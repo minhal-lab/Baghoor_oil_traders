@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baghoor Oil Traders - Multi-User System</title>
+    <title>Baghoor Oil Traders - Complete System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -43,6 +43,42 @@
         }
         .role-btn:hover { border-color: #667eea; background: #f7fafc; }
         .role-btn.active { border-color: #667eea; background: #667eea; color: white; }
+        
+        /* Quick Entry Section */
+        .quick-entry {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            margin-bottom: 20px;
+        }
+        .quick-entry h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        .quick-btn {
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .quick-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+        
         .container { max-width: 1600px; margin: 0 auto; }
         .header {
             background: white;
@@ -136,8 +172,6 @@
         .checkbox-group { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f7fafc; border-radius: 8px; margin-bottom: 10px; }
         .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
         .checkbox-group label { margin: 0; font-weight: 600; color: #2d3748; cursor: pointer; }
-        .permission-section { background: #ebf4ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #667eea; }
-        .permission-section h4 { color: #667eea; margin-bottom: 12px; font-weight: 700; }
         .table-container { overflow-x: auto; margin-top: 12px; border-radius: 10px; border: 1px solid #e2e8f0; max-height: 400px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; }
         table th, table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.85em; }
@@ -153,7 +187,6 @@
         .tab.active { color: #667eea; border-bottom-color: #667eea; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .full-width { grid-column: 1 / -1; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; }
         .modal.active { display: flex; }
         .modal-content { background: white; padding: 30px; border-radius: 16px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: auto; }
@@ -166,1592 +199,1598 @@
         .badge-danger { background: #fed7d7; color: #742a2a; }
         .badge-warning { background: #feebc8; color: #7c2d12; }
         .badge-info { background: #bee3f8; color: #2c5282; }
-        .badge-purple { background: #e9d8fd; color: #553c9a; }
-        .badge-admin { background: #fed7d7; color: #742a2a; }
-        .badge-manager { background: #feebc8; color: #7c2d12; }
-        .rate-info { background: #ebf4ff; padding: 16px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid #667eea; }
-        .rate-info h4 { color: #667eea; margin-bottom: 10px; font-weight: 700; font-size: 0.95em; }
-        .rate-display { display: flex; justify-content: space-between; margin: 6px 0; padding: 8px; background: white; border-radius: 6px; font-weight: 600; font-size: 0.9em; }
-        .final-amount { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 16px; border-radius: 10px; margin-top: 12px; font-size: 1.1em; font-weight: 700; text-align: center; }
         .notification { position: fixed; top: 20px; right: 20px; background: white; padding: 18px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 2000; min-width: 280px; border-left: 4px solid; animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
         .notification.success { border-left-color: #48bb78; }
         .notification.error { border-left-color: #f56565; }
         .profit-positive { color: #48bb78; font-weight: 700; }
         .profit-negative { color: #f56565; font-weight: 700; }
-        .vehicle-summary { background: #f7fafc; padding: 15px; border-radius: 10px; margin: 10px 0; border-left: 4px solid #667eea; }
-        .vehicle-summary h4 { color: #1a202c; margin-bottom: 10px; font-weight: 700; }
-        .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e2e8f0; }
-        .summary-row:last-child { border-bottom: none; }
         .hidden { display: none !important; }
-        .alert-box {
-            background: #fff5f5;
-            border-left: 4px solid #f56565;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            color: #742a2a;
-        }
-        .alert-box strong { display: block; margin-bottom: 5px; }
         @media (max-width: 768px) {
             .form-row, .dashboard-grid { grid-template-columns: 1fr; }
             .header { flex-direction: column; gap: 12px; }
-            .header h1 { font-size: 1.4em; }
         }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
-    <div id="loginScreen" class="login-container">
-        <div class="login-box">
-            <h1>🛢️ Baghoor Oil</h1>
-            <p>Premium Petrol & HSD Distribution System</p>
-            
+
+<!-- Login Screen -->
+<div id="loginScreen" class="login-container">
+    <div class="login-box">
+        <h1>🛢️ Baghoor Oil</h1>
+        <p>Premium Petrol & HSD Distribution System</p>
+        
+        <form onsubmit="handleLogin(event)">
             <div class="role-selector">
-                <div class="role-btn active" onclick="selectRole('admin')" id="adminRoleBtn">
+                <div class="role-btn active" onclick="selectRole('admin')">
                     <div style="font-size:2em;">👑</div>
                     <div>Admin</div>
                 </div>
-                <div class="role-btn" onclick="selectRole('manager')" id="managerRoleBtn">
+                <div class="role-btn" onclick="selectRole('manager')">
                     <div style="font-size:2em;">👤</div>
                     <div>Manager</div>
                 </div>
             </div>
             
-            <form onsubmit="handleLogin(event)">
-                <input type="hidden" id="selectedRole" value="admin">
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="loginUsername" required placeholder="Enter username" autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="loginPassword" required placeholder="Enter password" autocomplete="current-password">
-                </div>
-                <button type="submit" class="btn btn-primary" style="width:100%; margin-top:10px; padding:15px;">
-                    🔐 Login
-                </button>
-            </form>
+            <input type="hidden" id="selectedRole" value="admin">
             
-            <div style="margin-top: 25px; padding: 15px; background: #f7fafc; border-radius: 10px; font-size: 0.85em; color: #4a5568;">
-                <strong style="display:block; margin-bottom:8px; color:#667eea;">Default Credentials:</strong>
-                <div style="margin-bottom:5px;">👑 <strong>Admin:</strong> admin / admin123</div>
-                <div>👤 <strong>Manager:</strong> manager / manager123</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Dashboard -->
-    <div id="mainDashboard" class="hidden">
-        <div class="container">
-            <div class="header">
-                <h1>
-                    🛢️ Baghoor Oil Traders
-                    <span class="company-tagline">Complete Business Management System</span>
-                </h1>
-                <div class="header-actions">
-                    <div class="user-info">
-                        <div><strong id="currentUser">Admin</strong></div>
-                        <div class="user-role" id="currentUserRole">👑 Administrator</div>
-                    </div>
-                    <button class="btn btn-info" onclick="openModal('rateUpdateModal')" id="btnRates">💱 Rates</button>
-                    <button class="btn btn-success" onclick="exportToExcel()">📊 Export</button>
-                    <button class="btn btn-warning" onclick="openModal('permissionsModal')" id="btnPermissions" style="display:none;">⚙️ Permissions</button>
-                    <button class="btn btn-danger" onclick="handleLogout()">🚪 Logout</button>
-                </div>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="stat-card"><h3>Total Revenue</h3><div class="value" id="totalRevenue">Rs. 0</div><div class="change">Sales income</div></div>
-                <div class="stat-card"><h3>Net Profit</h3><div class="value" id="netProfit">Rs. 0</div><div class="change">After expenses</div></div>
-                <div class="stat-card"><h3>Total Expenses</h3><div class="value" id="totalExpenses">Rs. 0</div><div class="change">All costs</div></div>
-                <div class="stat-card"><h3>Pending Payments</h3><div class="value" id="pendingPayments">Rs. 0</div><div class="change">Receivables</div></div>
-                <div class="stat-card"><h3>Active Vehicles</h3><div class="value" id="activeVehicles">0</div><div class="change">In operation</div></div>
-                <div class="stat-card"><h3>Owner Capital</h3><div class="value" id="ownerCapital">Rs. 0</div><div class="change">Injected funds</div></div>
-            </div>
-
-            <div class="card full-width">
-                <h2>Management Center</h2>
-                <div class="tabs">
-                    <button class="tab active" onclick="switchTab('vehicles')">🚛 Vehicles</button>
-                    <button class="tab" onclick="switchTab('customers')">👥 Customers</button>
-                    <button class="tab" onclick="switchTab('suppliers')">🏭 Suppliers</button>
-                    <button class="tab" onclick="switchTab('purchases')">📦 Purchases</button>
-                    <button class="tab" onclick="switchTab('sales')">💰 Sales</button>
-                    <button class="tab" onclick="switchTab('expenses')">💳 Expenses</button>
-                    <button class="tab" onclick="switchTab('capital')">💵 Capital</button>
-                    <button class="tab" onclick="switchTab('reports')">📊 Reports</button>
-                </div>
-
-                <!-- Vehicles Tab -->
-                <div id="vehicles" class="tab-content active">
-                    <button class="btn btn-primary" onclick="checkPermissionAndOpenModal('add', 'vehicleModal')" id="btnAddVehicle" style="margin-bottom:15px;">+ Add Vehicle</button>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Vehicle #</th><th>Status</th><th>Current Stock</th><th>Total Profit</th><th>Actions</th></tr></thead>
-                            <tbody id="vehiclesTable"><tr><td colspan="5" style="text-align:center; padding:30px; color:#a0aec0;">No vehicles yet.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Customers Tab -->
-                <div id="customers" class="tab-content">
-                    <button class="btn btn-primary" onclick="checkPermissionAndOpenModal('add', 'customerModal')" id="btnAddCustomer" style="margin-bottom:15px;">+ Add Customer</button>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Name</th><th>Mobile</th><th>CNIC</th><th>Address</th><th>Petrol Rate</th><th>HSD Rate</th><th>Balance</th><th>Actions</th></tr></thead>
-                            <tbody id="customersTable"><tr><td colspan="8" style="text-align:center; padding:30px; color:#a0aec0;">No customers yet.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Suppliers Tab -->
-                <div id="suppliers" class="tab-content">
-                    <button class="btn btn-primary" onclick="checkPermissionAndOpenModal('add', 'supplierModal')" id="btnAddSupplier" style="margin-bottom:15px;">+ Add Supplier</button>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Name</th><th>Contact</th><th>Petrol Rate</th><th>HSD Rate</th><th>Balance Due</th><th>Actions</th></tr></thead>
-                            <tbody id="suppliersTable"><tr><td colspan="6" style="text-align:center; padding:30px; color:#a0aec0;">No suppliers yet.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Purchases Tab -->
-                <div id="purchases" class="tab-content">
-                    <button class="btn btn-primary" onclick="checkPermissionAndOpenModal('add', 'purchaseModal')" id="btnAddPurchase" style="margin-bottom:15px;">+ Record Purchase</button>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Date</th><th>Supplier</th><th>Vehicle</th><th>Product</th><th>Quantity</th><th>Rate</th><th>Total</th><th>Actions</th></tr></thead>
-                            <tbody id="purchasesTable"><tr><td colspan="8" style="text-align:center; padding:30px; color:#a0aec0;">No purchases yet.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Sales Tab -->
-                <div id="sales" class="tab-content">
-                    <button class="btn btn-success" onclick="checkPermissionAndOpenModal('add', 'saleModal')" id="btnAddSale" style="margin-bottom:15px;">+ Record Sale</button>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Date</th><th>Customer</th><th>Vehicle</th><th>Product</th><th>Qty</th><th>Rate</th><th>Discount</th><th>Total</th><th>Profit</th><th>Actions</th></tr></thead>
-                            <tbody id="salesTable"><tr><td colspan="10" style="text-align:center; padding:30px; color:#a0aec0;">No sales yet.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Expenses Tab -->
-                <div id="expenses" class="tab-content">
-                    <button class="btn btn-warning" onclick="checkPermissionAndOpenModal('add', 'expenseModal')" id="btnAddExpense" style="margin-bottom:15px;">+ Add Expense</button>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead>
-                            <tbody id="expensesTable"><tr><td colspan="6" style="text-align:center; padding:30px; color:#a0aec0;">No expenses yet.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Capital Tab -->
-                <div id="capital" class="tab-content">
-                    <button class="btn btn-info" onclick="checkPermissionAndOpenModal('add', 'capitalModal')" id="btnAddCapital" style="margin-bottom:15px;">+ Add Capital</button>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead>
-                            <tbody id="capitalTable"><tr><td colspan="5" style="text-align:center; padding:30px; color:#a0aec0;">No capital entries yet.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Reports Tab -->
-                <div id="reports" class="tab-content">
-                    <h3 style="color:#667eea; margin-bottom:15px;">📊 Vehicle-wise Profit & Loss Report</h3>
-                    <div id="vehicleReports"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Permissions Modal (Admin Only) -->
-    <div id="permissionsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>⚙️ Manager Permissions</h2>
-                <button class="close-modal" onclick="closeModal('permissionsModal')">&times;</button>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="password" id="loginUsername" required placeholder="Enter username" autocomplete="off">
             </div>
             
-            <div class="alert-box">
-                <strong>⚠️ Important:</strong>
-                Configure what actions the Manager role can perform in the system.
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" required placeholder="Enter password" autocomplete="new-password">
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:15px;">
+                🔐 Login
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Main App -->
+<div id="mainApp" class="hidden">
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                🛢️ Baghoor Oil Traders
+                <span class="company-tagline">Premium Distribution System</span>
+            </h1>
+            <div class="header-actions">
+                <div class="user-info">
+                    <span id="currentUsername">Admin</span>
+                    <span class="user-role" id="currentUserRole">Administrator</span>
+                </div>
+                <button class="btn btn-info" onclick="openModal('govRateModal')">📊 Update Rates</button>
+                <button class="btn btn-danger" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- Quick Entry Section -->
+        <div class="quick-entry">
+            <h3>⚡ Quick Entry</h3>
+            <div class="quick-grid">
+                <button class="quick-btn" onclick="quickEntry('customer')">👥 Add Customer</button>
+                <button class="quick-btn" onclick="quickEntry('supplier')">🏭 Add Supplier</button>
+                <button class="quick-btn" onclick="quickEntry('sale')">💰 Record Sale</button>
+                <button class="quick-btn" onclick="quickEntry('expense')">💸 Add Expense</button>
+                <button class="quick-btn" onclick="quickEntry('payment')">💳 Record Payment</button>
+                <button class="quick-btn" onclick="quickEntry('bank')">🏦 Bank Transaction</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <h3>Total Customers</h3>
+                <div class="value" id="totalCustomers">0</div>
+                <div class="change">Active accounts</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Receivables</h3>
+                <div class="value" id="totalReceivables">Rs. 0</div>
+                <div class="change">To be collected</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Suppliers</h3>
+                <div class="value" id="totalSuppliers">0</div>
+                <div class="change">Active suppliers</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Payables</h3>
+                <div class="value" id="totalPayables">Rs. 0</div>
+                <div class="change">To be paid</div>
+            </div>
+            <div class="stat-card">
+                <h3>Today's Sales</h3>
+                <div class="value" id="todaySales">Rs. 0</div>
+                <div class="change">Current day</div>
+            </div>
+            <div class="stat-card">
+                <h3>Bank Balance</h3>
+                <div class="value" id="bankBalance">Rs. 0</div>
+                <div class="change">Current balance</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('customers')">👥 Customers</button>
+                <button class="tab" onclick="switchTab('suppliers')">🏭 Suppliers</button>
+                <button class="tab" onclick="switchTab('sales')">💰 Sales</button>
+                <button class="tab" onclick="switchTab('purchases')">📦 Purchases</button>
+                <button class="tab" onclick="switchTab('expenses')">💸 Expenses</button>
+                <button class="tab" onclick="switchTab('payments')">💳 Payments</button>
+                <button class="tab" onclick="switchTab('bank')">🏦 Bank</button>
+                <button class="tab" onclick="switchTab('ledger')">📒 Ledger</button>
             </div>
 
-            <form onsubmit="savePermissions(event)">
-                <div class="permission-section">
-                    <h4>📝 Add Permissions</h4>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_add_vehicle" checked>
-                        <label for="perm_add_vehicle">Can add vehicles</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_add_customer" checked>
-                        <label for="perm_add_customer">Can add customers</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_add_supplier" checked>
-                        <label for="perm_add_supplier">Can add suppliers</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_add_purchase" checked>
-                        <label for="perm_add_purchase">Can record purchases</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_add_sale" checked>
-                        <label for="perm_add_sale">Can record sales</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_add_expense" checked>
-                        <label for="perm_add_expense">Can add expenses</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_add_capital" checked>
-                        <label for="perm_add_capital">Can add capital entries</label>
-                    </div>
+            <!-- Customers Tab -->
+            <div id="customers" class="tab-content active">
+                <button class="btn btn-primary" onclick="openModal('customerModal')">+ Add Customer</button>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>PMG Rate</th>
+                                <th>HSD Rate</th>
+                                <th>Balance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTable"></tbody>
+                    </table>
                 </div>
+            </div>
 
-                <div class="permission-section">
-                    <h4>✏️ Edit Permissions</h4>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_edit_vehicle">
-                        <label for="perm_edit_vehicle">Can edit vehicles</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_edit_customer">
-                        <label for="perm_edit_customer">Can edit customers</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_edit_supplier">
-                        <label for="perm_edit_supplier">Can edit suppliers</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_edit_transaction">
-                        <label for="perm_edit_transaction">Can edit transactions</label>
-                    </div>
+            <!-- Suppliers Tab -->
+            <div id="suppliers" class="tab-content">
+                <button class="btn btn-primary" onclick="openModal('supplierModal')">+ Add Supplier</button>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>PMG Rate</th>
+                                <th>HSD Rate</th>
+                                <th>Balance Due</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="suppliersTable"></tbody>
+                    </table>
                 </div>
+            </div>
 
-                <div class="permission-section">
-                    <h4>🗑️ Delete Permissions</h4>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_delete_vehicle">
-                        <label for="perm_delete_vehicle">Can delete vehicles</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_delete_customer">
-                        <label for="perm_delete_customer">Can delete customers</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_delete_supplier">
-                        <label for="perm_delete_supplier">Can delete suppliers</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_delete_transaction">
-                        <label for="perm_delete_transaction">Can delete transactions</label>
-                    </div>
+            <!-- Sales Tab -->
+            <div id="sales" class="tab-content">
+                <button class="btn btn-success" onclick="openModal('saleModal')">+ Record Sale</button>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Quantity (L)</th>
+                                <th>Rate</th>
+                                <th>Total</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesTable"></tbody>
+                    </table>
                 </div>
+            </div>
 
-                <div class="permission-section">
-                    <h4>👁️ View Permissions</h4>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_view_reports" checked>
-                        <label for="perm_view_reports">Can view reports</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_export_data" checked>
-                        <label for="perm_export_data">Can export data to Excel</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="perm_update_rates">
-                        <label for="perm_update_rates">Can update rates</label>
-                    </div>
+            <!-- Purchases Tab -->
+            <div id="purchases" class="tab-content">
+                <button class="btn btn-warning" onclick="openModal('purchaseModal')">+ Record Purchase</button>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Supplier</th>
+                                <th>Product</th>
+                                <th>Quantity (L)</th>
+                                <th>Rate</th>
+                                <th>Total</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchasesTable"></tbody>
+                    </table>
                 </div>
+            </div>
 
-                <button type="submit" class="btn btn-success" style="width:100%; margin-top:15px;">💾 Save Permissions</button>
-            </form>
+            <!-- Expenses Tab -->
+            <div id="expenses" class="tab-content">
+                <button class="btn btn-danger" onclick="openModal('expenseModal')">+ Add Expense</button>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Linked To</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expensesTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Payments Tab -->
+            <div id="payments" class="tab-content">
+                <button class="btn btn-success" onclick="openModal('paymentModal')">+ Record Payment</button>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Bank Tab -->
+            <div id="bank" class="tab-content">
+                <button class="btn btn-info" onclick="openModal('bankModal')">+ Bank Transaction</button>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bankTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Ledger Tab -->
+            <div id="ledger" class="tab-content">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Account</th>
+                                <th>Description</th>
+                                <th>Debit</th>
+                                <th>Credit</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerTable"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <!-- (Other modals continue - Vehicle, Customer, Supplier, Purchase, Sale, Expense, Capital, Rate Update) -->
-    <!-- Due to length, including placeholders - full modals in actual deployment -->
+<!-- MODALS -->
+
+<!-- Customer Modal -->
+<div id="customerModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="customerModalTitle">Add Customer</h2>
+            <button class="close-modal" onclick="closeModal('customerModal')">&times;</button>
+        </div>
+        <form onsubmit="saveCustomer(event)">
+            <input type="hidden" id="customerId">
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" id="customerName" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>PMG Rate (Rs/L) *</label>
+                    <input type="number" id="customerPmgRate" step="0.0001" required placeholder="255.5250">
+                </div>
+                <div class="form-group">
+                    <label>HSD Rate (Rs/L) *</label>
+                    <input type="number" id="customerHsdRate" step="0.0001" required placeholder="260.7500">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Save Customer</button>
+        </form>
+    </div>
+</div>
+
+<!-- Supplier Modal -->
+<div id="supplierModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Supplier</h2>
+            <button class="close-modal" onclick="closeModal('supplierModal')">&times;</button>
+        </div>
+        <form onsubmit="saveSupplier(event)">
+            <input type="hidden" id="supplierId">
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" id="supplierName" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>PMG Rate (Rs/L) *</label>
+                    <input type="number" id="supplierPmgRate" step="0.0001" required placeholder="252.3450">
+                </div>
+                <div class="form-group">
+                    <label>HSD Rate (Rs/L) *</label>
+                    <input type="number" id="supplierHsdRate" step="0.0001" required placeholder="257.8900">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Save Supplier</button>
+        </form>
+    </div>
+</div>
+
+<!-- Sale Modal -->
+<div id="saleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Record Sale</h2>
+            <button class="close-modal" onclick="closeModal('saleModal')">&times;</button>
+        </div>
+        <form onsubmit="saveSale(event)">
+            <div class="form-group">
+                <label>Customer *</label>
+                <select id="saleCustomer" required></select>
+            </div>
+            <div class="form-group">
+                <label>Product *</label>
+                <select id="saleProduct" required onchange="updateSaleRate()">
+                    <option value="">Select Product</option>
+                    <option value="pmg">PMG (Petrol)</option>
+                    <option value="hsd">HSD (Diesel)</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Quantity (Liters) *</label>
+                    <input type="number" id="saleQuantity" required step="0.01" onchange="calculateSaleTotal()">
+                </div>
+                <div class="form-group">
+                    <label>Rate (Rs/L) *</label>
+                    <input type="number" id="saleRate" required step="0.0001" onchange="calculateSaleTotal()">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Total Amount</label>
+                <input type="number" id="saleTotal" readonly style="font-weight:700; font-size:1.1em;">
+            </div>
+            <button type="submit" class="btn btn-success" style="width:100%;">Record Sale</button>
+        </form>
+    </div>
+</div>
+
+<!-- Purchase Modal -->
+<div id="purchaseModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Record Purchase</h2>
+            <button class="close-modal" onclick="closeModal('purchaseModal')">&times;</button>
+        </div>
+        <form onsubmit="savePurchase(event)">
+            <div class="form-group">
+                <label>Supplier *</label>
+                <select id="purchaseSupplier" required></select>
+            </div>
+            <div class="form-group">
+                <label>Product *</label>
+                <select id="purchaseProduct" required onchange="updatePurchaseRate()">
+                    <option value="">Select Product</option>
+                    <option value="pmg">PMG (Petrol)</option>
+                    <option value="hsd">HSD (Diesel)</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Quantity (Liters) *</label>
+                    <input type="number" id="purchaseQuantity" required step="0.01" onchange="calculatePurchaseTotal()">
+                </div>
+                <div class="form-group">
+                    <label>Rate (Rs/L) *</label>
+                    <input type="number" id="purchaseRate" required step="0.0001" onchange="calculatePurchaseTotal()">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Total Amount</label>
+                <input type="number" id="purchaseTotal" readonly style="font-weight:700; font-size:1.1em;">
+            </div>
+            <button type="submit" class="btn btn-warning" style="width:100%;">Record Purchase</button>
+        </form>
+    </div>
+</div>
+
+<!-- Expense Modal -->
+<div id="expenseModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Expense</h2>
+            <button class="close-modal" onclick="closeModal('expenseModal')">&times;</button>
+        </div>
+        <form onsubmit="saveExpense(event)">
+            <div class="form-group">
+                <label>Category *</label>
+                <select id="expenseCategory" required>
+                    <option value="">Select Category</option>
+                    <option value="vehicle">Vehicle</option>
+                    <option value="salary">Salary</option>
+                    <option value="utility">Utility</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description *</label>
+                <textarea id="expenseDescription" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Amount *</label>
+                <input type="number" id="expenseAmount" required step="0.01">
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="expenseOnBehalfCustomer" onchange="toggleExpenseCustomer()">
+                <label for="expenseOnBehalfCustomer">This expense is on behalf of a customer</label>
+            </div>
+            <div class="form-group" id="expenseCustomerGroup" style="display:none;">
+                <label>Select Customer *</label>
+                <select id="expenseCustomerId"></select>
+            </div>
+            <button type="submit" class="btn btn-danger" style="width:100%;">Save Expense</button>
+        </form>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div id="paymentModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Record Payment</h2>
+            <button class="close-modal" onclick="closeModal('paymentModal')">&times;</button>
+        </div>
+        <form onsubmit="savePayment(event)">
+            <div class="form-group">
+                <label>Payment Type *</label>
+                <select id="paymentType" required onchange="updatePaymentFields()">
+                    <option value="">-- Select Type --</option>
+                    <option value="customer_to_bank">Customer pays to Bank</option>
+                    <option value="customer_to_supplier">Customer pays to Supplier</option>
+                    <option value="customer_to_owner">Customer pays to Owner</option>
+                    <option value="owner_to_supplier">Owner pays to Supplier</option>
+                </select>
+            </div>
+            <div class="form-group" id="paymentFromGroup">
+                <label>From (Payer) *</label>
+                <select id="paymentFrom" required></select>
+            </div>
+            <div class="form-group" id="paymentToGroup">
+                <label>To (Receiver) *</label>
+                <select id="paymentTo" required></select>
+            </div>
+            <div class="form-group">
+                <label>Amount *</label>
+                <input type="number" id="paymentAmount" required step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Payment Method *</label>
+                <select id="paymentMethod" required>
+                    <option value="cash">Cash</option>
+                    <option value="bank">Bank Transfer</option>
+                    <option value="cheque">Cheque</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="paymentDescription"></textarea>
+            </div>
+            <button type="submit" class="btn btn-success" style="width:100%;">Save Payment</button>
+        </form>
+    </div>
+</div>
+
+<!-- Bank Modal -->
+<div id="bankModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Bank Transaction</h2>
+            <button class="close-modal" onclick="closeModal('bankModal')">&times;</button>
+        </div>
+        <form onsubmit="saveBankTransaction(event)">
+            <div class="form-group">
+                <label>Transaction Type *</label>
+                <select id="bankTransactionType" required onchange="updateBankFields()">
+                    <option value="">-- Select Type --</option>
+                    <option value="deposit">Deposit (Money In)</option>
+                    <option value="withdrawal">Withdrawal (Money Out)</option>
+                    <option value="transfer">Transfer Between Accounts</option>
+                </select>
+            </div>
+            <div class="form-group" id="bankFromGroup" style="display:none;">
+                <label>From Account *</label>
+                <select id="bankFrom"></select>
+            </div>
+            <div class="form-group" id="bankToGroup" style="display:none;">
+                <label>To Account *</label>
+                <select id="bankTo"></select>
+            </div>
+            <div class="form-group">
+                <label>Amount *</label>
+                <input type="number" id="bankAmount" required step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Description *</label>
+                <textarea id="bankDescription" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-info" style="width:100%;">Save Transaction</button>
+        </form>
+    </div>
+</div>
+
+<!-- Government Rate Update Modal -->
+<div id="govRateModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📊 Government Rate Update</h2>
+            <button class="close-modal" onclick="closeModal('govRateModal')">&times;</button>
+        </div>
+        <form onsubmit="applyGovRateChange(event)">
+            <div style="background:#ebf4ff; padding:15px; border-radius:10px; margin-bottom:15px;">
+                <p style="color:#667eea; font-weight:600;">Select fuel types and enter rate changes</p>
+            </div>
+            
+            <div class="form-group">
+                <label>Fuel Type(s) *</label>
+                <div style="display:flex; gap:15px;">
+                    <label style="display:flex; align-items:center; gap:5px;">
+                        <input type="checkbox" id="updatePmg" checked> PMG (Petrol)
+                    </label>
+                    <label style="display:flex; align-items:center; gap:5px;">
+                        <input type="checkbox" id="updateHsd" checked> HSD (Diesel)
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Change Type *</label>
+                <select id="changeType" required>
+                    <option value="absolute">Absolute (PKR)</option>
+                    <option value="percent">Percent (%)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Change Direction *</label>
+                <select id="changeSign" required>
+                    <option value="1">Increase (+)</option>
+                    <option value="-1">Decrease (-)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Amount *</label>
+                <input type="number" id="changeAmount" step="0.0001" min="0" required placeholder="e.g., 2.5000 or 5 (for 5%)">
+            </div>
+            
+            <div class="form-group">
+                <label>Apply To *</label>
+                <select id="changeScope" required>
+                    <option value="all">All Customers & Suppliers</option>
+                    <option value="customers">Customers Only</option>
+                    <option value="suppliers">Suppliers Only</option>
+                </select>
+            </div>
+            
+            <button type="button" class="btn btn-info" onclick="previewRateChange()" style="width:100%; margin-bottom:10px;">
+                👁️ Preview Changes
+            </button>
+            
+            <div id="rateChangePreview" style="display:none; background:#f7fafc; padding:15px; border-radius:10px; margin:10px 0; max-height:300px; overflow-y:auto;">
+                <h4 style="color:#667eea; margin-bottom:10px;">Preview:</h4>
+                <div id="previewContent"></div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width:100%;">
+                ✅ Apply Changes
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Global Variables
+let currentUser = null;
+let currentRole = null;
+let customers = [];
+let suppliers = [];
+let sales = [];
+let purchases = [];
+let expenses = [];
+let payments = [];
+let bankTransactions = [];
+let ledger = [];
+let rateChangeLogs = [];
+
+// Helper Functions
+function formatRate(value) {
+    return parseFloat(value).toFixed(4);
+}
+
+function roundRate(value) {
+    return Math.round(value * 10000) / 10000;
+}
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('en-PK', {
+        style: 'currency',
+        currency: 'PKR',
+        minimumFractionDigits: 2
+    }).format(value).replace('PKR', 'Rs.');
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// Login Functions
+function selectRole(role) {
+    document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.closest('.role-btn').classList.add('active');
+    document.getElementById('selectedRole').value = role;
+}
+
+function handleLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    const role = document.getElementById('selectedRole').value;
     
-    <div id="vehicleModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Add Vehicle</h2><button class="close-modal" onclick="closeModal('vehicleModal')">&times;</button></div><form onsubmit="saveVehicle(event)"><div class="form-group"><label>Vehicle Number *</label><input type="text" id="vehicleNumber" required placeholder="e.g., LES-1234"></div><div class="form-group"><label>Status</label><select id="vehicleStatus"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="inactive">Inactive</option></select></div><button type="submit" class="btn btn-primary" style="width:100%;">💾 Save Vehicle</button></form></div></div>
+    // Simple authentication (replace with real auth)
+    if ((role === 'admin' && username === 'admin' && password === 'admin123') ||
+        (role === 'manager' && username === 'manager' && password === 'manager123')) {
+        currentUser = username;
+        currentRole = role;
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('mainApp').classList.remove('hidden');
+        document.getElementById('currentUsername').textContent = username;
+        document.getElementById('currentUserRole').textContent = role === 'admin' ? 'Administrator' : 'Manager';
+        loadData();
+        updateDashboardStats();
+        renderCustomers();
+        renderSuppliers();
+        showNotification('Login successful!');
+    } else {
+        showNotification('Invalid credentials!', 'error');
+    }
+}
 
-    <div id="customerModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Add Customer</h2><button class="close-modal" onclick="closeModal('customerModal')">&times;</button></div><form onsubmit="saveCustomer(event)"><div class="form-group"><label>Name *</label><input type="text" id="customerName" required></div><div class="form-row"><div class="form-group"><label>Mobile</label><input type="text" id="customerMobile" placeholder="03XX-XXXXXXX"></div><div class="form-group"><label>CNIC</label><input type="text" id="customerCnic" placeholder="XXXXX-XXXXXXX-X"></div></div><div class="form-group"><label>Address</label><textarea id="customerAddress"></textarea></div><div class="form-row"><div class="form-group"><label>Petrol Rate *</label><input type="number" id="customerPetrolRate" required step="0.01"></div><div class="form-group"><label>HSD Rate *</label><input type="number" id="customerHsdRate" required step="0.01"></div></div><div class="form-group"><label>Opening Balance</label><input type="number" id="customerBalance" value="0" step="0.01"></div><button type="submit" class="btn btn-primary" style="width:100%;">💾 Save Customer</button></form></div></div>
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        currentUser = null;
+        currentRole = null;
+        document.getElementById('mainApp').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+    }
+}
 
-    <div id="supplierModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Add Supplier</h2><button class="close-modal" onclick="closeModal('supplierModal')">&times;</button></div><form onsubmit="saveSupplier(event)"><div class="form-group"><label>Name *</label><input type="text" id="supplierName" required></div><div class="form-group"><label>Contact</label><input type="text" id="supplierContact"></div><div class="form-row"><div class="form-group"><label>Petrol Rate *</label><input type="number" id="supplierPetrolRate" required step="0.01"></div><div class="form-group"><label>HSD Rate *</label><input type="number" id="supplierHsdRate" required step="0.01"></div></div><button type="submit" class="btn btn-primary" style="width:100%;">💾 Save Supplier</button></form></div></div>
+// Data Loading
+function loadData() {
+    customers = JSON.parse(localStorage.getItem('customers')) || [];
+    suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
+    sales = JSON.parse(localStorage.getItem('sales')) || [];
+    purchases = JSON.parse(localStorage.getItem('purchases')) || [];
+    expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+    payments = JSON.parse(localStorage.getItem('payments')) || [];
+    bankTransactions = JSON.parse(localStorage.getItem('bankTransactions')) || [];
+    ledger = JSON.parse(localStorage.getItem('ledger')) || [];
+    rateChangeLogs = JSON.parse(localStorage.getItem('rateChangeLogs')) || [];
+}
 
-    <div id="purchaseModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Record Purchase</h2><button class="close-modal" onclick="closeModal('purchaseModal')">&times;</button></div><form onsubmit="savePurchase(event)"><div class="form-group"><label>Supplier *</label><select id="purchaseSupplier" required onchange="loadPurchaseRate()"><option value="">-- Select Supplier --</option></select></div><div class="form-group"><label>Vehicle *</label><select id="purchaseVehicle" required><option value="">-- Select Vehicle --</option></select></div><div class="form-group"><label>Product *</label><select id="purchaseProduct" onchange="loadPurchaseRate()"><option value="petrol">Petrol</option><option value="hsd">HSD (Diesel)</option></select></div><div class="form-row"><div class="form-group"><label>Quantity (Liters) *</label><input type="number" id="purchaseQuantity" required step="0.01" oninput="calculatePurchaseTotal()"></div><div class="form-group"><label>Rate (Rs/L) *</label><input type="number" id="purchaseRate" required step="0.01" oninput="calculatePurchaseTotal()"></div></div><div class="final-amount" id="purchaseTotalDisplay" style="display:none;">Total: <span id="purchaseTotal">Rs. 0</span></div><button type="submit" class="btn btn-primary" style="width:100%; margin-top:10px;">💾 Save Purchase</button></form></div></div>
+// Quick Entry
+function quickEntry(type) {
+    const modalMap = {
+        'customer': 'customerModal',
+        'supplier': 'supplierModal',
+        'sale': 'saleModal',
+        'expense': 'expenseModal',
+        'payment': 'paymentModal',
+        'bank': 'bankModal'
+    };
+    openModal(modalMap[type]);
+}
 
-    <div id="saleModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Record Sale</h2><button class="close-modal" onclick="closeModal('saleModal')">&times;</button></div><form onsubmit="saveSale(event)"><div class="form-group"><label>Customer *</label><select id="saleCustomer" required onchange="loadSaleRate()"><option value="">-- Select Customer --</option></select></div><div class="form-group"><label>Vehicle (Stock Source) *</label><select id="saleVehicle" required onchange="checkVehicleStock()"><option value="">-- Select Vehicle --</option></select></div><div class="form-group"><label>Product *</label><select id="saleProduct" onchange="loadSaleRate(); checkVehicleStock();"><option value="petrol">Petrol</option><option value="hsd">HSD (Diesel)</option></select></div><div id="stockInfo" class="rate-info" style="display:none;"><h4>📦 Available Stock</h4><div class="rate-display"><span>Vehicle Stock:</span><strong id="displayStock">0 L</strong></div><div class="rate-display"><span>Purchase Rate:</span><strong id="displayPurchaseRate">Rs. 0</strong></div></div><div class="form-row"><div class="form-group"><label>Quantity (Liters) *</label><input type="number" id="saleQuantity" required step="0.01" oninput="calculateSaleTotal()"></div><div class="form-group"><label>Sale Rate (Rs/L) *</label><input type="number" id="saleRate" required step="0.01" oninput="calculateSaleTotal()"></div></div><div class="form-group"><label>Discount (Rs/L)</label><input type="number" id="saleDiscount" value="0" step="0.01" oninput="calculateSaleTotal()"></div><div class="rate-info" id="saleCalculation" style="display:none;"><h4>💰 Sale Calculation</h4><div class="rate-display"><span>Final Rate:</span><strong id="displayFinalRate">Rs. 0</strong></div><div class="rate-display"><span>Total Amount:</span><strong id="displaySaleTotal">Rs. 0</strong></div><div class="rate-display" style="background:#c6f6d5;"><span>Profit:</span><strong id="displayProfit" class="profit-positive">Rs. 0</strong></div></div><button type="submit" class="btn btn-success" style="width:100%; margin-top:10px;">💾 Save Sale</button></form></div></div>
+// Modal Functions
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+    if (modalId === 'saleModal') {
+        populateCustomerSelect('saleCustomer');
+    } else if (modalId === 'purchaseModal') {
+        populateSupplierSelect('purchaseSupplier');
+    } else if (modalId === 'expenseModal') {
+        populateCustomerSelect('expenseCustomerId');
+    } else if (modalId === 'paymentModal') {
+        updatePaymentFields();
+    }
+}
 
-    <div id="expenseModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Add Expense</h2><button class="close-modal" onclick="closeModal('expenseModal')">&times;</button></div><form onsubmit="saveExpense(event)"><div class="form-group"><label>Expense Type *</label><select id="expenseType" onchange="updateExpenseCategories()"><option value="vehicle">Vehicle Expense</option><option value="owner">Owner Personal</option><option value="staff">Staff Salary</option><option value="business">Business Expense</option></select></div><div class="form-group" id="expenseVehicleGroup" style="display:none;"><label>Vehicle *</label><select id="expenseVehicle"><option value="">-- Select Vehicle --</option></select></div><div class="form-group"><label>Category *</label><select id="expenseCategory" required></select></div><div class="form-group"><label>Description *</label><textarea id="expenseDescription" required></textarea></div><div class="form-group"><label>Amount *</label><input type="number" id="expenseAmount" required step="0.01"></div><button type="submit" class="btn btn-warning" style="width:100%;">💾 Save Expense</button></form></div></div>
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+    document.getElementById(modalId).querySelector('form')?.reset();
+}
 
-    <div id="capitalModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Add Capital</h2><button class="close-modal" onclick="closeModal('capitalModal')">&times;</button></div><form onsubmit="saveCapital(event)"><div class="form-group"><label>Capital Type *</label><select id="capitalType" required><option value="owner">Owner Investment</option><option value="loan">Loan</option><option value="payment_received">Payment Received (Through Owner)</option><option value="other">Other</option></select></div><div class="form-group"><label>Description *</label><textarea id="capitalDescription" required></textarea></div><div class="form-group"><label>Amount *</label><input type="number" id="capitalAmount" required step="0.01"></div><button type="submit" class="btn btn-info" style="width:100%;">💾 Save Capital Entry</button></form></div></div>
+// Tab Functions
+function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById(tabName).classList.add('active');
+    
+    if (tabName === 'customers') renderCustomers();
+    else if (tabName === 'suppliers') renderSuppliers();
+    else if (tabName === 'sales') renderSales();
+    else if (tabName === 'purchases') renderPurchases();
+    else if (tabName === 'expenses') renderExpenses();
+    else if (tabName === 'payments') renderPayments();
+    else if (tabName === 'bank') renderBankTransactions();
+    else if (tabName === 'ledger') renderLedger();
+}
 
-    <div id="rateUpdateModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>💱 Update Rates</h2><button class="close-modal" onclick="closeModal('rateUpdateModal')">&times;</button></div><h3 style="color:#667eea; margin:15px 0 10px;">Customers</h3><div id="customerRatesUpdate"></div><h3 style="color:#667eea; margin:20px 0 10px;">Suppliers</h3><div id="supplierRatesUpdate"></div><button class="btn btn-success" style="width:100%; margin-top:15px;" onclick="saveAllRates()">💾 Save All Rates</button></div></div>
+// Customer Functions
+function saveCustomer(e) {
+    e.preventDefault();
+    const id = document.getElementById('customerId').value || 'cust_' + Date.now();
+    const customer = {
+        id,
+        name: document.getElementById('customerName').value,
+        pmgRate: formatRate(document.getElementById('customerPmgRate').value),
+        hsdRate: formatRate(document.getElementById('customerHsdRate').value),
+        balance: customers.find(c => c.id === id)?.balance || 0
+    };
+    
+    const index = customers.findIndex(c => c.id === id);
+    if (index >= 0) {
+        customers[index] = customer;
+    } else {
+        customers.push(customer);
+    }
+    
+    localStorage.setItem('customers', JSON.stringify(customers));
+    renderCustomers();
+    updateDashboardStats();
+    closeModal('customerModal');
+    showNotification('Customer saved successfully!');
+}
 
-    <script>
-        // ==================== DATA STORAGE ====================
-        let currentUser = null;
-        let currentRole = null;
-        let permissions = {};
+function renderCustomers() {
+    const tbody = document.getElementById('customersTable');
+    if (customers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#a0aec0;">No customers yet.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = customers.map(c => `
+        <tr>
+            <td><strong>${c.name}</strong></td>
+            <td>Rs. ${c.pmgRate}/L</td>
+            <td>Rs. ${c.hsdRate}/L</td>
+            <td class="${c.balance > 0 ? 'profit-negative' : 'profit-positive'}">${formatCurrency(c.balance)}</td>
+            <td>
+                <button class="action-btn edit" onclick="editCustomer('${c.id}')">Edit</button>
+                <button class="action-btn delete" onclick="deleteCustomer('${c.id}')">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function editCustomer(id) {
+    const customer = customers.find(c => c.id === id);
+    if (!customer) return;
+    
+    document.getElementById('customerId').value = customer.id;
+    document.getElementById('customerName').value = customer.name;
+    document.getElementById('customerPmgRate').value = customer.pmgRate;
+    document.getElementById('customerHsdRate').value = customer.hsdRate;
+    document.getElementById('customerModalTitle').textContent = 'Edit Customer';
+    openModal('customerModal');
+}
+
+function deleteCustomer(id) {
+    if (confirm('Delete this customer?')) {
+        customers = customers.filter(c => c.id !== id);
+        localStorage.setItem('customers', JSON.stringify(customers));
+        renderCustomers();
+        updateDashboardStats();
+        showNotification('Customer deleted!');
+    }
+}
+
+// Supplier Functions
+function saveSupplier(e) {
+    e.preventDefault();
+    const id = document.getElementById('supplierId').value || 'supp_' + Date.now();
+    const supplier = {
+        id,
+        name: document.getElementById('supplierName').value,
+        pmgRate: formatRate(document.getElementById('supplierPmgRate').value),
+        hsdRate: formatRate(document.getElementById('supplierHsdRate').value),
+        balance: suppliers.find(s => s.id === id)?.balance || 0
+    };
+    
+    const index = suppliers.findIndex(s => s.id === id);
+    if (index >= 0) {
+        suppliers[index] = supplier;
+    } else {
+        suppliers.push(supplier);
+    }
+    
+    localStorage.setItem('suppliers', JSON.stringify(suppliers));
+    renderSuppliers();
+    updateDashboardStats();
+    closeModal('supplierModal');
+    showNotification('Supplier saved successfully!');
+}
+
+function renderSuppliers() {
+    const tbody = document.getElementById('suppliersTable');
+    if (suppliers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#a0aec0;">No suppliers yet.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = suppliers.map(s => `
+        <tr>
+            <td><strong>${s.name}</strong></td>
+            <td>Rs. ${s.pmgRate}/L</td>
+            <td>Rs. ${s.hsdRate}/L</td>
+            <td class="${s.balance > 0 ? 'profit-negative' : ''}">${formatCurrency(s.balance)}</td>
+            <td>
+                <button class="action-btn edit" onclick="editSupplier('${s.id}')">Edit</button>
+                <button class="action-btn delete" onclick="deleteSupplier('${s.id}')">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function editSupplier(id) {
+    const supplier = suppliers.find(s => s.id === id);
+    if (!supplier) return;
+    
+    document.getElementById('supplierId').value = supplier.id;
+    document.getElementById('supplierName').value = supplier.name;
+    document.getElementById('supplierPmgRate').value = supplier.pmgRate;
+    document.getElementById('supplierHsdRate').value = supplier.hsdRate;
+    openModal('supplierModal');
+}
+
+function deleteSupplier(id) {
+    if (confirm('Delete this supplier?')) {
+        suppliers = suppliers.filter(s => s.id !== id);
+        localStorage.setItem('suppliers', JSON.stringify(suppliers));
+        renderSuppliers();
+        updateDashboardStats();
+        showNotification('Supplier deleted!');
+    }
+}
+
+// Sale Functions
+function populateCustomerSelect(selectId) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = '<option value="">Select Customer</option>' + 
+        customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function populateSupplierSelect(selectId) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = '<option value="">Select Supplier</option>' + 
+        suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+function updateSaleRate() {
+    const customerId = document.getElementById('saleCustomer').value;
+    const product = document.getElementById('saleProduct').value;
+    if (!customerId || !product) return;
+    
+    const customer = customers.find(c => c.id === customerId);
+    if (customer) {
+        document.getElementById('saleRate').value = product === 'pmg' ? customer.pmgRate : customer.hsdRate;
+        calculateSaleTotal();
+    }
+}
+
+function calculateSaleTotal() {
+    const quantity = parseFloat(document.getElementById('saleQuantity').value) || 0;
+    const rate = parseFloat(document.getElementById('saleRate').value) || 0;
+    document.getElementById('saleTotal').value = (quantity * rate).toFixed(2);
+}
+
+function saveSale(e) {
+    e.preventDefault();
+    const customerId = document.getElementById('saleCustomer').value;
+    const customer = customers.find(c => c.id === customerId);
+    
+    const sale = {
+        id: 'sale_' + Date.now(),
+        customerId,
+        customerName: customer.name,
+        product: document.getElementById('saleProduct').value,
+        quantity: parseFloat(document.getElementById('saleQuantity').value),
+        rate: formatRate(document.getElementById('saleRate').value),
+        total: parseFloat(document.getElementById('saleTotal').value),
+        date: new Date().toISOString(),
+        createdBy: currentUser
+    };
+    
+    sales.push(sale);
+    customer.balance += sale.total;
+    
+    localStorage.setItem('sales', JSON.stringify(sales));
+    localStorage.setItem('customers', JSON.stringify(customers));
+    
+    renderSales();
+    renderCustomers();
+    updateDashboardStats();
+    closeModal('saleModal');
+    showNotification('Sale recorded successfully!');
+}
+
+function renderSales() {
+    const tbody = document.getElementById('salesTable');
+    if (sales.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#a0aec0;">No sales yet.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = sales.slice().reverse().map(s => {
+        const date = new Date(s.date);
+        return `
+            <tr>
+                <td>${date.toLocaleDateString()}</td>
+                <td><strong>${s.customerName}</strong></td>
+                <td><span class="badge badge-${s.product === 'pmg' ? 'success' : 'warning'}">${s.product.toUpperCase()}</span></td>
+                <td>${s.quantity.toLocaleString()} L</td>
+                <td>Rs. ${s.rate}/L</td>
+                <td class="profit-positive" style="font-weight:700;">${formatCurrency(s.total)}</td>
+                <td>
+                    <button class="action-btn delete" onclick="deleteSale('${s.id}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function deleteSale(id) {
+    if (confirm('Delete this sale?')) {
+        const sale = sales.find(s => s.id === id);
+        const customer = customers.find(c => c.id === sale.customerId);
+        if (customer) customer.balance -= sale.total;
         
-        let vehicles = [];
-        let customers = [];
-        let suppliers = [];
-        let purchases = [];
-        let sales = [];
-        let expenses = [];
-        let capitals = [];
-        let users = [];
+        sales = sales.filter(s => s.id !== id);
+        localStorage.setItem('sales', JSON.stringify(sales));
+        localStorage.setItem('customers', JSON.stringify(customers));
+        renderSales();
+        renderCustomers();
+        updateDashboardStats();
+        showNotification('Sale deleted!');
+    }
+}
 
-        // Default users
-        const defaultUsers = [
-            { username: 'admin', password: 'admin123', role: 'admin', name: 'Administrator' },
-            { username: 'manager', password: 'manager123', role: 'manager', name: 'Manager' }
-        ];
+// Purchase Functions
+function updatePurchaseRate() {
+    const supplierId = document.getElementById('purchaseSupplier').value;
+    const product = document.getElementById('purchaseProduct').value;
+    if (!supplierId || !product) return;
+    
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (supplier) {
+        document.getElementById('purchaseRate').value = product === 'pmg' ? supplier.pmgRate : supplier.hsdRate;
+        calculatePurchaseTotal();
+    }
+}
 
-        // Default permissions for manager
-        const defaultPermissions = {
-            add_vehicle: true,
-            add_customer: true,
-            add_supplier: true,
-            add_purchase: true,
-            add_sale: true,
-            add_expense: true,
-            add_capital: true,
-            edit_vehicle: false,
-            edit_customer: false,
-            edit_supplier: false,
-            edit_transaction: false,
-            delete_vehicle: false,
-            delete_customer: false,
-            delete_supplier: false,
-            delete_transaction: false,
-            view_reports: true,
-            export_data: true,
-            update_rates: false
-        };
+function calculatePurchaseTotal() {
+    const quantity = parseFloat(document.getElementById('purchaseQuantity').value) || 0;
+    const rate = parseFloat(document.getElementById('purchaseRate').value) || 0;
+    document.getElementById('purchaseTotal').value = (quantity * rate).toFixed(2);
+}
 
-        // ==================== INITIALIZATION ====================
-        window.onload = function() {
-            initializeData();
-            checkLogin();
-        };
+function savePurchase(e) {
+    e.preventDefault();
+    const supplierId = document.getElementById('purchaseSupplier').value;
+    const supplier = suppliers.find(s => s.id === supplierId);
+    
+    const purchase = {
+        id: 'purch_' + Date.now(),
+        supplierId,
+        supplierName: supplier.name,
+        product: document.getElementById('purchaseProduct').value,
+        quantity: parseFloat(document.getElementById('purchaseQuantity').value),
+        rate: formatRate(document.getElementById('purchaseRate').value),
+        total: parseFloat(document.getElementById('purchaseTotal').value),
+        date: new Date().toISOString(),
+        createdBy: currentUser
+    };
+    
+    purchases.push(purchase);
+    supplier.balance += purchase.total;
+    
+    localStorage.setItem('purchases', JSON.stringify(purchases));
+    localStorage.setItem('suppliers', JSON.stringify(suppliers));
+    
+    renderPurchases();
+    renderSuppliers();
+    updateDashboardStats();
+    closeModal('purchaseModal');
+    showNotification('Purchase recorded successfully!');
+}
 
-        function initializeData() {
-            // Load or initialize users
-            const storedUsers = localStorage.getItem('users');
-            users = storedUsers ? JSON.parse(storedUsers) : defaultUsers;
-            if (!storedUsers) {
-                localStorage.setItem('users', JSON.stringify(users));
-            }
+function renderPurchases() {
+    const tbody = document.getElementById('purchasesTable');
+    if (purchases.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#a0aec0;">No purchases yet.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = purchases.slice().reverse().map(p => {
+        const date = new Date(p.date);
+        return `
+            <tr>
+                <td>${date.toLocaleDateString()}</td>
+                <td><strong>${p.supplierName}</strong></td>
+                <td><span class="badge badge-${p.product === 'pmg' ? 'success' : 'warning'}">${p.product.toUpperCase()}</span></td>
+                <td>${p.quantity.toLocaleString()} L</td>
+                <td>Rs. ${p.rate}/L</td>
+                <td class="profit-negative" style="font-weight:700;">${formatCurrency(p.total)}</td>
+                <td>
+                    <button class="action-btn delete" onclick="deletePurchase('${p.id}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
 
-            // Load permissions
-            const storedPermissions = localStorage.getItem('permissions');
-            permissions = storedPermissions ? JSON.parse(storedPermissions) : defaultPermissions;
-            if (!storedPermissions) {
-                localStorage.setItem('permissions', JSON.stringify(permissions));
-            }
+function deletePurchase(id) {
+    if (confirm('Delete this purchase?')) {
+        const purchase = purchases.find(p => p.id === id);
+        const supplier = suppliers.find(s => s.id === purchase.supplierId);
+        if (supplier) supplier.balance -= purchase.total;
+        
+        purchases = purchases.filter(p => p.id !== id);
+        localStorage.setItem('purchases', JSON.stringify(purchases));
+        localStorage.setItem('suppliers', JSON.stringify(suppliers));
+        renderPurchases();
+        renderSuppliers();
+        updateDashboardStats();
+        showNotification('Purchase deleted!');
+    }
+}
 
-            // Load business data
-            vehicles = JSON.parse(localStorage.getItem('vehicles')) || [];
-            customers = JSON.parse(localStorage.getItem('customers')) || [];
-            suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
-            purchases = JSON.parse(localStorage.getItem('purchases')) || [];
-            sales = JSON.parse(localStorage.getItem('sales')) || [];
-            expenses = JSON.parse(localStorage.getItem('expenses')) || [];
-            capitals = JSON.parse(localStorage.getItem('capitals')) || [];
-        }
+// Expense Functions
+function toggleExpenseCustomer() {
+    const checked = document.getElementById('expenseOnBehalfCustomer').checked;
+    document.getElementById('expenseCustomerGroup').style.display = checked ? 'block' : 'none';
+}
 
-        // ==================== LOGIN & AUTHENTICATION ====================
-        function selectRole(role) {
-            document.getElementById('selectedRole').value = role;
-            document.getElementById('adminRoleBtn').classList.remove('active');
-            document.getElementById('managerRoleBtn').classList.remove('active');
-            document.getElementById(role + 'RoleBtn').classList.add('active');
-        }
+function saveExpense(e) {
+    e.preventDefault();
+    const onBehalfCustomer = document.getElementById('expenseOnBehalfCustomer').checked;
+    const customerId = onBehalfCustomer ? document.getElementById('expenseCustomerId').value : null;
+    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    
+    const expense = {
+        id: 'exp_' + Date.now(),
+        category: document.getElementById('expenseCategory').value,
+        description: document.getElementById('expenseDescription').value,
+        amount,
+        customerId,
+        customerName: customerId ? customers.find(c => c.id === customerId)?.name : null,
+        date: new Date().toISOString(),
+        createdBy: currentUser
+    };
+    
+    expenses.push(expense);
+    
+    // If on behalf of customer, add to their balance
+    if (customerId) {
+        const customer = customers.find(c => c.id === customerId);
+        if (customer) customer.balance += amount;
+        localStorage.setItem('customers', JSON.stringify(customers));
+    }
+    
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    
+    renderExpenses();
+    renderCustomers();
+    updateDashboardStats();
+    closeModal('expenseModal');
+    showNotification('Expense recorded successfully!');
+}
 
-        function checkLogin() {
-            const user = localStorage.getItem('currentUser');
-            const role = localStorage.getItem('currentRole');
-            if (user && role) {
-                currentUser = user;
-                currentRole = role;
-                showDashboard();
-            } else {
-                showLogin();
-            }
-        }
+function renderExpenses() {
+    const tbody = document.getElementById('expensesTable');
+    if (expenses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#a0aec0;">No expenses yet.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = expenses.slice().reverse().map(e => {
+        const date = new Date(e.date);
+        return `
+            <tr>
+                <td>${date.toLocaleDateString()}</td>
+                <td><span class="badge badge-warning">${e.category.toUpperCase()}</span></td>
+                <td>${e.description}</td>
+                <td class="profit-negative" style="font-weight:700;">${formatCurrency(e.amount)}</td>
+                <td>${e.customerName || '-'}</td>
+                <td>
+                    <button class="action-btn delete" onclick="deleteExpense('${e.id}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
 
-        function handleLogin(e) {
-            e.preventDefault();
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
-            const role = document.getElementById('selectedRole').value;
-
-            const user = users.find(u => u.username === username.trim() && u.password === password && u.role === role);
-
-            if (user) {
-                localStorage.setItem('currentUser', user.name);
-                localStorage.setItem('currentRole', user.role);
-                currentUser = user.name;
-                currentRole = user.role;
-                showDashboard();
-                showNotification('Login successful! Welcome ' + user.name, 'success');
-            } else {
-                showNotification('Invalid credentials or wrong role selected!', 'error');
-            }
-        }
-
-        function handleLogout() {
-            if (confirm('Are you sure you want to logout?')) {
-                localStorage.removeItem('currentUser');
-                localStorage.removeItem('currentRole');
-                currentUser = null;
-                currentRole = null;
-                showLogin();
-                showNotification('Logged out successfully!', 'success');
-            }
-        }
-
-        function showLogin() {
-            document.getElementById('loginScreen').classList.remove('hidden');
-            document.getElementById('mainDashboard').classList.add('hidden');
-        }
-
-        function showDashboard() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('mainDashboard').classList.remove('hidden');
-            document.getElementById('currentUser').textContent = currentUser;
-            document.getElementById('currentUserRole').innerHTML = currentRole === 'admin' ? '👑 Administrator' : '👤 Manager';
-            document.getElementById('currentUserRole').className = 'user-role role-' + currentRole;
-            
-            // Show/hide permissions button for admin only
-            document.getElementById('btnPermissions').style.display = currentRole === 'admin' ? 'inline-flex' : 'none';
-            
-            applyPermissions();
-            initializeDashboard();
-        }
-
-        // ==================== PERMISSIONS ====================
-        function applyPermissions() {
-            if (currentRole === 'admin') return; // Admin has all permissions
-
-            // Apply add permissions
-            document.getElementById('btnAddVehicle').disabled = !permissions.add_vehicle;
-            document.getElementById('btnAddCustomer').disabled = !permissions.add_customer;
-            document.getElementById('btnAddSupplier').disabled = !permissions.add_supplier;
-            document.getElementById('btnAddPurchase').disabled = !permissions.add_purchase;
-            document.getElementById('btnAddSale').disabled = !permissions.add_sale;
-            document.getElementById('btnAddExpense').disabled = !permissions.add_expense;
-            document.getElementById('btnAddCapital').disabled = !permissions.add_capital;
-            
-            // Hide/show rates button
-            document.getElementById('btnRates').style.display = permissions.update_rates ? 'inline-flex' : 'none';
-        }
-
-        function checkPermissionAndOpenModal(action, modalId) {
-            if (currentRole === 'admin') {
-                openModal(modalId);
-                return true;
-            }
-
-            const permissionKey = action + '_' + modalId.replace('Modal', '');
-            if (permissions[permissionKey]) {
-                openModal(modalId);
-                return true;
-            } else {
-                showNotification('You do not have permission to perform this action!', 'error');
-                return false;
-            }
-        }
-
-        function checkPermission(action, type) {
-            if (currentRole === 'admin') return true;
-            
-            const permissionKey = action + '_' + type;
-            if (permissions[permissionKey]) {
-                return true;
-            } else {
-                showNotification('You do not have permission to ' + action + ' ' + type + '!', 'error');
-                return false;
-            }
-        }
-
-        function savePermissions(e) {
-            e.preventDefault();
-            
-            permissions = {
-                add_vehicle: document.getElementById('perm_add_vehicle').checked,
-                add_customer: document.getElementById('perm_add_customer').checked,
-                add_supplier: document.getElementById('perm_add_supplier').checked,
-                add_purchase: document.getElementById('perm_add_purchase').checked,
-                add_sale: document.getElementById('perm_add_sale').checked,
-                add_expense: document.getElementById('perm_add_expense').checked,
-                add_capital: document.getElementById('perm_add_capital').checked,
-                edit_vehicle: document.getElementById('perm_edit_vehicle').checked,
-                edit_customer: document.getElementById('perm_edit_customer').checked,
-                edit_supplier: document.getElementById('perm_edit_supplier').checked,
-                edit_transaction: document.getElementById('perm_edit_transaction').checked,
-                delete_vehicle: document.getElementById('perm_delete_vehicle').checked,
-                delete_customer: document.getElementById('perm_delete_customer').checked,
-                delete_supplier: document.getElementById('perm_delete_supplier').checked,
-                delete_transaction: document.getElementById('perm_delete_transaction').checked,
-                view_reports: document.getElementById('perm_view_reports').checked,
-                export_data: document.getElementById('perm_export_data').checked,
-                update_rates: document.getElementById('perm_update_rates').checked
-            };
-
-            localStorage.setItem('permissions', JSON.stringify(permissions));
-            showNotification('Permissions updated successfully!', 'success');
-            closeModal('permissionsModal');
-            applyPermissions();
-        }
-
-        function loadPermissions() {
-            document.getElementById('perm_add_vehicle').checked = permissions.add_vehicle || false;
-            document.getElementById('perm_add_customer').checked = permissions.add_customer || false;
-            document.getElementById('perm_add_supplier').checked = permissions.add_supplier || false;
-            document.getElementById('perm_add_purchase').checked = permissions.add_purchase || false;
-            document.getElementById('perm_add_sale').checked = permissions.add_sale || false;
-            document.getElementById('perm_add_expense').checked = permissions.add_expense || false;
-            document.getElementById('perm_add_capital').checked = permissions.add_capital || false;
-            document.getElementById('perm_edit_vehicle').checked = permissions.edit_vehicle || false;
-            document.getElementById('perm_edit_customer').checked = permissions.edit_customer || false;
-            document.getElementById('perm_edit_supplier').checked = permissions.edit_supplier || false;
-            document.getElementById('perm_edit_transaction').checked = permissions.edit_transaction || false;
-            document.getElementById('perm_delete_vehicle').checked = permissions.delete_vehicle || false;
-            document.getElementById('perm_delete_customer').checked = permissions.delete_customer || false;
-            document.getElementById('perm_delete_supplier').checked = permissions.delete_supplier || false;
-            document.getElementById('perm_delete_transaction').checked = permissions.delete_transaction || false;
-            document.getElementById('perm_view_reports').checked = permissions.view_reports || false;
-            document.getElementById('perm_export_data').checked = permissions.export_data || false;
-            document.getElementById('perm_update_rates').checked = permissions.update_rates || false;
-        }
-
-        // ==================== DASHBOARD ====================
-        function initializeDashboard() {
-            loadVehicleOptions();
-            loadCustomerOptions();
-            loadSupplierOptions();
-            renderVehicles();
-            renderCustomers();
-            renderSuppliers();
-            renderPurchases();
-            renderSales();
-            renderExpenses();
-            renderCapitals();
-            updateDashboardStats();
-            generateVehicleReports();
-        }
-
-        function switchTab(t) {
-            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById(t).classList.add('active');
-            if (t === 'reports') {
-                if (currentRole === 'manager' && !permissions.view_reports) {
-                    showNotification('You do not have permission to view reports!', 'error');
-                    return;
-                }
-                generateVehicleReports();
-            }
-        }
-
-        function openModal(m) {
-            if (m === 'rateUpdateModal') loadRateUpdateModal();
-            if (m === 'permissionsModal') loadPermissions();
-            if (m === 'purchaseModal') { loadPurchaseSuppliers(); loadPurchaseVehicles(); }
-            if (m === 'saleModal') { loadSaleCustomers(); loadSaleVehicles(); }
-            if (m === 'expenseModal') { loadExpenseVehicles(); updateExpenseCategories(); }
-            document.getElementById(m).classList.add('active');
-        }
-
-        function closeModal(m) {
-            document.getElementById(m).classList.remove('active');
-        }
-
-        function updateDashboardStats() {
-            const totalRevenue = sales.reduce((s, x) => s + x.totalAmount, 0);
-            const totalExpensesAmt = expenses.reduce((s, x) => s + x.amount, 0);
-            const grossProfit = sales.reduce((s, x) => s + x.profit, 0);
-            const netProfit = grossProfit - totalExpensesAmt;
-            const pendingPayments = customers.reduce((s, c) => s + (c.balance > 0 ? c.balance : 0), 0);
-            const totalCapital = capitals.reduce((s, c) => s + c.amount, 0);
-            const activeVehicleCount = vehicles.filter(v => v.status === 'active').length;
-
-            document.getElementById('totalRevenue').textContent = `Rs. ${totalRevenue.toLocaleString('en-PK', {minimumFractionDigits: 2})}`;
-            document.getElementById('netProfit').textContent = `Rs. ${netProfit.toLocaleString('en-PK', {minimumFractionDigits: 2})}`;
-            document.getElementById('totalExpenses').textContent = `Rs. ${totalExpensesAmt.toLocaleString('en-PK', {minimumFractionDigits: 2})}`;
-            document.getElementById('pendingPayments').textContent = `Rs. ${pendingPayments.toLocaleString('en-PK', {minimumFractionDigits: 2})}`;
-            document.getElementById('activeVehicles').textContent = activeVehicleCount;
-            document.getElementById('ownerCapital').textContent = `Rs. ${totalCapital.toLocaleString('en-PK', {minimumFractionDigits: 2})}`;
-        }
-
-        // ==================== VEHICLES ====================
-        function saveVehicle(e) {
-            e.preventDefault();
-            if (!checkPermission('add', 'vehicle')) return;
-
-            const vehicle = {
-                id: 'veh_' + Date.now(),
-                number: document.getElementById('vehicleNumber').value,
-                status: document.getElementById('vehicleStatus').value,
-                petrolStock: 0,
-                hsdStock: 0,
-                totalProfit: 0,
-                createdAt: new Date().toISOString()
-            };
-            vehicles.push(vehicle);
-            localStorage.setItem('vehicles', JSON.stringify(vehicles));
-            showNotification('Vehicle added successfully!', 'success');
-            closeModal('vehicleModal');
-            renderVehicles();
-            loadVehicleOptions();
-            updateDashboardStats();
-            e.target.reset();
-        }
-
-        function deleteVehicle(id) {
-            if (!checkPermission('delete', 'vehicle')) return;
-            if (!confirm('Delete this vehicle? All related data will be affected.')) return;
-
-            const vehicle = vehicles.find(v => v.id === id);
-            if (vehicle && (vehicle.petrolStock > 0 || vehicle.hsdStock > 0)) {
-                alert('Cannot delete vehicle with active stock!');
-                return;
-            }
-
-            vehicles = vehicles.filter(v => v.id !== id);
-            purchases = purchases.filter(p => p.vehicleId !== id);
-            sales = sales.filter(s => s.vehicleId !== id);
-            expenses = expenses.filter(e => e.vehicleId !== id);
-
-            localStorage.setItem('vehicles', JSON.stringify(vehicles));
-            localStorage.setItem('purchases', JSON.stringify(purchases));
-            localStorage.setItem('sales', JSON.stringify(sales));
-            localStorage.setItem('expenses', JSON.stringify(expenses));
-
-            showNotification('Vehicle and related data deleted!', 'success');
-            renderVehicles();
-            renderPurchases();
-            renderSales();
-            renderExpenses();
-            updateDashboardStats();
-        }
-
-        function renderVehicles() {
-            const tb = document.getElementById('vehiclesTable');
-            if (vehicles.length === 0) {
-                tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#a0aec0;">No vehicles yet.</td></tr>';
-                return;
-            }
-            tb.innerHTML = vehicles.map(v => `
-                <tr>
-                    <td style="font-weight:600;">${v.number}</td>
-                    <td><span class="badge badge-${v.status === 'active' ? 'success' : 'warning'}">${v.status.toUpperCase()}</span></td>
-                    <td>Petrol: ${v.petrolStock.toFixed(0)}L | HSD: ${v.hsdStock.toFixed(0)}L</td>
-                    <td class="profit-positive">Rs. ${v.totalProfit.toLocaleString('en-PK', {minimumFractionDigits: 2})}</td>
-                    <td>
-                        <button class="action-btn view" onclick="viewVehicleDetails('${v.id}')">View</button>
-                        <button class="action-btn delete" onclick="deleteVehicle('${v.id}')" ${currentRole === 'manager' && !permissions.delete_vehicle ? 'disabled' : ''}>Delete</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function viewVehicleDetails(id) {
-            const vehicle = vehicles.find(v => v.id === id);
-            if (!vehicle) return;
-
-            const vehiclePurchases = purchases.filter(p => p.vehicleId === id);
-            const vehicleSales = sales.filter(s => s.vehicleId === id);
-            const vehicleExpenses = expenses.filter(e => e.vehicleId === id);
-
-            const totalPurchase = vehiclePurchases.reduce((s, p) => s + p.totalAmount, 0);
-            const totalSale = vehicleSales.reduce((s, sale) => s + sale.totalAmount, 0);
-            const totalExpense = vehicleExpenses.reduce((s, e) => s + e.amount, 0);
-            const grossProfit = totalSale - totalPurchase;
-            const netProfit = grossProfit - totalExpense;
-
-            alert(`Vehicle: ${vehicle.number}\n\nStock:\nPetrol: ${vehicle.petrolStock} L\nHSD: ${vehicle.hsdStock} L\n\nFinancials:\nPurchases: Rs. ${totalPurchase.toLocaleString()}\nSales: Rs. ${totalSale.toLocaleString()}\nExpenses: Rs. ${totalExpense.toLocaleString()}\nGross Profit: Rs. ${grossProfit.toLocaleString()}\nNet Profit: Rs. ${netProfit.toLocaleString()}`);
-        }
-
-        function loadVehicleOptions() {
-            const selects = ['purchaseVehicle', 'saleVehicle', 'expenseVehicle'];
-            selects.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.innerHTML = '<option value="">-- Select Vehicle --</option>' +
-                        vehicles.map(v => `<option value="${v.id}">${v.number}</option>`).join('');
-                }
-            });
-        }
-
-        // ==================== CUSTOMERS ====================
-        function saveCustomer(e) {
-            e.preventDefault();
-            if (!checkPermission('add', 'customer')) return;
-
-            const customer = {
-                id: 'cust_' + Date.now(),
-                name: document.getElementById('customerName').value,
-                mobile: document.getElementById('customerMobile').value,
-                cnic: document.getElementById('customerCnic').value,
-                address: document.getElementById('customerAddress').value,
-                petrolRate: parseFloat(document.getElementById('customerPetrolRate').value),
-                hsdRate: parseFloat(document.getElementById('customerHsdRate').value),
-                balance: parseFloat(document.getElementById('customerBalance').value) || 0,
-                createdAt: new Date().toISOString()
-            };
-            customers.push(customer);
+function deleteExpense(id) {
+    if (confirm('Delete this expense?')) {
+        const expense = expenses.find(e => e.id === id);
+        if (expense.customerId) {
+            const customer = customers.find(c => c.id === expense.customerId);
+            if (customer) customer.balance -= expense.amount;
             localStorage.setItem('customers', JSON.stringify(customers));
-            showNotification('Customer added successfully!', 'success');
-            closeModal('customerModal');
-            renderCustomers();
-            loadCustomerOptions();
-            e.target.reset();
         }
-
-        function deleteCustomer(id) {
-            if (!checkPermission('delete', 'customer')) return;
-            if (!confirm('Delete this customer?')) return;
-            customers = customers.filter(c => c.id !== id);
-            sales = sales.filter(s => s.customerId !== id);
-            localStorage.setItem('customers', JSON.stringify(customers));
-            localStorage.setItem('sales', JSON.stringify(sales));
-            showNotification('Customer deleted!', 'success');
-            renderCustomers();
-            renderSales();
-        }
-
-        function renderCustomers() {
-            const tb = document.getElementById('customersTable');
-            if (customers.length === 0) {
-                tb.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:#a0aec0;">No customers yet.</td></tr>';
-                return;
-            }
-            tb.innerHTML = customers.map(c => `
-                <tr>
-                    <td style="font-weight:600;">${c.name}</td>
-                    <td>${c.mobile || 'N/A'}</td>
-                    <td>${c.cnic || 'N/A'}</td>
-                    <td>${c.address || 'N/A'}</td>
-                    <td><span class="badge badge-info">Rs. ${c.petrolRate.toFixed(2)}</span></td>
-                    <td><span class="badge badge-warning">Rs. ${c.hsdRate.toFixed(2)}</span></td>
-                    <td class="${c.balance > 0 ? 'profit-negative' : 'profit-positive'}">Rs. ${c.balance.toLocaleString('en-PK', {minimumFractionDigits: 2})}</td>
-                    <td>
-                        <button class="action-btn delete" onclick="deleteCustomer('${c.id}')" ${currentRole === 'manager' && !permissions.delete_customer ? 'disabled' : ''}>Delete</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function loadCustomerOptions() {
-            const el = document.getElementById('saleCustomer');
-            if (el) {
-                el.innerHTML = '<option value="">-- Select Customer --</option>' +
-                    customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            }
-        }
-
-        // ==================== SUPPLIERS ====================
-        function saveSupplier(e) {
-            e.preventDefault();
-            if (!checkPermission('add', 'supplier')) return;
-
-            const supplier = {
-                id: 'supp_' + Date.now(),
-                name: document.getElementById('supplierName').value,
-                contact: document.getElementById('supplierContact').value,
-                petrolRate: parseFloat(document.getElementById('supplierPetrolRate').value),
-                hsdRate: parseFloat(document.getElementById('supplierHsdRate').value),
-                balance: 0,
-                createdAt: new Date().toISOString()
-            };
-            suppliers.push(supplier);
-            localStorage.setItem('suppliers', JSON.stringify(suppliers));
-            showNotification('Supplier added successfully!', 'success');
-            closeModal('supplierModal');
-            renderSuppliers();
-            loadSupplierOptions();
-            e.target.reset();
-        }
-
-        function deleteSupplier(id) {
-            if (!checkPermission('delete', 'supplier')) return;
-            if (!confirm('Delete this supplier?')) return;
-            suppliers = suppliers.filter(s => s.id !== id);
-            purchases = purchases.filter(p => p.supplierId !== id);
-            localStorage.setItem('suppliers', JSON.stringify(suppliers));
-            localStorage.setItem('purchases', JSON.stringify(purchases));
-            showNotification('Supplier deleted!', 'success');
-            renderSuppliers();
-            renderPurchases();
-        }
-
-        function renderSuppliers() {
-            const tb = document.getElementById('suppliersTable');
-            if (suppliers.length === 0) {
-                tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#a0aec0;">No suppliers yet.</td></tr>';
-                return;
-            }
-            tb.innerHTML = suppliers.map(s => `
-                <tr>
-                    <td style="font-weight:600;">${s.name}</td>
-                    <td>${s.contact || 'N/A'}</td>
-                    <td><span class="badge badge-info">Rs. ${s.petrolRate.toFixed(2)}</span></td>
-                    <td><span class="badge badge-warning">Rs. ${s.hsdRate.toFixed(2)}</span></td>
-                    <td class="profit-negative">Rs. ${s.balance.toLocaleString('en-PK', {minimumFractionDigits: 2})}</td>
-                    <td>
-                        <button class="action-btn delete" onclick="deleteSupplier('${s.id}')" ${currentRole === 'manager' && !permissions.delete_supplier ? 'disabled' : ''}>Delete</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function loadSupplierOptions() {
-            const el = document.getElementById('purchaseSupplier');
-            if (el) {
-                el.innerHTML = '<option value="">-- Select Supplier --</option>' +
-                    suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-            }
-        }
-
-        // ==================== PURCHASES ====================
-        function loadPurchaseSuppliers() {
-            document.getElementById('purchaseSupplier').innerHTML = '<option value="">-- Select Supplier --</option>' +
-                suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-        }
-
-        function loadPurchaseVehicles() {
-            document.getElementById('purchaseVehicle').innerHTML = '<option value="">-- Select Vehicle --</option>' +
-                vehicles.filter(v => v.status === 'active').map(v => `<option value="${v.id}">${v.number}</option>`).join('');
-        }
-
-        function loadPurchaseRate() {
-            const supplierId = document.getElementById('purchaseSupplier').value;
-            const product = document.getElementById('purchaseProduct').value;
-            if (!supplierId) return;
-            const supplier = suppliers.find(s => s.id === supplierId);
-            const rate = product === 'petrol' ? supplier.petrolRate : supplier.hsdRate;
-            document.getElementById('purchaseRate').value = rate;
-            calculatePurchaseTotal();
-        }
-
-        function calculatePurchaseTotal() {
-            const qty = parseFloat(document.getElementById('purchaseQuantity').value) || 0;
-            const rate = parseFloat(document.getElementById('purchaseRate').value) || 0;
-            if (qty > 0 && rate > 0) {
-                const total = qty * rate;
-                document.getElementById('purchaseTotal').textContent = `Rs. ${total.toLocaleString('en-PK', {minimumFractionDigits: 2})}`;
-                document.getElementById('purchaseTotalDisplay').style.display = 'block';
-            }
-        }
-
-        function savePurchase(e) {
-            e.preventDefault();
-            if (!checkPermission('add', 'purchase')) return;
-
-            const supplierId = document.getElementById('purchaseSupplier').value;
-            const vehicleId = document.getElementById('purchaseVehicle').value;
-            const product = document.getElementById('purchaseProduct').value;
-            const qty = parseFloat(document.getElementById('purchaseQuantity').value);
-            const rate = parseFloat(document.getElementById('purchaseRate').value);
-            const total = qty * rate;
-
-            const supplier = suppliers.find(s => s.id === supplierId);
-            const vehicle = vehicles.find(v => v.id === vehicleId);
-
-            const purchase = {
-                id: 'pur_' + Date.now(),
-                supplierId,
-                supplierName: supplier.name,
-                vehicleId,
-                vehicleNumber: vehicle.number,
-                productType: product,
-                quantity: qty,
-                rate,
-                totalAmount: total,
-                date: new Date().toISOString()
-            };
-
-            purchases.push(purchase);
-
-            // Update vehicle stock
-            if (product === 'petrol') vehicle.petrolStock += qty;
-            else vehicle.hsdStock += qty;
-
-            // Update supplier balance
-            supplier.balance += total;
-
-            localStorage.setItem('purchases', JSON.stringify(purchases));
-            localStorage.setItem('vehicles', JSON.stringify(vehicles));
-            localStorage.setItem('suppliers', JSON.stringify(suppliers));
-
-            showNotification('Purchase recorded successfully!', 'success');
-            closeModal('purchaseModal');
-            renderPurchases();
-            renderVehicles();
-            renderSuppliers();
-            updateDashboardStats();
-            e.target.reset();
-        }
-
-        function deletePurchase(id) {
-            if (!checkPermission('delete', 'transaction')) return;
-            if (!confirm('Delete this purchase? Vehicle stock will be adjusted.')) return;
-
-            const purchase = purchases.find(p => p.id === id);
-            if (!purchase) return;
-
-            // Update vehicle stock
-            const vehicle = vehicles.find(v => v.id === purchase.vehicleId);
-            if (vehicle) {
-                if (purchase.productType === 'petrol') vehicle.petrolStock -= purchase.quantity;
-                else vehicle.hsdStock -= purchase.quantity;
-            }
-
-            // Update supplier balance
-            const supplier = suppliers.find(s => s.id === purchase.supplierId);
-            if (supplier) supplier.balance -= purchase.totalAmount;
-
-            // Remove purchase
-            purchases = purchases.filter(p => p.id !== id);
-
-            localStorage.setItem('purchases', JSON.stringify(purchases));
-            localStorage.setItem('vehicles', JSON.stringify(vehicles));
-            localStorage.setItem('suppliers', JSON.stringify(suppliers));
-
-            showNotification('Purchase deleted!', 'success');
-            renderPurchases();
-            renderVehicles();
-            renderSuppliers();
-            updateDashboardStats();
-        }
-
-        function renderPurchases() {
-            const tb = document.getElementById('purchasesTable');
-            if (purchases.length === 0) {
-                tb.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:#a0aec0;">No purchases yet.</td></tr>';
-                return;
-            }
-            tb.innerHTML = purchases.slice().reverse().map(p => {
-                const date = new Date(p.date);
-                return `
-                    <tr>
-                        <td>${date.toLocaleDateString()}</td>
-                        <td style="font-weight:600;">${p.supplierName}</td>
-                        <td>${p.vehicleNumber}</td>
-                        <td><span class="badge badge-info">${p.productType.toUpperCase()}</span></td>
-                        <td>${p.quantity.toFixed(0)} L</td>
-                        <td>Rs. ${p.rate.toFixed(2)}</td>
-                        <td class="profit-negative" style="font-weight:700;">Rs. ${p.totalAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}</td>
-                        <td>
-                            <button class="action-btn delete" onclick="deletePurchase('${p.id}')" ${currentRole === 'manager' && !permissions.delete_transaction ? 'disabled' : ''}>Delete</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // ==================== SALES ====================
-        function loadSaleCustomers() {
-            document.getElementById('saleCustomer').innerHTML = '<option value="">-- Select Customer --</option>' +
-                customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-        }
-
-        function loadSaleVehicles() {
-            document.getElementById('saleVehicle').innerHTML = '<option value="">-- Select Vehicle --</option>' +
-                vehicles.map(v => `<option value="${v.id}">${v.number}</option>`).join('');
-        }
-
-        function loadSaleRate() {
-            const customerId = document.getElementById('saleCustomer').value;
-            const product = document.getElementById('saleProduct').value;
-            if (!customerId) return;
-            const customer = customers.find(c => c.id === customerId);
-            const rate = product === 'petrol' ? customer.petrolRate : customer.hsdRate;
-            document.getElementById('saleRate').value = rate;
-            calculateSaleTotal();
-        }
-
-        function checkVehicleStock() {
-            const vehicleId = document.getElementById('saleVehicle').value;
-            const product = document.getElementById('saleProduct').value;
-            if (!vehicleId) return;
-
-            const vehicle = vehicles.find(v => v.id === vehicleId);
-            const stock = product === 'petrol' ? vehicle.petrolStock : vehicle.hsdStock;
-
-            // Get average purchase rate
-            const vehiclePurchases = purchases.filter(p => p.vehicleId === vehicleId && p.productType === product);
-            const avgPurchaseRate = vehiclePurchases.length > 0 ?
-                vehiclePurchases.reduce((s, p) => s + p.rate, 0) / vehiclePurchases.length : 0;
-
-            document.getElementById('displayStock').textContent = `${stock.toFixed(0)} L`;
-            document.getElementById('displayPurchaseRate').textContent = `Rs. ${avgPurchaseRate.toFixed(2)}`;
-            document.getElementById('stockInfo').style.display = 'block';
-
-            calculateSaleTotal();
-        }
-
-        function calculateSaleTotal() {
-            const vehicleId = document.getElementById('saleVehicle').value;
-            const product = document.getElementById('saleProduct').value;
-            const qty = parseFloat(document.getElementById('saleQuantity').value) || 0;
-            const rate = parseFloat(document.getElementById('saleRate').value) || 0;
-            const discount = parseFloat(document.getElementById('saleDiscount').value) || 0;
-
-            if (!vehicleId || qty === 0 || rate === 0) return;
-
-            const vehicle = vehicles.find(v => v.id === vehicleId);
-            const stock = product === 'petrol' ? vehicle.petrolStock : vehicle.hsdStock;
-
-            if (qty > stock) {
-                alert(`Insufficient stock! Available: ${stock} L`);
-                document.getElementById('saleQuantity').value = stock;
-                return;
-            }
-
-            // Get average purchase rate
-            const vehiclePurchases = purchases.filter(p => p.vehicleId === vehicleId && p.productType === product);
-            const avgPurchaseRate = vehiclePurchases.length > 0 ?
-                vehiclePurchases.reduce((s, p) => s + p.rate, 0) / vehiclePurchases.length : 0;
-
-            const finalRate = rate - discount;
-            const totalAmount = qty * finalRate;
-            const profit = qty * (finalRate - avgPurchaseRate);
-
-            document.getElementById('displayFinalRate').textContent = `Rs. ${finalRate.toFixed(2)}`;
-            document.getElementById('displaySaleTotal').textContent = `Rs. ${totalAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}`;
-            document.getElementById('displayProfit').textContent = `Rs. ${profit.toLocaleString('en-PK', {minimumFractionDigits: 2})}`;
-            document.getElementById('displayProfit').className = profit >= 0 ? 'profit-positive' : 'profit-negative';
-            document.getElementById('saleCalculation').style.display = 'block';
-        }
-
-        function saveSale(e) {
-            e.preventDefault();
-            if (!checkPermission('add', 'sale')) return;
-
-            const customerId = document.getElementById('saleCustomer').value;
-            const vehicleId = document.getElementById('saleVehicle').value;
-            const product = document.getElementById('saleProduct').value;
-            const qty = parseFloat(document.getElementById('saleQuantity').value);
-            const rate = parseFloat(document.getElementById('saleRate').value);
-            const discount = parseFloat(document.getElementById('saleDiscount').value) || 0;
-
-            const customer = customers.find(c => c.id === customerId);
-            const vehicle = vehicles.find(v => v.id === vehicleId);
-            const stock = product === 'petrol' ? vehicle.petrolStock : vehicle.hsdStock;
-
-            if (qty > stock) {
-                alert('Insufficient stock!');
-                return;
-            }
-
-            // Get purchase rate
-            const vehiclePurchases = purchases.filter(p => p.vehicleId === vehicleId && p.productType === product);
-            const avgPurchaseRate = vehiclePurchases.length > 0 ?
-                vehiclePurchases.reduce((s, p) => s + p.rate, 0) / vehiclePurchases.length : 0;
-
-            const finalRate = rate - discount;
-            const totalAmount = qty * finalRate;
-            const profit = qty * (finalRate - avgPurchaseRate);
-
-            const sale = {
-                id: 'sale_' + Date.now(),
-                customerId,
-                customerName: customer.name,
-                vehicleId,
-                vehicleNumber: vehicle.number,
-                productType: product,
-                quantity: qty,
-                baseRate: rate,
-                discount,
-                finalRate,
-                totalAmount,
-                purchaseRate: avgPurchaseRate,
-                profit,
-                date: new Date().toISOString()
-            };
-
-            sales.push(sale);
-
-            // Update vehicle stock
-            if (product === 'petrol') vehicle.petrolStock -= qty;
-            else vehicle.hsdStock -= qty;
-
-            // Update vehicle profit
-            vehicle.totalProfit += profit;
-
-            // Update customer balance
-            customer.balance += totalAmount;
-
-            localStorage.setItem('sales', JSON.stringify(sales));
-            localStorage.setItem('vehicles', JSON.stringify(vehicles));
-            localStorage.setItem('customers', JSON.stringify(customers));
-
-            showNotification('Sale recorded successfully!', 'success');
-            closeModal('saleModal');
-            renderSales();
-            renderVehicles();
-            renderCustomers();
-            updateDashboardStats();
-            e.target.reset();
-        }
-
-        function deleteSale(id) {
-            if (!checkPermission('delete', 'transaction')) return;
-            if (!confirm('Delete this sale? Vehicle stock and profit will be adjusted.')) return;
-
-            const sale = sales.find(s => s.id === id);
-            if (!sale) return;
-
-            // Update vehicle stock
-            const vehicle = vehicles.find(v => v.id === sale.vehicleId);
-            if (vehicle) {
-                if (sale.productType === 'petrol') vehicle.petrolStock += sale.quantity;
-                else vehicle.hsdStock += sale.quantity;
-                vehicle.totalProfit -= sale.profit;
-            }
-
-            // Update customer balance
-            const customer = customers.find(c => c.id === sale.customerId);
-            if (customer) customer.balance -= sale.totalAmount;
-
-            // Remove sale
-            sales = sales.filter(s => s.id !== id);
-
-            localStorage.setItem('sales', JSON.stringify(sales));
-            localStorage.setItem('vehicles', JSON.stringify(vehicles));
-            localStorage.setItem('customers', JSON.stringify(customers));
-
-            showNotification('Sale deleted!', 'success');
-            renderSales();
-            renderVehicles();
-            renderCustomers();
-            updateDashboardStats();
-        }
-
-        function renderSales() {
-            const tb = document.getElementById('salesTable');
-            if (sales.length === 0) {
-                tb.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px; color:#a0aec0;">No sales yet.</td></tr>';
-                return;
-            }
-            tb.innerHTML = sales.slice().reverse().map(s => {
-                const date = new Date(s.date);
-                return `
-                    <tr>
-                        <td>${date.toLocaleDateString()}</td>
-                        <td style="font-weight:600;">${s.customerName}</td>
-                        <td>${s.vehicleNumber}</td>
-                        <td><span class="badge badge-success">${s.productType.toUpperCase()}</span></td>
-                        <td>${s.quantity.toFixed(0)} L</td>
-                        <td>Rs. ${s.baseRate.toFixed(2)}</td>
-                        <td class="profit-positive">Rs. ${s.discount.toFixed(2)}</td>
-                        <td>Rs. ${s.finalRate.toFixed(2)}</td>
-                        <td class="profit-positive" style="font-weight:700;">Rs. ${s.totalAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}</td>
-                        <td class="${s.profit >= 0 ? 'profit-positive' : 'profit-negative'}" style="font-weight:700;">Rs. ${s.profit.toLocaleString('en-PK', {minimumFractionDigits: 2})}</td>
-                        <td>
-                            <button class="action-btn delete" onclick="deleteSale('${s.id}')" ${currentRole === 'manager' && !permissions.delete_transaction ? 'disabled' : ''}>Delete</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // ==================== EXPENSES ====================
-        function loadExpenseVehicles() {
-            document.getElementById('expenseVehicle').innerHTML = '<option value="">-- Select Vehicle --</option>' +
-                vehicles.map(v => `<option value="${v.id}">${v.number}</option>`).join('');
-        }
-
-        function updateExpenseCategories() {
-            const type = document.getElementById('expenseType').value;
-            const vehicleGroup = document.getElementById('expenseVehicleGroup');
-            const category = document.getElementById('expenseCategory');
-
-            vehicleGroup.style.display = type === 'vehicle' ? 'block' : 'none';
-
-            const categories = {
-                vehicle: ['Fuel', 'Maintenance', 'Repair', 'Insurance', 'Other'],
-                owner: ['Personal', 'Family', 'Other'],
-                staff: ['Salary', 'Bonus', 'Allowance', 'Other'],
-                business: ['Rent', 'Utilities', 'Office', 'Marketing', 'Other']
-            };
-
-            category.innerHTML = (categories[type] || ['Other']).map(c =>
-                `<option value="${c.toLowerCase()}">${c}</option>`
-            ).join('');
-        }
-
-        function saveExpense(e) {
-            e.preventDefault();
-            if (!checkPermission('add', 'expense')) return;
-
-            const type = document.getElementById('expenseType').value;
-            const vehicleId = type === 'vehicle' ? document.getElementById('expenseVehicle').value : null;
-            const category = document.getElementById('expenseCategory').value;
-            const description = document.getElementById('expenseDescription').value;
-            const amount = parseFloat(document.getElementById('expenseAmount').value);
-
-            const expense = {
-                id: 'exp_' + Date.now(),
-                type,
-                vehicleId,
-                vehicleNumber: vehicleId ? vehicles.find(v => v.id === vehicleId)?.number : null,
-                category,
-                description,
-                amount,
-                date: new Date().toISOString()
-            };
-
-            expenses.push(expense);
-            localStorage.setItem('expenses', JSON.stringify(expenses));
-
-            showNotification('Expense recorded successfully!', 'success');
-            closeModal('expenseModal');
-            renderExpenses();
-            updateDashboardStats();
-            e.target.reset();
-        }
-
-        function deleteExpense(id) {
-            if (!checkPermission('delete', 'transaction')) return;
-            if (!confirm('Delete this expense?')) return;
-            expenses = expenses.filter(e => e.id !== id);
-            localStorage.setItem('expenses', JSON.stringify(expenses));
-            showNotification('Expense deleted!', 'success');
-            renderExpenses();
-            updateDashboardStats();
-        }
-
-        function renderExpenses() {
-            const tb = document.getElementById('expensesTable');
-            if (expenses.length === 0) {
-                tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#a0aec0;">No expenses yet.</td></tr>';
-                return;
-            }
-            tb.innerHTML = expenses.slice().reverse().map(e => {
-                const date = new Date(e.date);
-                return `
-                    <tr>
-                        <td>${date.toLocaleDateString()}</td>
-                        <td><span class="badge badge-${e.type === 'vehicle' ? 'warning' : e.type === 'owner' ? 'info' : e.type === 'staff' ? 'success' : 'purple'}">${e.type.toUpperCase()}</span></td>
-                        <td>${e.category} ${e.vehicleNumber ? `(${e.vehicleNumber})` : ''}</td>
-                        <td>${e.description}</td>
-                        <td class="profit-negative" style="font-weight:700;">Rs. ${e.amount.toLocaleString('en-PK', {minimumFractionDigits: 2})}</td>
-                        <td>
-                            <button class="action-btn delete" onclick="deleteExpense('${e.id}')" ${currentRole === 'manager' && !permissions.delete_transaction ? 'disabled' : ''}>Delete</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // ==================== CAPITAL ====================
-        function saveCapital(e) {
-            e.preventDefault();
-            if (!checkPermission('add', 'capital')) return;
-
-            const type = document.getElementById('capitalType').value;
-            const description = document.getElementById('capitalDescription').value;
-            const amount = parseFloat(document.getElementById('capitalAmount').value);
-
-            const capital = {
-                id: 'cap_' + Date.now(),
-                type,
-                description,
-                amount,
-                date: new Date().toISOString()
-            };
-
-            capitals.push(capital);
-            localStorage.setItem('capitals', JSON.stringify(capitals));
-
-            showNotification('Capital entry recorded successfully!', 'success');
-            closeModal('capitalModal');
-            renderCapitals();
-            updateDashboardStats();
-            e.target.reset();
-        }
-
-        function deleteCapital(id) {
-            if (!checkPermission('delete', 'transaction')) return;
-            if (!confirm('Delete this capital entry?')) return;
-            capitals = capitals.filter(c => c.id !== id);
-            localStorage.setItem('capitals', JSON.stringify(capitals));
-            showNotification('Capital entry deleted!', 'success');
-            renderCapitals();
-            updateDashboardStats();
-        }
-
-        function renderCapitals() {
-            const tb = document.getElementById('capitalTable');
-            if (capitals.length === 0) {
-                tb.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#a0aec0;">No capital entries yet.</td></tr>';
-                return;
-            }
-            tb.innerHTML = capitals.slice().reverse().map(c => {
-                const date = new Date(c.date);
-                return `
-                    <tr>
-                        <td>${date.toLocaleDateString()}</td>
-                        <td><span class="badge badge-info">${c.type.toUpperCase().replace('_', ' ')}</span></td>
-                        <td>${c.description}</td>
-                        <td class="profit-positive" style="font-weight:700;">Rs. ${c.amount.toLocaleString('en-PK', {minimumFractionDigits: 2})}</td>
-                        <td>
-                            <button class="action-btn delete" onclick="deleteCapital('${c.id}')" ${currentRole === 'manager' && !permissions.delete_transaction ? 'disabled' : ''}>Delete</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // ==================== REPORTS ====================
-        function generateVehicleReports() {
-            const reportsDiv = document.getElementById('vehicleReports');
-            if (vehicles.length === 0) {
-                reportsDiv.innerHTML = '<p style="color:#a0aec0; text-align:center; padding:30px;">No vehicles to report.</p>';
-                return;
-            }
-
-            reportsDiv.innerHTML = vehicles.map(v => {
-                const vehiclePurchases = purchases.filter(p => p.vehicleId === v.id);
-                const vehicleSales = sales.filter(s => s.vehicleId === v.id);
-                const vehicleExpenses = expenses.filter(e => e.vehicleId === v.id);
-
-                const totalPurchase = vehiclePurchases.reduce((s, p) => s + p.totalAmount, 0);
-                const totalSale = vehicleSales.reduce((s, sale) => s + sale.totalAmount, 0);
-                const grossProfit = vehicleSales.reduce((s, sale) => s + sale.profit, 0);
-                const totalExpense = vehicleExpenses.reduce((s, e) => s + e.amount, 0);
-                const netProfit = grossProfit - totalExpense;
-
-                return `
-                    <div class="vehicle-summary">
-                        <h4>🚛 ${v.number}</h4>
-                        <div class="summary-row">
-                            <span>Current Stock:</span>
-                            <strong>Petrol: ${v.petrolStock.toFixed(0)}L | HSD: ${v.hsdStock.toFixed(0)}L</strong>
-                        </div>
-                        <div class="summary-row">
-                            <span>Total Purchases:</span>
-                            <strong class="profit-negative">Rs. ${totalPurchase.toLocaleString('en-PK', {minimumFractionDigits: 2})}</strong>
-                        </div>
-                        <div class="summary-row">
-                            <span>Total Sales:</span>
-                            <strong class="profit-positive">Rs. ${totalSale.toLocaleString('en-PK', {minimumFractionDigits: 2})}</strong>
-                        </div>
-                        <div class="summary-row">
-                            <span>Gross Profit:</span>
-                            <strong class="${grossProfit >= 0 ? 'profit-positive' : 'profit-negative'}">Rs. ${grossProfit.toLocaleString('en-PK', {minimumFractionDigits: 2})}</strong>
-                        </div>
-                        <div class="summary-row">
-                            <span>Vehicle Expenses:</span>
-                            <strong class="profit-negative">Rs. ${totalExpense.toLocaleString('en-PK', {minimumFractionDigits: 2})}</strong>
-                        </div>
-                        <div class="summary-row" style="background:#ebf4ff; padding:10px; border-radius:6px; margin-top:8px;">
-                            <span style="font-weight:700; color:#667eea;">NET PROFIT:</span>
-                            <strong class="${netProfit >= 0 ? 'profit-positive' : 'profit-negative'}" style="font-size:1.2em;">Rs. ${netProfit.toLocaleString('en-PK', {minimumFractionDigits: 2})}</strong>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // ==================== RATE UPDATE ====================
-        function loadRateUpdateModal() {
-            if (currentRole === 'manager' && !permissions.update_rates) {
-                showNotification('You do not have permission to update rates!', 'error');
-                return;
-            }
-
-            document.getElementById('customerRatesUpdate').innerHTML = customers.map(c => `
-                <div style="background:#f7fafc; padding:15px; border-radius:10px; margin-bottom:10px; border:2px solid #e2e8f0;">
-                    <h4 style="color:#2d3748; margin-bottom:10px; font-weight:700;">${c.name}</h4>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Petrol Rate</label>
-                            <input type="number" id="rate_c_${c.id}_petrol" value="${c.petrolRate}" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>HSD Rate</label>
-                            <input type="number" id="rate_c_${c.id}_hsd" value="${c.hsdRate}" step="0.01">
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            document.getElementById('supplierRatesUpdate').innerHTML = suppliers.map(s => `
-                <div style="background:#f7fafc; padding:15px; border-radius:10px; margin-bottom:10px; border:2px solid #e2e8f0;">
-                    <h4 style="color:#2d3748; margin-bottom:10px; font-weight:700;">${s.name}</h4>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Petrol Rate</label>
-                            <input type="number" id="rate_s_${s.id}_petrol" value="${s.petrolRate}" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>HSD Rate</label>
-                            <input type="number" id="rate_s_${s.id}_hsd" value="${s.hsdRate}" step="0.01">
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function saveAllRates() {
-            if (currentRole === 'manager' && !permissions.update_rates) {
-                showNotification('You do not have permission to update rates!', 'error');
-                return;
-            }
-
+        
+        expenses = expenses.filter(e => e.id !== id);
+        localStorage.setItem('expenses', JSON.stringify(expenses));
+        renderExpenses();
+        renderCustomers();
+        updateDashboardStats();
+        showNotification('Expense deleted!');
+    }
+}
+
+// Payment Functions
+function updatePaymentFields() {
+    const type = document.getElementById('paymentType').value;
+    const fromSelect = document.getElementById('paymentFrom');
+    const toSelect = document.getElementById('paymentTo');
+    
+    fromSelect.innerHTML = '<option value="">-- Select --</option>';
+    toSelect.innerHTML = '<option value="">-- Select --</option>';
+    
+    switch(type) {
+        case 'customer_to_bank':
             customers.forEach(c => {
-                const p = document.getElementById(`rate_c_${c.id}_petrol`);
-                const h = document.getElementById(`rate_c_${c.id}_hsd`);
-                if (p) c.petrolRate = parseFloat(p.value);
-                if (h) c.hsdRate = parseFloat(h.value);
+                fromSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
             });
-
+            toSelect.innerHTML += '<option value="bank">Bank Account</option>';
+            break;
+            
+        case 'customer_to_supplier':
+            customers.forEach(c => {
+                fromSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
             suppliers.forEach(s => {
-                const p = document.getElementById(`rate_s_${s.id}_petrol`);
-                const h = document.getElementById(`rate_s_${s.id}_hsd`);
-                if (p) s.petrolRate = parseFloat(p.value);
-                if (h) s.hsdRate = parseFloat(h.value);
+                toSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
             });
+            break;
+            
+        case 'customer_to_owner':
+            customers.forEach(c => {
+                fromSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+            toSelect.innerHTML += '<option value="owner">Owner Account</option>';
+            break;
+            
+        case 'owner_to_supplier':
+            fromSelect.innerHTML += '<option value="owner">Owner Account</option>';
+            suppliers.forEach(s => {
+                toSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+            });
+            break;
+    }
+}
 
-            localStorage.setItem('customers', JSON.stringify(customers));
-            localStorage.setItem('suppliers', JSON.stringify(suppliers));
-            renderCustomers();
-            renderSuppliers();
-            closeModal('rateUpdateModal');
-            showNotification('All rates updated successfully!', 'success');
+function savePayment(e) {
+    e.preventDefault();
+    const type = document.getElementById('paymentType').value;
+    const fromId = document.getElementById('paymentFrom').value;
+    const toId = document.getElementById('paymentTo').value;
+    const amount = parseFloat(document.getElementById('paymentAmount').value);
+    
+    const payment = {
+        id: 'pay_' + Date.now(),
+        type,
+        fromId,
+        toId,
+        amount,
+        method: document.getElementById('paymentMethod').value,
+        description: document.getElementById('paymentDescription').value,
+        date: new Date().toISOString(),
+        createdBy: currentUser
+    };
+    
+    payments.push(payment);
+    
+    // Update accounts
+    if (type === 'customer_to_bank') {
+        const customer = customers.find(c => c.id === fromId);
+        if (customer) customer.balance -= amount;
+    } else if (type === 'customer_to_supplier') {
+        const customer = customers.find(c => c.id === fromId);
+        const supplier = suppliers.find(s => s.id === toId);
+        if (customer) customer.balance -= amount;
+        if (supplier) supplier.balance -= amount;
+    } else if (type === 'customer_to_owner') {
+        const customer = customers.find(c => c.id === fromId);
+        if (customer) customer.balance -= amount;
+    } else if (type === 'owner_to_supplier') {
+        const supplier = suppliers.find(s => s.id === toId);
+        if (supplier) supplier.balance -= amount;
+    }
+    
+    localStorage.setItem('payments', JSON.stringify(payments));
+    localStorage.setItem('customers', JSON.stringify(customers));
+    localStorage.setItem('suppliers', JSON.stringify(suppliers));
+    
+    renderPayments();
+    renderCustomers();
+    renderSuppliers();
+    updateDashboardStats();
+    closeModal('paymentModal');
+    showNotification('Payment recorded successfully!');
+}
+
+function renderPayments() {
+    const tbody = document.getElementById('paymentsTable');
+    if (payments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#a0aec0;">No payments yet.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = payments.slice().reverse().map(p => {
+        const date = new Date(p.date);
+        const fromName = p.fromId === 'owner' ? 'Owner' : p.fromId === 'bank' ? 'Bank' : 
+            (customers.find(c => c.id === p.fromId)?.name || suppliers.find(s => s.id === p.fromId)?.name || 'Unknown');
+        const toName = p.toId === 'owner' ? 'Owner' : p.toId === 'bank' ? 'Bank' : 
+            (customers.find(c => c.id === p.toId)?.name || suppliers.find(s => s.id === p.toId)?.name || 'Unknown');
+        
+        return `
+            <tr>
+                <td>${date.toLocaleDateString()}</td>
+                <td><strong>${fromName}</strong></td>
+                <td><strong>${toName}</strong></td>
+                <td class="profit-positive" style="font-weight:700;">${formatCurrency(p.amount)}</td>
+                <td><span class="badge badge-info">${p.method.toUpperCase()}</span></td>
+                <td>
+                    <button class="action-btn delete" onclick="deletePayment('${p.id}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function deletePayment(id) {
+    if (confirm('Delete this payment?')) {
+        payments = payments.filter(p => p.id !== id);
+        localStorage.setItem('payments', JSON.stringify(payments));
+        renderPayments();
+        showNotification('Payment deleted!');
+    }
+}
+
+// Bank Functions
+function updateBankFields() {
+    const type = document.getElementById('bankTransactionType').value;
+    const fromGroup = document.getElementById('bankFromGroup');
+    const toGroup = document.getElementById('bankToGroup');
+    const fromSelect = document.getElementById('bankFrom');
+    const toSelect = document.getElementById('bankTo');
+    
+    fromGroup.style.display = 'none';
+    toGroup.style.display = 'none';
+    fromSelect.innerHTML = '<option value="">-- Select --</option>';
+    toSelect.innerHTML = '<option value="">-- Select --</option>';
+    
+    if (type === 'deposit') {
+        fromGroup.style.display = 'block';
+        customers.forEach(c => {
+            fromSelect.innerHTML += `<option value="${c.id}">${c.name} (Customer)</option>`;
+        });
+    } else if (type === 'withdrawal') {
+        toGroup.style.display = 'block';
+        suppliers.forEach(s => {
+            toSelect.innerHTML += `<option value="${s.id}">${s.name} (Supplier)</option>`;
+        });
+        toSelect.innerHTML += '<option value="owner">Owner</option>';
+    } else if (type === 'transfer') {
+        fromGroup.style.display = 'block';
+        toGroup.style.display = 'block';
+        fromSelect.innerHTML += '<option value="bank">Bank Account</option>';
+        toSelect.innerHTML += '<option value="bank">Bank Account</option>';
+    }
+}
+
+function saveBankTransaction(e) {
+    e.preventDefault();
+    const type = document.getElementById('bankTransactionType').value;
+    const amount = parseFloat(document.getElementById('bankAmount').value);
+    
+    const transaction = {
+        id: 'bank_' + Date.now(),
+        type,
+        fromId: document.getElementById('bankFrom')?.value || null,
+        toId: document.getElementById('bankTo')?.value || null,
+        amount,
+        description: document.getElementById('bankDescription').value,
+        date: new Date().toISOString(),
+        createdBy: currentUser
+    };
+    
+    bankTransactions.push(transaction);
+    localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
+    
+    renderBankTransactions();
+    updateDashboardStats();
+    closeModal('bankModal');
+    showNotification('Bank transaction recorded successfully!');
+}
+
+function renderBankTransactions() {
+    const tbody = document.getElementById('bankTable');
+    if (bankTransactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#a0aec0;">No bank transactions yet.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = bankTransactions.slice().reverse().map(t => {
+        const date = new Date(t.date);
+        const fromName = t.fromId ? (customers.find(c => c.id === t.fromId)?.name || t.fromId) : '-';
+        const toName = t.toId ? (suppliers.find(s => s.id === t.toId)?.name || t.toId) : '-';
+        
+        return `
+            <tr>
+                <td>${date.toLocaleDateString()}</td>
+                <td><span class="badge badge-info">${t.type.toUpperCase()}</span></td>
+                <td>${fromName}</td>
+                <td>${toName}</td>
+                <td class="profit-positive" style="font-weight:700;">${formatCurrency(t.amount)}</td>
+                <td>
+                    <button class="action-btn delete" onclick="deleteBankTransaction('${t.id}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function deleteBankTransaction(id) {
+    if (confirm('Delete this bank transaction?')) {
+        bankTransactions = bankTransactions.filter(t => t.id !== id);
+        localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
+        renderBankTransactions();
+        updateDashboardStats();
+        showNotification('Bank transaction deleted!');
+    }
+}
+
+// Ledger
+function renderLedger() {
+    const tbody = document.getElementById('ledgerTable');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#a0aec0;">Ledger feature coming soon!</td></tr>';
+}
+
+// Government Rate Update
+function previewRateChange() {
+    const updatePmg = document.getElementById('updatePmg').checked;
+    const updateHsd = document.getElementById('updateHsd').checked;
+    const changeType = document.getElementById('changeType').value;
+    const changeSign = parseInt(document.getElementById('changeSign').value);
+    const changeAmount = parseFloat(document.getElementById('changeAmount').value);
+    const scope = document.getElementById('changeScope').value;
+    
+    if (!updatePmg && !updateHsd) {
+        showNotification('Select at least one fuel type!', 'error');
+        return;
+    }
+    
+    let affectedParties = [];
+    if (scope === 'all' || scope === 'customers') affectedParties = affectedParties.concat(customers);
+    if (scope === 'all' || scope === 'suppliers') affectedParties = affectedParties.concat(suppliers);
+    
+    let html = '<table style="width:100%; font-size:0.85em;"><thead><tr><th>Name</th><th>Old PMG</th><th>New PMG</th><th>Old HSD</th><th>New HSD</th></tr></thead><tbody>';
+    
+    affectedParties.slice(0, 5).forEach(party => {
+        const oldPmg = parseFloat(party.pmgRate);
+        const oldHsd = parseFloat(party.hsdRate);
+        
+        let newPmg, newHsd;
+        if (changeType === 'absolute') {
+            newPmg = updatePmg ? roundRate(oldPmg + (changeSign * changeAmount)) : oldPmg;
+            newHsd = updateHsd ? roundRate(oldHsd + (changeSign * changeAmount)) : oldHsd;
+        } else {
+            newPmg = updatePmg ? roundRate(oldPmg * (1 + changeSign * changeAmount / 100)) : oldPmg;
+            newHsd = updateHsd ? roundRate(oldHsd * (1 + changeSign * changeAmount / 100)) : oldHsd;
         }
+        
+        html += `
+            <tr>
+                <td><strong>${party.name}</strong></td>
+                <td>Rs. ${oldPmg.toFixed(4)}</td>
+                <td style="color:${newPmg > oldPmg ? '#48bb78' : newPmg < oldPmg ? '#f56565' : '#718096'};">Rs. ${newPmg.toFixed(4)}</td>
+                <td>Rs. ${oldHsd.toFixed(4)}</td>
+                <td style="color:${newHsd > oldHsd ? '#48bb78' : newHsd < oldHsd ? '#f56565' : '#718096'};">Rs. ${newHsd.toFixed(4)}</td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table>';
+    if (affectedParties.length > 5) {
+        html += `<p style="text-align:center; margin-top:10px; color:#718096;">... and ${affectedParties.length - 5} more</p>`;
+    }
+    html += `<p style="text-align:center; margin-top:15px; font-weight:700; color:#667eea;">Total: ${affectedParties.length} parties</p>`;
+    
+    document.getElementById('previewContent').innerHTML = html;
+    document.getElementById('rateChangePreview').style.display = 'block';
+}
 
-        // ==================== EXCEL EXPORT ====================
-        function exportToExcel() {
-            if (currentRole === 'manager' && !permissions.export_data) {
-                showNotification('You do not have permission to export data!', 'error');
-                return;
+function applyGovRateChange(e) {
+    e.preventDefault();
+    
+    const updatePmg = document.getElementById('updatePmg').checked;
+    const updateHsd = document.getElementById('updateHsd').checked;
+    const changeType = document.getElementById('changeType').value;
+    const changeSign = parseInt(document.getElementById('changeSign').value);
+    const changeAmount = parseFloat(document.getElementById('changeAmount').value);
+    const scope = document.getElementById('changeScope').value;
+    
+    if (!updatePmg && !updateHsd) {
+        showNotification('Select at least one fuel type!', 'error');
+        return;
+    }
+    
+    if (!confirm(`Apply rate change?\nType: ${changeType}\nAmount: ${changeSign > 0 ? '+' : ''}${changeAmount}\nThis will update all rates!`)) {
+        return;
+    }
+    
+    const logEntry = {
+        id: 'log_' + Date.now(),
+        updatePmg,
+        updateHsd,
+        changeType,
+        changeSign,
+        changeAmount,
+        scope,
+        appliedBy: currentUser,
+        appliedAt: new Date().toISOString(),
+        changes: []
+    };
+    
+    // Update customers
+    if (scope === 'all' || scope === 'customers') {
+        customers.forEach(customer => {
+            const oldPmg = parseFloat(customer.pmgRate);
+            const oldHsd = parseFloat(customer.hsdRate);
+            
+            let newPmg, newHsd;
+            if (changeType === 'absolute') {
+                newPmg = updatePmg ? roundRate(oldPmg + (changeSign * changeAmount)) : oldPmg;
+                newHsd = updateHsd ? roundRate(oldHsd + (changeSign * changeAmount)) : oldHsd;
+            } else {
+                newPmg = updatePmg ? roundRate(oldPmg * (1 + changeSign * changeAmount / 100)) : oldPmg;
+                newHsd = updateHsd ? roundRate(oldHsd * (1 + changeSign * changeAmount / 100)) : oldHsd;
             }
-
-            const wb = XLSX.utils.book_new();
-
-            // Sales
-            const salesData = sales.map(s => {
-                const d = new Date(s.date);
-                return {
-                    Date: d.toLocaleDateString(),
-                    Customer: s.customerName,
-                    Vehicle: s.vehicleNumber,
-                    Product: s.productType.toUpperCase(),
-                    'Qty (L)': s.quantity,
-                    'Rate': s.baseRate,
-                    Discount: s.discount,
-                    'Final Rate': s.finalRate,
-                    'Total': s.totalAmount,
-                    Profit: s.profit
-                };
+            
+            logEntry.changes.push({
+                partyId: customer.id,
+                partyName: customer.name,
+                partyType: 'customer',
+                oldPmgRate: oldPmg,
+                newPmgRate: newPmg,
+                oldHsdRate: oldHsd,
+                newHsdRate: newHsd
             });
-            const ws1 = XLSX.utils.json_to_sheet(salesData);
-            XLSX.utils.book_append_sheet(wb, ws1, 'Sales');
-
-            // Purchases
-            const purchData = purchases.map(p => {
-                const d = new Date(p.date);
-                return {
-                    Date: d.toLocaleDateString(),
-                    Supplier: p.supplierName,
-                    Vehicle: p.vehicleNumber,
-                    Product: p.productType.toUpperCase(),
-                    'Qty (L)': p.quantity,
-                    Rate: p.rate,
-                    Total: p.totalAmount
-                };
-            });
-            const ws2 = XLSX.utils.json_to_sheet(purchData);
-            XLSX.utils.book_append_sheet(wb, ws2, 'Purchases');
-
-            // Expenses
-            const expData = expenses.map(e => {
-                const d = new Date(e.date);
-                return {
-                    Date: d.toLocaleDateString(),
-                    Type: e.type,
-                    Category: e.category,
-                    Description: e.description,
-                    Amount: e.amount
-                };
-            });
-            const ws3 = XLSX.utils.json_to_sheet(expData);
-            XLSX.utils.book_append_sheet(wb, ws3, 'Expenses');
-
-            // Capital
-            const capData = capitals.map(c => {
-                const d = new Date(c.date);
-                return {
-                    Date: d.toLocaleDateString(),
-                    Type: c.type,
-                    Description: c.description,
-                    Amount: c.amount
-                };
-            });
-            const ws4 = XLSX.utils.json_to_sheet(capData);
-            XLSX.utils.book_append_sheet(wb, ws4, 'Capital');
-
-            // Vehicles Report
-            const vehData = vehicles.map(v => {
-                const vehiclePurchases = purchases.filter(p => p.vehicleId === v.id);
-                const vehicleSales = sales.filter(s => s.vehicleId === v.id);
-                const vehicleExpenses = expenses.filter(e => e.vehicleId === v.id);
-                const totalPurchase = vehiclePurchases.reduce((s, p) => s + p.totalAmount, 0);
-                const totalSale = vehicleSales.reduce((s, sale) => s + sale.totalAmount, 0);
-                const grossProfit = vehicleSales.reduce((s, sale) => s + sale.profit, 0);
-                const totalExpense = vehicleExpenses.reduce((s, e) => s + e.amount, 0);
-                const netProfit = grossProfit - totalExpense;
-                return {
-                    Vehicle: v.number,
-                    Status: v.status,
-                    'Petrol Stock': v.petrolStock,
-                    'HSD Stock': v.hsdStock,
-                    'Total Purchases': totalPurchase,
-                    'Total Sales': totalSale,
-                    'Gross Profit': grossProfit,
-                    'Expenses': totalExpense,
-                    'Net Profit': netProfit
-                };
-            });
-            const ws5 = XLSX.utils.json_to_sheet(vehData);
-            XLSX.utils.book_append_sheet(wb, ws5, 'Vehicle Reports');
-
-            const date = new Date().toISOString().split('T')[0];
-            XLSX.writeFile(wb, `Baghoor_Complete_${date}.xlsx`);
-            showNotification('Excel exported successfully!', 'success');
-        }
-
-        // ==================== UTILITIES ====================
-        function showNotification(msg, type) {
-            const n = document.createElement('div');
-            n.className = `notification ${type}`;
-            n.innerHTML = `<strong>${type === 'success' ? '✅' : '❌'} ${msg}</strong>`;
-            document.body.appendChild(n);
-            setTimeout(() => n.remove(), 3500);
-        }
-
-        // Modal Click Outside to Close
-        window.onclick = function(e) {
-            if (e.target.classList.contains('modal')) {
-                e.target.classList.remove('active');
+            
+            customer.pmgRate = newPmg.toFixed(4);
+            customer.hsdRate = newHsd.toFixed(4);
+        });
+    }
+    
+    // Update suppliers
+    if (scope === 'all' || scope === 'suppliers') {
+        suppliers.forEach(supplier => {
+            const oldPmg = parseFloat(supplier.pmgRate);
+            const oldHsd = parseFloat(supplier.hsdRate);
+            
+            let newPmg, newHsd;
+            if (changeType === 'absolute') {
+                newPmg = updatePmg ? roundRate(oldPmg + (changeSign * changeAmount)) : oldPmg;
+                newHsd = updateHsd ? roundRate(oldHsd + (changeSign * changeAmount)) : oldHsd;
+            } else {
+                newPmg = updatePmg ? roundRate(oldPmg * (1 + changeSign * changeAmount / 100)) : oldPmg;
+                newHsd = updateHsd ? roundRate(oldHsd * (1 + changeSign * changeAmount / 100)) : oldHsd;
             }
-        }
-    </script>
+            
+            logEntry.changes.push({
+                partyId: supplier.id,
+                partyName: supplier.name,
+                partyType: 'supplier',
+                oldPmgRate: oldPmg,
+                newPmgRate: newPmg,
+                oldHsdRate: oldHsd,
+                newHsdRate: newHsd
+            });
+            
+            supplier.pmgRate = newPmg.toFixed(4);
+            supplier.hsdRate = newHsd.toFixed(4);
+        });
+    }
+    
+    rateChangeLogs.push(logEntry);
+    localStorage.setItem('rateChangeLogs', JSON.stringify(rateChangeLogs));
+    localStorage.setItem('customers', JSON.stringify(customers));
+    localStorage.setItem('suppliers', JSON.stringify(suppliers));
+    
+    showNotification(`Rate change applied to ${logEntry.changes.length} parties!`, 'success');
+    closeModal('govRateModal');
+    renderCustomers();
+    renderSuppliers();
+    document.getElementById('rateChangePreview').style.display = 'none';
+}
+
+// Dashboard Stats
+function updateDashboardStats() {
+    document.getElementById('totalCustomers').textContent = customers.length;
+    document.getElementById('totalSuppliers').textContent = suppliers.length;
+    
+    const totalReceivables = customers.reduce((sum, c) => sum + (c.balance > 0 ? c.balance : 0), 0);
+    const totalPayables = suppliers.reduce((sum, s) => sum + (s.balance > 0 ? s.balance : 0), 0);
+    
+    document.getElementById('totalReceivables').textContent = formatCurrency(totalReceivables);
+    document.getElementById('totalPayables').textContent = formatCurrency(totalPayables);
+    
+    const today = new Date().toDateString();
+    const todaySales = sales.filter(s => new Date(s.date).toDateString() === today)
+        .reduce((sum, s) => sum + s.total, 0);
+    document.getElementById('todaySales').textContent = formatCurrency(todaySales);
+    
+    const bankBalance = bankTransactions
+        .filter(t => t.type === 'deposit')
+        .reduce((sum, t) => sum + t.amount, 0) -
+        bankTransactions
+        .filter(t => t.type === 'withdrawal')
+        .reduce((sum, t) => sum + t.amount, 0);
+    document.getElementById('bankBalance').textContent = formatCurrency(bankBalance);
+}
+</script>
 </body>
 </html>
