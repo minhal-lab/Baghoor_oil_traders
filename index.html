@@ -489,10 +489,12 @@
                 <button class="quick-btn" onclick="openModal('saleModal')">💰 Record Sale</button>
                 <button class="quick-btn" onclick="openModal('purchaseModal')">🛒 Record Purchase</button>
                 <button class="quick-btn" onclick="openModal('paymentModal')">💳 Record Payment</button>
+                <button class="quick-btn" onclick="openModal('jvModal')">📝 JV Voucher</button>
                 <button class="quick-btn" onclick="openModal('customerTransferModal')">🔄 Customer Transfer</button>
                 <button class="quick-btn" onclick="openModal('expenseModal')">💸 Add Expense</button>
                 <button class="quick-btn" onclick="openModal('bankTransModal')">🏦 Bank Transaction</button>
                 <button class="quick-btn" onclick="openModal('vehicleModal')">🚛 Add Vehicle</button>
+                <button class="quick-btn" onclick="openModal('invoiceModal')">🧾 Vehicle Invoice</button>
                 <button class="quick-btn" onclick="openModal('govRateModal')">📊 Gov Rate Change</button>
             </div>
         </div>
@@ -879,6 +881,11 @@
                 </div>
             </div>
             <div class="form-group">
+                <label>Opening Balance (Rs)</label>
+                <input type="number" step="0.01" id="customerOpeningBalance" value="0" placeholder="Previous balance (if any)">
+                <small style="color: var(--text-secondary); font-size: 0.85em;">💡 Enter previous balance here (Positive = Customer owes you, Negative = You owe customer)</small>
+            </div>
+            <div class="form-group">
                 <label>Address</label>
                 <textarea id="customerAddress"></textarea>
             </div>
@@ -923,6 +930,11 @@
                     <label>HSD Rate (Rs/L) *</label>
                     <input type="number" step="0.0001" id="supplierHsdRate" required>
                 </div>
+            </div>
+            <div class="form-group">
+                <label>Opening Balance (Rs)</label>
+                <input type="number" step="0.01" id="supplierOpeningBalance" value="0" placeholder="Previous balance (if any)">
+                <small style="color: var(--text-secondary); font-size: 0.85em;">💡 Enter previous balance here (Positive = You owe supplier, Negative = Supplier owes you)</small>
             </div>
             <div class="form-group">
                 <label>Address</label>
@@ -978,8 +990,33 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>Total Amount</label>
-                <input type="number" step="0.01" id="saleAmount" readonly>
+                <label>Subtotal (Before Discount)</label>
+                <input type="number" step="0.01" id="saleSubtotal" readonly style="background: #f0f0f0; font-weight: 600;">
+            </div>
+            
+            <!-- DISCOUNT SECTION -->
+            <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 2px solid #ffc107;">
+                <h4 style="color: #856404; margin-bottom: 10px; font-size: 0.95em;">💰 Discount (Optional)</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Discount Type</label>
+                        <select id="saleDiscountType" onchange="calculateSaleAmount()">
+                            <option value="none">No Discount</option>
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="fixed">Fixed Amount (Rs)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Discount Value</label>
+                        <input type="number" step="0.01" id="saleDiscountValue" value="0" oninput="calculateSaleAmount()" placeholder="Enter discount">
+                    </div>
+                </div>
+                <div id="saleDiscountInfo" style="font-size: 0.85em; color: #856404; margin-top: 8px;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>Final Amount (After Discount)</label>
+                <input type="number" step="0.01" id="saleAmount" readonly style="background: #d4edda; font-weight: 700; font-size: 1.1em; color: #155724;">
             </div>
             <div class="form-group">
                 <label>Date</label>
@@ -1031,8 +1068,33 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>Total Amount</label>
-                <input type="number" step="0.01" id="purchaseAmount" readonly>
+                <label>Subtotal (Before Discount)</label>
+                <input type="number" step="0.01" id="purchaseSubtotal" readonly style="background: #f0f0f0; font-weight: 600;">
+            </div>
+            
+            <!-- DISCOUNT SECTION -->
+            <div style="background: #d1ecf1; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 2px solid #17a2b8;">
+                <h4 style="color: #0c5460; margin-bottom: 10px; font-size: 0.95em;">💰 Discount from Supplier (Optional)</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Discount Type</label>
+                        <select id="purchaseDiscountType" onchange="calculatePurchaseAmount()">
+                            <option value="none">No Discount</option>
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="fixed">Fixed Amount (Rs)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Discount Value</label>
+                        <input type="number" step="0.01" id="purchaseDiscountValue" value="0" oninput="calculatePurchaseAmount()" placeholder="Enter discount">
+                    </div>
+                </div>
+                <div id="purchaseDiscountInfo" style="font-size: 0.85em; color: #0c5460; margin-top: 8px;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>Final Amount (After Discount)</label>
+                <input type="number" step="0.01" id="purchaseAmount" readonly style="background: #d4edda; font-weight: 700; font-size: 1.1em; color: #155724;">
             </div>
             <div class="form-group">
                 <label>Date</label>
@@ -1267,6 +1329,22 @@
                 <label>Driver Contact</label>
                 <input type="text" id="vehicleContact">
             </div>
+            <hr style="border: 1px solid var(--border-color); margin: 15px 0;">
+            <h4 style="color: var(--primary-color); margin-bottom: 10px;">🚗 Vehicle Owner Information</h4>
+            <div class="form-group">
+                <label>Owner Name</label>
+                <input type="text" id="vehicleOwnerName" placeholder="Vehicle owner (if different from driver)">
+            </div>
+            <div class="form-group">
+                <label>Owner Contact</label>
+                <input type="text" id="vehicleOwnerContact">
+            </div>
+            <div class="form-group">
+                <label>Owner Opening Balance (Rs)</label>
+                <input type="number" step="0.01" id="vehicleOwnerBalance" value="0" placeholder="Previous balance with owner">
+                <small style="color: var(--text-secondary); font-size: 0.85em;">💡 Enter previous balance (Positive = You owe owner, Negative = Owner owes you)</small>
+            </div>
+            <hr style="border: 1px solid var(--border-color); margin: 15px 0;">
             <div class="form-group">
                 <label>Status</label>
                 <select id="vehicleStatus">
@@ -1362,23 +1440,95 @@
 
 <!-- BACKUP MODAL -->
 <div id="backupModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 1000px;">
         <div class="modal-header">
-            <h2>💾 Backup & Restore</h2>
+            <h2>💾 Backup & Export System</h2>
             <button class="close-btn" onclick="closeModal('backupModal')">&times;</button>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 15px;">
-            <div>
-                <h3 style="color: #667eea; margin-bottom: 10px;">Create Backup</h3>
-                <p style="color: #718096; margin-bottom: 10px;">Download all your data as a backup file</p>
-                <button class="btn btn-success" onclick="createBackup()">Download Backup</button>
+        
+        <!-- Complete Backup Section -->
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: var(--primary-color); margin-bottom: 15px;">📦 Complete System Backup</h3>
+            <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                <p style="color: var(--text-secondary); margin-bottom: 10px;">Download ALL your data as one backup file (JSON format)</p>
+                <button class="btn btn-success" onclick="createBackup()">💾 Download Complete Backup</button>
             </div>
-            <hr style="border: 1px solid #e2e8f0;">
-            <div>
-                <h3 style="color: #667eea; margin-bottom: 10px;">Restore Backup</h3>
-                <p style="color: #718096; margin-bottom: 10px;">Upload a backup file to restore your data</p>
+            <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px;">
+                <p style="color: var(--text-secondary); margin-bottom: 10px;">Upload complete backup file to restore ALL data</p>
                 <input type="file" id="backupFile" accept=".json" style="margin-bottom: 10px;">
-                <button class="btn btn-warning" onclick="restoreBackup()">Restore Backup</button>
+                <button class="btn btn-warning" onclick="restoreBackup()">⚠️ Restore Complete Backup</button>
+            </div>
+        </div>
+        
+        <hr style="border: 1px solid var(--border-color); margin: 30px 0;">
+        
+        <!-- Individual Data Export/Backup Section -->
+        <div>
+            <h3 style="color: var(--primary-color); margin-bottom: 15px;">📊 Individual Data Export & Backup</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9em;">
+                <strong>PDF</strong> = For viewing/printing/records | <strong>JSON</strong> = For backup/restore
+            </p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 15px;">
+                
+                <!-- Customers -->
+                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; border-left: 4px solid #48bb78;">
+                    <h4 style="color: #48bb78; margin-bottom: 10px;">👥 Customers</h4>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button class="btn btn-info btn-sm" onclick="exportCustomersPDF()">📄 Export PDF</button>
+                        <button class="btn btn-success btn-sm" onclick="exportCustomersJSON()">💾 Backup (JSON)</button>
+                    </div>
+                    <div style="font-size: 0.85em;">
+                        <input type="file" id="customersRestoreFile" accept=".json" style="font-size: 0.8em; margin-bottom: 5px;">
+                        <button class="btn btn-warning btn-sm" onclick="restoreCustomers()">⚠️ Restore</button>
+                    </div>
+                </div>
+                
+                <!-- Suppliers -->
+                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; border-left: 4px solid #ed8936;">
+                    <h4 style="color: #ed8936; margin-bottom: 10px;">🏭 Suppliers</h4>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button class="btn btn-info btn-sm" onclick="exportSuppliersPDF()">📄 Export PDF</button>
+                        <button class="btn btn-success btn-sm" onclick="exportSuppliersJSON()">💾 Backup (JSON)</button>
+                    </div>
+                    <div style="font-size: 0.85em;">
+                        <input type="file" id="suppliersRestoreFile" accept=".json" style="font-size: 0.8em; margin-bottom: 5px;">
+                        <button class="btn btn-warning btn-sm" onclick="restoreSuppliers()">⚠️ Restore</button>
+                    </div>
+                </div>
+                
+                <!-- Vehicles -->
+                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; border-left: 4px solid #667eea;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">🚛 Vehicles</h4>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button class="btn btn-info btn-sm" onclick="exportVehiclesPDF()">📄 Export PDF</button>
+                        <button class="btn btn-success btn-sm" onclick="exportVehiclesJSON()">💾 Backup (JSON)</button>
+                    </div>
+                    <div style="font-size: 0.85em;">
+                        <input type="file" id="vehiclesRestoreFile" accept=".json" style="font-size: 0.8em; margin-bottom: 5px;">
+                        <button class="btn btn-warning btn-sm" onclick="restoreVehicles()">⚠️ Restore</button>
+                    </div>
+                </div>
+                
+                <!-- Banks -->
+                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; border-left: 4px solid #4299e1;">
+                    <h4 style="color: #4299e1; margin-bottom: 10px;">🏦 Banks</h4>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button class="btn btn-info btn-sm" onclick="exportBanksPDF()">📄 Export PDF</button>
+                        <button class="btn btn-success btn-sm" onclick="exportBanksJSON()">💾 Backup (JSON)</button>
+                    </div>
+                    <div style="font-size: 0.85em;">
+                        <input type="file" id="banksRestoreFile" accept=".json" style="font-size: 0.8em; margin-bottom: 5px;">
+                        <button class="btn btn-warning btn-sm" onclick="restoreBanks()">⚠️ Restore</button>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 12px; border-radius: 8px; margin-top: 20px;">
+                <p style="color: #856404; font-size: 0.85em; margin: 0;">
+                    <strong>⚠️ Note:</strong> Restoring individual data will REPLACE existing data of that type only. Other data stays safe!
+                </p>
             </div>
         </div>
     </div>
@@ -1401,6 +1551,126 @@
     </div>
 </div>
 
+<!-- JV VOUCHER MODAL -->
+<div id="jvModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h2>📝 Journal Voucher (JV Entry)</h2>
+            <button class="close-btn" onclick="closeModal('jvModal')">&times;</button>
+        </div>
+        <form onsubmit="saveJVVoucher(event)">
+            <div class="form-group">
+                <label>Date *</label>
+                <input type="date" id="jvDate" required>
+            </div>
+            <div class="form-group">
+                <label>Description *</label>
+                <textarea id="jvDescription" required placeholder="Describe this journal entry..."></textarea>
+            </div>
+            
+            <hr style="border: 1px solid var(--border-color); margin: 20px 0;">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- DEBIT SIDE -->
+                <div style="background: #fff3cd; padding: 15px; border-radius: 10px; border: 2px solid #ffc107;">
+                    <h3 style="color: #856404; margin-bottom: 15px;">📤 DEBIT (Dr.)</h3>
+                    <div class="form-group">
+                        <label>Account Type *</label>
+                        <select id="jvDebitType" onchange="updateJVDebitAccounts()" required>
+                            <option value="">Select Type</option>
+                            <option value="customer">Customer</option>
+                            <option value="supplier">Supplier</option>
+                            <option value="bank">Bank</option>
+                            <option value="vehicle">Vehicle Owner</option>
+                            <option value="expense">Expense</option>
+                            <option value="other">Other Account</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Account *</label>
+                        <select id="jvDebitAccount" required>
+                            <option value="">Select Account</option>
+                        </select>
+                        <input type="text" id="jvDebitOther" placeholder="Account name" style="display: none; margin-top: 10px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (Rs) *</label>
+                        <input type="number" step="0.01" id="jvDebitAmount" oninput="validateJVAmounts()" required>
+                    </div>
+                </div>
+                
+                <!-- CREDIT SIDE -->
+                <div style="background: #d4edda; padding: 15px; border-radius: 10px; border: 2px solid #28a745;">
+                    <h3 style="color: #155724; margin-bottom: 15px;">📥 CREDIT (Cr.)</h3>
+                    <div class="form-group">
+                        <label>Account Type *</label>
+                        <select id="jvCreditType" onchange="updateJVCreditAccounts()" required>
+                            <option value="">Select Type</option>
+                            <option value="customer">Customer</option>
+                            <option value="supplier">Supplier</option>
+                            <option value="bank">Bank</option>
+                            <option value="vehicle">Vehicle Owner</option>
+                            <option value="income">Income</option>
+                            <option value="other">Other Account</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Account *</label>
+                        <select id="jvCreditAccount" required>
+                            <option value="">Select Account</option>
+                        </select>
+                        <input type="text" id="jvCreditOther" placeholder="Account name" style="display: none; margin-top: 10px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (Rs) *</label>
+                        <input type="number" step="0.01" id="jvCreditAmount" oninput="validateJVAmounts()" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="jvBalanceWarning" style="background: #f8d7da; color: #721c24; padding: 10px; border-radius: 8px; margin-top: 15px; display: none; text-align: center;">
+                ⚠️ Debit and Credit amounts must be equal!
+            </div>
+            
+            <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 20px;">Save Journal Voucher</button>
+        </form>
+    </div>
+</div>
+
+<!-- VEHICLE INVOICE MODAL -->
+<div id="invoiceModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h2>🧾 Generate Vehicle Invoice</h2>
+            <button class="close-btn" onclick="closeModal('invoiceModal')">&times;</button>
+        </div>
+        
+        <div class="form-group">
+            <label>Select Vehicle *</label>
+            <select id="invoiceVehicleId" onchange="loadVehicleInvoiceData()" required>
+                <option value="">Choose Vehicle</option>
+            </select>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>From Date *</label>
+                <input type="date" id="invoiceFromDate" required>
+            </div>
+            <div class="form-group">
+                <label>To Date *</label>
+                <input type="date" id="invoiceToDate" required>
+            </div>
+        </div>
+        
+        <button class="btn btn-primary" onclick="generateVehicleInvoice()" style="width: 100%; margin-bottom: 20px;">📊 Generate Invoice</button>
+        
+        <div id="invoicePreview" style="background: var(--bg-primary); padding: 20px; border-radius: 10px; border: 2px solid var(--border-color); display: none;">
+            <!-- Invoice will be generated here -->
+        </div>
+    </div>
+</div>
+
 <script>
 // DATA STORAGE
 let customers = JSON.parse(localStorage.getItem('customers')) || [];
@@ -1414,6 +1684,7 @@ let banks = JSON.parse(localStorage.getItem('banks')) || [];
 let bankTransactions = JSON.parse(localStorage.getItem('bankTransactions')) || [];
 let rateChangeLogs = JSON.parse(localStorage.getItem('rateChangeLogs')) || [];
 let ledgerEntries = JSON.parse(localStorage.getItem('ledgerEntries')) || [];
+let jvVouchers = JSON.parse(localStorage.getItem('jvVouchers')) || [];
 let currentUser = '';
 let currentRole = 'admin';
 let selectedRole = 'admin';
@@ -1428,10 +1699,13 @@ let systemUsers = JSON.parse(localStorage.getItem('systemUsers')) || [
 // Theme preference
 let isDarkMode = localStorage.getItem('darkMode') === 'true';
 
-// Initialize vehicle stocks if not exists
+// Initialize vehicle stocks and owner info if not exists
 vehicles.forEach(v => {
     if (!v.stockPMG) v.stockPMG = 0;
     if (!v.stockHSD) v.stockHSD = 0;
+    if (!v.ownerName) v.ownerName = '';
+    if (!v.ownerContact) v.ownerContact = '';
+    if (!v.ownerBalance) v.ownerBalance = 0;
 });
 
 // LOGIN SYSTEM
@@ -1529,6 +1803,7 @@ function saveToStorage() {
     localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
     localStorage.setItem('rateChangeLogs', JSON.stringify(rateChangeLogs));
     localStorage.setItem('ledgerEntries', JSON.stringify(ledgerEntries));
+    localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
     localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
 }
 
@@ -1554,6 +1829,8 @@ function addLedgerEntry(type, description, debitAccount, debitAmount, creditAcco
 function saveCustomer(e) {
     e.preventDefault();
     
+    const openingBalance = parseFloat(document.getElementById('customerOpeningBalance').value) || 0;
+    
     const customer = {
         id: document.getElementById('customerId').value || 'cust_' + Date.now(),
         name: document.getElementById('customerName').value,
@@ -1569,12 +1846,15 @@ function saveCustomer(e) {
     
     const existingIndex = customers.findIndex(c => c.id === customer.id);
     if (existingIndex >= 0) {
+        // Editing existing customer - keep current balance
         customer.balance = customers[existingIndex].balance;
         customers[existingIndex] = customer;
         showNotification('Customer updated! ✅', 'success');
     } else {
+        // New customer - set opening balance
+        customer.balance = openingBalance;
         customers.push(customer);
-        showNotification('Customer added! ✅', 'success');
+        showNotification('Customer added! ✅' + (openingBalance !== 0 ? ` (Opening balance: Rs. ${openingBalance.toFixed(2)})` : ''), 'success');
     }
     
     saveToStorage();
@@ -1633,6 +1913,8 @@ function deleteCustomer(id) {
 function saveSupplier(e) {
     e.preventDefault();
     
+    const openingBalance = parseFloat(document.getElementById('supplierOpeningBalance').value) || 0;
+    
     const supplier = {
         id: document.getElementById('supplierId').value || 'supp_' + Date.now(),
         name: document.getElementById('supplierName').value,
@@ -1648,12 +1930,15 @@ function saveSupplier(e) {
     
     const existingIndex = suppliers.findIndex(s => s.id === supplier.id);
     if (existingIndex >= 0) {
+        // Editing - keep current balance
         supplier.balance = suppliers[existingIndex].balance;
         suppliers[existingIndex] = supplier;
         showNotification('Supplier updated! ✅', 'success');
     } else {
+        // New supplier - set opening balance
+        supplier.balance = openingBalance;
         suppliers.push(supplier);
-        showNotification('Supplier added! ✅', 'success');
+        showNotification('Supplier added! ✅' + (openingBalance !== 0 ? ` (Opening balance: Rs. ${openingBalance.toFixed(2)})` : ''), 'success');
     }
     
     saveToStorage();
@@ -1717,10 +2002,16 @@ function saveSale(e) {
     const fuelType = document.getElementById('saleFuelType').value;
     const quantity = parseFloat(document.getElementById('saleQuantity').value);
     const rate = parseFloat(document.getElementById('saleRate').value);
+    const subtotal = parseFloat(document.getElementById('saleSubtotal').value);
     const amount = parseFloat(document.getElementById('saleAmount').value);
     const vehicleId = document.getElementById('saleVehicleId').value;
     const vehicle = vehicles.find(v => v.id === vehicleId);
     const date = document.getElementById('saleDate').value;
+    
+    // Get discount details
+    const discountType = document.getElementById('saleDiscountType').value;
+    const discountValue = parseFloat(document.getElementById('saleDiscountValue').value) || 0;
+    const discountAmount = subtotal - amount;
     
     // Check if vehicle has enough stock
     if (fuelType === 'PMG' && vehicle.stockPMG < quantity/1000) {
@@ -1740,6 +2031,10 @@ function saveSale(e) {
         fuelType: fuelType,
         quantity: quantity,
         rate: rate,
+        subtotal: subtotal,
+        discountType: discountType,
+        discountValue: discountValue,
+        discountAmount: discountAmount,
         amount: amount,
         vehicleId: vehicleId,
         date: date,
@@ -1766,8 +2061,14 @@ function saveSale(e) {
     renderVehicles();
     closeModal('saleModal');
     updateDashboard();
-    showNotification('Sale recorded! Stock updated! ✅', 'success');
+    
+    let msg = 'Sale recorded! Stock updated! ✅';
+    if (discountAmount > 0) {
+        msg += ` (Discount: Rs. ${discountAmount.toFixed(2)})`;
+    }
+    showNotification(msg, 'success');
     e.target.reset();
+    calculateSaleAmount(); // Reset display
 }
 
 function savePurchase(e) {
@@ -1778,10 +2079,16 @@ function savePurchase(e) {
     const fuelType = document.getElementById('purchaseFuelType').value;
     const quantity = parseFloat(document.getElementById('purchaseQuantity').value);
     const rate = parseFloat(document.getElementById('purchaseRate').value);
+    const subtotal = parseFloat(document.getElementById('purchaseSubtotal').value);
     const amount = parseFloat(document.getElementById('purchaseAmount').value);
     const vehicleId = document.getElementById('purchaseVehicleId').value;
     const vehicle = vehicles.find(v => v.id === vehicleId);
     const date = document.getElementById('purchaseDate').value;
+    
+    // Get discount details
+    const discountType = document.getElementById('purchaseDiscountType').value;
+    const discountValue = parseFloat(document.getElementById('purchaseDiscountValue').value) || 0;
+    const discountAmount = subtotal - amount;
     
     const transaction = {
         id: 'trans_' + Date.now(),
@@ -1791,6 +2098,10 @@ function savePurchase(e) {
         fuelType: fuelType,
         quantity: quantity,
         rate: rate,
+        subtotal: subtotal,
+        discountType: discountType,
+        discountValue: discountValue,
+        discountAmount: discountAmount,
         amount: amount,
         vehicleId: vehicleId,
         date: date,
@@ -1817,8 +2128,14 @@ function savePurchase(e) {
     renderVehicles();
     closeModal('purchaseModal');
     updateDashboard();
-    showNotification('Purchase recorded! Stock updated! ✅', 'success');
+    
+    let msg = 'Purchase recorded! Stock updated! ✅';
+    if (discountAmount > 0) {
+        msg += ` (Discount: Rs. ${discountAmount.toFixed(2)})`;
+    }
+    showNotification(msg, 'success');
     e.target.reset();
+    calculatePurchaseAmount(); // Reset display
 }
 
 function renderTransactions() {
@@ -1827,6 +2144,13 @@ function renderTransactions() {
     
     transactions.slice().reverse().forEach(trans => {
         const vehicle = vehicles.find(v => v.id === trans.vehicleId);
+        
+        // Build discount display
+        let discountDisplay = '';
+        if (trans.discountAmount && trans.discountAmount > 0) {
+            discountDisplay = `<br><small style="color: #28a745;">💰 Discount: Rs. ${trans.discountAmount.toFixed(2)}</small>`;
+        }
+        
         const row = tbody.insertRow();
         row.innerHTML = `
             <td>${new Date(trans.date).toLocaleDateString()}</td>
@@ -1835,7 +2159,7 @@ function renderTransactions() {
             <td>${trans.fuelType}</td>
             <td>${trans.quantity.toFixed(2)} L</td>
             <td>Rs. ${trans.rate.toFixed(4)}</td>
-            <td style="font-weight: 700;">Rs. ${trans.amount.toFixed(2)}</td>
+            <td style="font-weight: 700;">Rs. ${trans.amount.toFixed(2)}${discountDisplay}</td>
             <td>${vehicle ? vehicle.number : '-'}</td>
             <td>
                 <button class="btn btn-danger btn-sm" onclick="deleteTransaction('${trans.id}', '${trans.type}', '${trans.partyId}', '${trans.vehicleId}', '${trans.fuelType}', ${trans.quantity}, ${trans.amount})">Delete</button>
@@ -1921,7 +2245,35 @@ function updateSaleRate() {
 function calculateSaleAmount() {
     const quantity = parseFloat(document.getElementById('saleQuantity').value) || 0;
     const rate = parseFloat(document.getElementById('saleRate').value) || 0;
-    document.getElementById('saleAmount').value = (quantity * rate).toFixed(2);
+    const subtotal = quantity * rate;
+    
+    // Update subtotal
+    document.getElementById('saleSubtotal').value = subtotal.toFixed(2);
+    
+    // Get discount details
+    const discountType = document.getElementById('saleDiscountType').value;
+    const discountValue = parseFloat(document.getElementById('saleDiscountValue').value) || 0;
+    
+    let discountAmount = 0;
+    let finalAmount = subtotal;
+    let discountInfo = '';
+    
+    if (discountType === 'percentage' && discountValue > 0) {
+        discountAmount = (subtotal * discountValue) / 100;
+        finalAmount = subtotal - discountAmount;
+        discountInfo = `💰 Discount: ${discountValue}% = Rs. ${discountAmount.toFixed(2)}`;
+    } else if (discountType === 'fixed' && discountValue > 0) {
+        discountAmount = discountValue;
+        finalAmount = subtotal - discountAmount;
+        const percentageDiscount = ((discountAmount / subtotal) * 100).toFixed(2);
+        discountInfo = `💰 Discount: Rs. ${discountAmount.toFixed(2)} (${percentageDiscount}%)`;
+    } else {
+        discountInfo = 'No discount applied';
+    }
+    
+    // Update final amount and info
+    document.getElementById('saleAmount').value = finalAmount.toFixed(2);
+    document.getElementById('saleDiscountInfo').innerHTML = discountInfo;
 }
 
 function updatePurchaseRate() {
@@ -1939,7 +2291,35 @@ function updatePurchaseRate() {
 function calculatePurchaseAmount() {
     const quantity = parseFloat(document.getElementById('purchaseQuantity').value) || 0;
     const rate = parseFloat(document.getElementById('purchaseRate').value) || 0;
-    document.getElementById('purchaseAmount').value = (quantity * rate).toFixed(2);
+    const subtotal = quantity * rate;
+    
+    // Update subtotal
+    document.getElementById('purchaseSubtotal').value = subtotal.toFixed(2);
+    
+    // Get discount details
+    const discountType = document.getElementById('purchaseDiscountType').value;
+    const discountValue = parseFloat(document.getElementById('purchaseDiscountValue').value) || 0;
+    
+    let discountAmount = 0;
+    let finalAmount = subtotal;
+    let discountInfo = '';
+    
+    if (discountType === 'percentage' && discountValue > 0) {
+        discountAmount = (subtotal * discountValue) / 100;
+        finalAmount = subtotal - discountAmount;
+        discountInfo = `💰 Discount: ${discountValue}% = Rs. ${discountAmount.toFixed(2)}`;
+    } else if (discountType === 'fixed' && discountValue > 0) {
+        discountAmount = discountValue;
+        finalAmount = subtotal - discountAmount;
+        const percentageDiscount = ((discountAmount / subtotal) * 100).toFixed(2);
+        discountInfo = `💰 Discount: Rs. ${discountAmount.toFixed(2)} (${percentageDiscount}%)`;
+    } else {
+        discountInfo = 'No discount applied';
+    }
+    
+    // Update final amount and info
+    document.getElementById('purchaseAmount').value = finalAmount.toFixed(2);
+    document.getElementById('purchaseDiscountInfo').innerHTML = discountInfo;
 }
 
 // PAYMENT FUNCTIONS
@@ -2359,8 +2739,12 @@ function saveVehicle(e) {
     const vehicle = {
         id: document.getElementById('vehicleId').value || 'veh_' + Date.now(),
         number: document.getElementById('vehicleNumber').value,
-        driverName: document.getElementById('vehicleDriver').value,
+        driver: document.getElementById('vehicleDriver').value,
+        driverName: document.getElementById('vehicleDriver').value, // Keep both for compatibility
         contact: document.getElementById('vehicleContact').value,
+        ownerName: document.getElementById('vehicleOwnerName').value,
+        ownerContact: document.getElementById('vehicleOwnerContact').value,
+        ownerBalance: 0,
         status: document.getElementById('vehicleStatus').value,
         stockPMG: 0,
         stockHSD: 0,
@@ -2369,13 +2753,18 @@ function saveVehicle(e) {
     
     const existingIndex = vehicles.findIndex(v => v.id === vehicle.id);
     if (existingIndex >= 0) {
+        // Editing - keep stock and owner balance
         vehicle.stockPMG = vehicles[existingIndex].stockPMG;
         vehicle.stockHSD = vehicles[existingIndex].stockHSD;
+        vehicle.ownerBalance = vehicles[existingIndex].ownerBalance || 0;
         vehicles[existingIndex] = vehicle;
         showNotification('Vehicle updated! ✅', 'success');
     } else {
+        // New vehicle - set opening balance
+        const openingBalance = parseFloat(document.getElementById('vehicleOwnerBalance').value) || 0;
+        vehicle.ownerBalance = openingBalance;
         vehicles.push(vehicle);
-        showNotification('Vehicle added! ✅', 'success');
+        showNotification('Vehicle added! ✅' + (openingBalance !== 0 ? ` (Owner balance: Rs. ${openingBalance.toFixed(2)})` : ''), 'success');
     }
     
     saveToStorage();
@@ -2441,10 +2830,12 @@ function generateLedger() {
         // Get all transactions for this customer
         const customerSales = transactions.filter(t => t.partyId === customer.id && t.type === 'sale');
         const customerPayments = payments.filter(p => p.partyId === customer.id && p.type === 'received');
+        const customerExpenses = expenses.filter(e => e.customerId === customer.id && e.source === 'customer');
         
         // Calculate totals
         const totalSales = customerSales.reduce((sum, t) => sum + t.amount, 0);
         const totalPayments = customerPayments.reduce((sum, p) => sum + p.amount, 0);
+        const totalExpenses = customerExpenses.reduce((sum, e) => sum + e.amount, 0);
         const balance = customer.balance;
         
         html += `
@@ -2459,7 +2850,7 @@ function generateLedger() {
                     Contact: ${customer.contact || 'N/A'} | CNIC: ${customer.cnic || 'N/A'}
                 </p>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                     <div style="background: white; padding: 10px; border-radius: 8px; text-align: center;">
                         <div style="color: #718096; font-size: 0.8em;">Total Sales</div>
                         <div style="color: #48bb78; font-weight: 700; font-size: 1.2em;">Rs. ${totalSales.toFixed(2)}</div>
@@ -2469,12 +2860,16 @@ function generateLedger() {
                         <div style="color: #4299e1; font-weight: 700; font-size: 1.2em;">Rs. ${totalPayments.toFixed(2)}</div>
                     </div>
                     <div style="background: white; padding: 10px; border-radius: 8px; text-align: center;">
+                        <div style="color: #718096; font-size: 0.8em;">Total Expenses</div>
+                        <div style="color: #f56565; font-weight: 700; font-size: 1.2em;">Rs. ${totalExpenses.toFixed(2)}</div>
+                    </div>
+                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center;">
                         <div style="color: #718096; font-size: 0.8em;">Outstanding</div>
                         <div style="color: ${balance >= 0 ? '#ed8936' : '#48bb78'}; font-weight: 700; font-size: 1.2em;">Rs. ${balance.toFixed(2)}</div>
                     </div>
                 </div>
                 
-                ${customerSales.length > 0 || customerPayments.length > 0 ? `
+                ${customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0 ? `
                 <table style="width: 100%; font-size: 0.85em; background: white; border-radius: 8px;">
                     <thead style="background: #667eea; color: white;">
                         <tr>
@@ -2504,6 +2899,13 @@ function generateLedger() {
                 details: `${p.method} - ${p.notes || 'Payment received'}`,
                 debit: 0,
                 credit: p.amount
+            })),
+            ...customerExpenses.map(e => ({
+                date: e.date,
+                type: 'Expense',
+                details: `${e.category} - ${e.description}`,
+                debit: 0,
+                credit: e.amount
             }))
         ].sort((a, b) => new Date(b.date) - new Date(a.date));
         
@@ -2512,7 +2914,7 @@ function generateLedger() {
                 <tr style="border-bottom: 1px solid #e2e8f0;">
                     <td style="padding: 8px;">${new Date(entry.date).toLocaleDateString()}</td>
                     <td style="padding: 8px;">
-                        <span style="background: ${entry.type === 'Sale' ? '#48bb78' : '#4299e1'}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75em;">
+                        <span style="background: ${entry.type === 'Sale' ? '#48bb78' : entry.type === 'Payment' ? '#4299e1' : '#f56565'}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75em;">
                             ${entry.type}
                         </span>
                     </td>
@@ -2527,7 +2929,7 @@ function generateLedger() {
             `;
         });
         
-        if (customerSales.length > 0 || customerPayments.length > 0) {
+        if (customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0) {
             html += `
                     </tbody>
                 </table>
@@ -2768,18 +3170,22 @@ function generateCustomerLedgerReport() {
     // Filter transactions by date if dates are provided
     let customerSales = transactions.filter(t => t.partyId === customerId && t.type === 'sale');
     let customerPayments = payments.filter(p => p.partyId === customerId && p.type === 'received');
+    let customerExpenses = expenses.filter(e => e.customerId === customerId && e.source === 'customer');
     
     if (fromDate) {
         customerSales = customerSales.filter(t => t.date >= fromDate);
         customerPayments = customerPayments.filter(p => p.date >= fromDate);
+        customerExpenses = customerExpenses.filter(e => e.date >= fromDate);
     }
     if (toDate) {
         customerSales = customerSales.filter(t => t.date <= toDate);
         customerPayments = customerPayments.filter(p => p.date <= toDate);
+        customerExpenses = customerExpenses.filter(e => e.date <= toDate);
     }
     
     const totalSales = customerSales.reduce((sum, t) => sum + t.amount, 0);
     const totalPayments = customerPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalExpenses = customerExpenses.reduce((sum, e) => sum + e.amount, 0);
     const balance = customer.balance;
     
     let html = `
@@ -2801,7 +3207,7 @@ function generateCustomerLedgerReport() {
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                 <div style="background: #48bb78; color: white; padding: 15px; border-radius: 10px; text-align: center;">
                     <div style="font-size: 0.9em; opacity: 0.9;">Total Sales</div>
                     <div style="font-size: 1.8em; font-weight: 700;">Rs. ${totalSales.toFixed(2)}</div>
@@ -2810,13 +3216,17 @@ function generateCustomerLedgerReport() {
                     <div style="font-size: 0.9em; opacity: 0.9;">Total Payments</div>
                     <div style="font-size: 1.8em; font-weight: 700;">Rs. ${totalPayments.toFixed(2)}</div>
                 </div>
+                <div style="background: #f56565; color: white; padding: 15px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 0.9em; opacity: 0.9;">Total Expenses</div>
+                    <div style="font-size: 1.8em; font-weight: 700;">Rs. ${totalExpenses.toFixed(2)}</div>
+                </div>
                 <div style="background: ${balance >= 0 ? '#ed8936' : '#48bb78'}; color: white; padding: 15px; border-radius: 10px; text-align: center;">
                     <div style="font-size: 0.9em; opacity: 0.9;">Current Balance</div>
                     <div style="font-size: 1.8em; font-weight: 700;">Rs. ${balance.toFixed(2)}</div>
                 </div>
             </div>
             
-            ${customerSales.length > 0 || customerPayments.length > 0 ? `
+            ${customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0 ? `
             <div class="table-container">
                 <table>
                     <thead>
@@ -2848,6 +3258,13 @@ function generateCustomerLedgerReport() {
             details: `${p.method} - ${p.notes || 'Payment received'}`,
             debit: 0,
             credit: p.amount
+        })),
+        ...customerExpenses.map(e => ({
+            date: e.date,
+            type: 'Expense',
+            details: `${e.category} - ${e.description}`,
+            debit: 0,
+            credit: e.amount
         }))
     ].sort((a, b) => new Date(a.date) - new Date(b.date));
     
@@ -2858,7 +3275,7 @@ function generateCustomerLedgerReport() {
             <tr>
                 <td>${new Date(entry.date).toLocaleDateString()}</td>
                 <td>
-                    <span style="background: ${entry.type === 'Sale' ? '#48bb78' : '#4299e1'}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em;">
+                    <span style="background: ${entry.type === 'Sale' ? '#48bb78' : entry.type === 'Payment' ? '#4299e1' : '#f56565'}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em;">
                         ${entry.type}
                     </span>
                 </td>
@@ -2876,7 +3293,7 @@ function generateCustomerLedgerReport() {
         `;
     });
     
-    if (customerSales.length > 0 || customerPayments.length > 0) {
+    if (customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0) {
         html += `
                     </tbody>
                 </table>
@@ -3925,6 +4342,202 @@ function restoreBackup() {
     reader.readAsText(file);
 }
 
+// INDIVIDUAL DATA EXPORT & RESTORE FUNCTIONS
+
+// ===== CUSTOMERS =====
+function exportCustomersPDF() {
+    window.print(); // Simple print for now - in production, use jsPDF
+    showNotification('Use Print dialog to save as PDF', 'success');
+}
+
+function exportCustomersJSON() {
+    const data = { customers: customers };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'customers-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    showNotification('Customers backup downloaded! 💾', 'success');
+}
+
+function restoreCustomers() {
+    const file = document.getElementById('customersRestoreFile').files[0];
+    if (!file) {
+        showNotification('Please select a file!', 'error');
+        return;
+    }
+    
+    if (!confirm('This will REPLACE all existing customers! Continue?')) {
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const backup = JSON.parse(e.target.result);
+            if (backup.customers) {
+                customers = backup.customers;
+                saveToStorage();
+                renderCustomers();
+                updateDashboard();
+                showNotification('Customers restored! ✅', 'success');
+            } else {
+                showNotification('Invalid customers backup file!', 'error');
+            }
+        } catch (err) {
+            showNotification('Error reading file!', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+// ===== SUPPLIERS =====
+function exportSuppliersPDF() {
+    window.print();
+    showNotification('Use Print dialog to save as PDF', 'success');
+}
+
+function exportSuppliersJSON() {
+    const data = { suppliers: suppliers };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'suppliers-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    showNotification('Suppliers backup downloaded! 💾', 'success');
+}
+
+function restoreSuppliers() {
+    const file = document.getElementById('suppliersRestoreFile').files[0];
+    if (!file) {
+        showNotification('Please select a file!', 'error');
+        return;
+    }
+    
+    if (!confirm('This will REPLACE all existing suppliers! Continue?')) {
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const backup = JSON.parse(e.target.result);
+            if (backup.suppliers) {
+                suppliers = backup.suppliers;
+                saveToStorage();
+                renderSuppliers();
+                updateDashboard();
+                showNotification('Suppliers restored! ✅', 'success');
+            } else {
+                showNotification('Invalid suppliers backup file!', 'error');
+            }
+        } catch (err) {
+            showNotification('Error reading file!', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+// ===== VEHICLES =====
+function exportVehiclesPDF() {
+    window.print();
+    showNotification('Use Print dialog to save as PDF', 'success');
+}
+
+function exportVehiclesJSON() {
+    const data = { vehicles: vehicles };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vehicles-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    showNotification('Vehicles backup downloaded! 💾', 'success');
+}
+
+function restoreVehicles() {
+    const file = document.getElementById('vehiclesRestoreFile').files[0];
+    if (!file) {
+        showNotification('Please select a file!', 'error');
+        return;
+    }
+    
+    if (!confirm('This will REPLACE all existing vehicles! Continue?')) {
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const backup = JSON.parse(e.target.result);
+            if (backup.vehicles) {
+                vehicles = backup.vehicles;
+                saveToStorage();
+                renderVehicles();
+                updateDashboard();
+                showNotification('Vehicles restored! ✅', 'success');
+            } else {
+                showNotification('Invalid vehicles backup file!', 'error');
+            }
+        } catch (err) {
+            showNotification('Error reading file!', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+// ===== BANKS =====
+function exportBanksPDF() {
+    window.print();
+    showNotification('Use Print dialog to save as PDF', 'success');
+}
+
+function exportBanksJSON() {
+    const data = { banks: banks, bankTransactions: bankTransactions };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'banks-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    showNotification('Banks backup downloaded! 💾', 'success');
+}
+
+function restoreBanks() {
+    const file = document.getElementById('banksRestoreFile').files[0];
+    if (!file) {
+        showNotification('Please select a file!', 'error');
+        return;
+    }
+    
+    if (!confirm('This will REPLACE all existing banks and bank transactions! Continue?')) {
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const backup = JSON.parse(e.target.result);
+            if (backup.banks) {
+                banks = backup.banks;
+                bankTransactions = backup.bankTransactions || [];
+                saveToStorage();
+                renderBanks();
+                renderBankTransactions();
+                updateDashboard();
+                showNotification('Banks restored! ✅', 'success');
+            } else {
+                showNotification('Invalid banks backup file!', 'error');
+            }
+        } catch (err) {
+            showNotification('Error reading file!', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
 // UI HELPER FUNCTIONS
 function updateDashboard() {
     document.getElementById('totalCustomers').textContent = customers.length;
@@ -3969,6 +4582,17 @@ function openModal(modalId) {
         }
         renderUserManagement();
     }
+    
+    // Initialize JV modal
+    if (modalId === 'jvModal') {
+        initJVModal();
+    }
+    
+    // Initialize invoice modal
+    if (modalId === 'invoiceModal') {
+        initInvoiceModal();
+    }
+    
     document.getElementById(modalId).style.display = 'flex';
 }
 
@@ -4058,6 +4682,260 @@ function populateDropdowns() {
             });
         }
     });
+}
+
+// JV VOUCHER FUNCTIONS
+function updateJVDebitAccounts() {
+    const type = document.getElementById('jvDebitType').value;
+    const accountSelect = document.getElementById('jvDebitAccount');
+    const otherInput = document.getElementById('jvDebitOther');
+    
+    accountSelect.innerHTML = '<option value="">Select Account</option>';
+    otherInput.style.display = 'none';
+    
+    if (type === 'customer') {
+        customers.forEach(c => accountSelect.innerHTML += `<option value="customer_${c.id}">${c.name}</option>`);
+    } else if (type === 'supplier') {
+        suppliers.forEach(s => accountSelect.innerHTML += `<option value="supplier_${s.id}">${s.name}</option>`);
+    } else if (type === 'bank') {
+        banks.forEach(b => accountSelect.innerHTML += `<option value="bank_${b.id}">${b.name}</option>`);
+    } else if (type === 'vehicle') {
+        vehicles.forEach(v => accountSelect.innerHTML += `<option value="vehicle_${v.id}">${v.number} - ${v.ownerName || 'Owner'}</option>`);
+    } else if (type === 'other') {
+        otherInput.style.display = 'block';
+    }
+}
+
+function updateJVCreditAccounts() {
+    const type = document.getElementById('jvCreditType').value;
+    const accountSelect = document.getElementById('jvCreditAccount');
+    const otherInput = document.getElementById('jvCreditOther');
+    
+    accountSelect.innerHTML = '<option value="">Select Account</option>';
+    otherInput.style.display = 'none';
+    
+    if (type === 'customer') {
+        customers.forEach(c => accountSelect.innerHTML += `<option value="customer_${c.id}">${c.name}</option>`);
+    } else if (type === 'supplier') {
+        suppliers.forEach(s => accountSelect.innerHTML += `<option value="supplier_${s.id}">${s.name}</option>`);
+    } else if (type === 'bank') {
+        banks.forEach(b => accountSelect.innerHTML += `<option value="bank_${b.id}">${b.name}</option>`);
+    } else if (type === 'vehicle') {
+        vehicles.forEach(v => accountSelect.innerHTML += `<option value="vehicle_${v.id}">${v.number} - ${v.ownerName || 'Owner'}</option>`);
+    } else if (type === 'other') {
+        otherInput.style.display = 'block';
+    }
+}
+
+function validateJVAmounts() {
+    const debit = parseFloat(document.getElementById('jvDebitAmount').value) || 0;
+    const credit = parseFloat(document.getElementById('jvCreditAmount').value) || 0;
+    const warning = document.getElementById('jvBalanceWarning');
+    
+    if (debit > 0 && credit > 0 && debit !== credit) {
+        warning.style.display = 'block';
+    } else {
+        warning.style.display = 'none';
+    }
+}
+
+function saveJVVoucher(e) {
+    e.preventDefault();
+    
+    const debit = parseFloat(document.getElementById('jvDebitAmount').value);
+    const credit = parseFloat(document.getElementById('jvCreditAmount').value);
+    
+    if (debit !== credit) {
+        showNotification('Debit and Credit must be equal!', 'error');
+        return;
+    }
+    
+    const jv = {
+        id: 'jv_' + Date.now(),
+        date: document.getElementById('jvDate').value,
+        description: document.getElementById('jvDescription').value,
+        debitType: document.getElementById('jvDebitType').value,
+        debitAccount: document.getElementById('jvDebitType').value === 'other' ? 
+            document.getElementById('jvDebitOther').value : 
+            document.getElementById('jvDebitAccount').value,
+        debitAmount: debit,
+        creditType: document.getElementById('jvCreditType').value,
+        creditAccount: document.getElementById('jvCreditType').value === 'other' ? 
+            document.getElementById('jvCreditOther').value : 
+            document.getElementById('jvCreditAccount').value,
+        creditAmount: credit,
+        createdBy: currentUser,
+        createdAt: new Date().toISOString()
+    };
+    
+    jvVouchers.push(jv);
+    
+    // Update accounts
+    updateAccountFromJV(jv.debitType, jv.debitAccount, debit, 'debit');
+    updateAccountFromJV(jv.creditType, jv.creditAccount, credit, 'credit');
+    
+    saveToStorage();
+    showNotification('JV Voucher saved! ✅', 'success');
+    closeModal('jvModal');
+    e.target.reset();
+}
+
+function updateAccountFromJV(type, account, amount, side) {
+    if (type === 'customer') {
+        const custId = account.replace('customer_', '');
+        const cust = customers.find(c => c.id === custId);
+        if (cust) {
+            cust.balance += side === 'debit' ? amount : -amount;
+        }
+    } else if (type === 'supplier') {
+        const suppId = account.replace('supplier_', '');
+        const supp = suppliers.find(s => s.id === suppId);
+        if (supp) {
+            supp.balance += side === 'credit' ? amount : -amount;
+        }
+    } else if (type === 'bank') {
+        const bankId = account.replace('bank_', '');
+        const bank = banks.find(b => b.id === bankId);
+        if (bank) {
+            bank.balance += side === 'debit' ? amount : -amount;
+        }
+    } else if (type === 'vehicle') {
+        const vehId = account.replace('vehicle_', '');
+        const veh = vehicles.find(v => v.id === vehId);
+        if (veh) {
+            veh.ownerBalance += side === 'credit' ? amount : -amount;
+        }
+    }
+}
+
+// VEHICLE INVOICE FUNCTIONS
+function loadVehicleInvoiceData() {
+    const select = document.getElementById('invoiceVehicleId');
+    select.innerHTML = '<option value="">Choose Vehicle</option>';
+    vehicles.forEach(v => {
+        select.innerHTML += `<option value="${v.id}">${v.number} - ${v.driver}</option>`;
+    });
+}
+
+function generateVehicleInvoice() {
+    const vehicleId = document.getElementById('invoiceVehicleId').value;
+    const fromDate = document.getElementById('invoiceFromDate').value;
+    const toDate = document.getElementById('invoiceToDate').value;
+    
+    if (!vehicleId || !fromDate || !toDate) {
+        showNotification('Please fill all fields!', 'error');
+        return;
+    }
+    
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    const vehicleTrans = transactions.filter(t => 
+        t.vehicleId === vehicleId && 
+        t.date >= fromDate && 
+        t.date <= toDate
+    );
+    
+    if (vehicleTrans.length === 0) {
+        showNotification('No transactions found for this period!', 'warning');
+        return;
+    }
+    
+    let html = `
+        <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--primary-color); padding-bottom: 15px;">
+            <h2 style="color: var(--primary-color); margin-bottom: 5px;">🛢️ Baghoor Oil Traders</h2>
+            <h3 style="color: var(--text-secondary); font-size: 1.1em;">Vehicle Invoice</h3>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <p><strong>Vehicle Number:</strong> ${vehicle.number}</p>
+                <p><strong>Driver:</strong> ${vehicle.driver}</p>
+                ${vehicle.ownerName ? `<p><strong>Owner:</strong> ${vehicle.ownerName}</p>` : ''}
+            </div>
+            <div style="text-align: right;">
+                <p><strong>Invoice Date:</strong> ${new Date().toLocaleDateString()}</p>
+                <p><strong>Period:</strong> ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}</p>
+            </div>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead style="background: var(--primary-color); color: white;">
+                <tr>
+                    <th style="padding: 10px; border: 1px solid var(--border-color);">Date</th>
+                    <th style="padding: 10px; border: 1px solid var(--border-color);">Type</th>
+                    <th style="padding: 10px; border: 1px solid var(--border-color);">Party</th>
+                    <th style="padding: 10px; border: 1px solid var(--border-color);">Fuel</th>
+                    <th style="padding: 10px; border: 1px solid var(--border-color);">Qty (L)</th>
+                    <th style="padding: 10px; border: 1px solid var(--border-color);">Rate</th>
+                    <th style="padding: 10px; border: 1px solid var(--border-color);">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    let totalSales = 0;
+    let totalPurchases = 0;
+    
+    vehicleTrans.forEach(t => {
+        html += `
+            <tr>
+                <td style="padding: 8px; border: 1px solid var(--border-color);">${new Date(t.date).toLocaleDateString()}</td>
+                <td style="padding: 8px; border: 1px solid var(--border-color);"><span style="background: ${t.type === 'sale' ? '#48bb78' : '#ed8936'}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.85em;">${t.type.toUpperCase()}</span></td>
+                <td style="padding: 8px; border: 1px solid var(--border-color);">${t.partyName}</td>
+                <td style="padding: 8px; border: 1px solid var(--border-color);">${t.fuelType}</td>
+                <td style="padding: 8px; border: 1px solid var(--border-color); text-align: right;">${t.quantity.toFixed(2)}</td>
+                <td style="padding: 8px; border: 1px solid var(--border-color); text-align: right;">Rs. ${t.rate.toFixed(4)}</td>
+                <td style="padding: 8px; border: 1px solid var(--border-color); text-align: right;"><strong>Rs. ${t.amount.toFixed(2)}</strong></td>
+            </tr>
+        `;
+        
+        if (t.type === 'sale') totalSales += t.amount;
+        else totalPurchases += t.amount;
+    });
+    
+    const profit = totalSales - totalPurchases;
+    
+    html += `
+            </tbody>
+            <tfoot style="background: var(--bg-secondary); font-weight: bold;">
+                <tr>
+                    <td colspan="6" style="padding: 10px; border: 1px solid var(--border-color); text-align: right;">Total Sales:</td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color); text-align: right; color: #48bb78;">Rs. ${totalSales.toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td colspan="6" style="padding: 10px; border: 1px solid var(--border-color); text-align: right;">Total Purchases:</td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color); text-align: right; color: #ed8936;">Rs. ${totalPurchases.toFixed(2)}</td>
+                </tr>
+                <tr style="background: ${profit >= 0 ? '#d4edda' : '#f8d7da'};">
+                    <td colspan="6" style="padding: 12px; border: 1px solid var(--border-color); text-align: right; font-size: 1.1em;">NET PROFIT:</td>
+                    <td style="padding: 12px; border: 1px solid var(--border-color); text-align: right; font-size: 1.2em; color: ${profit >= 0 ? '#155724' : '#721c24'};">Rs. ${profit.toFixed(2)}</td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        <div style="margin-top: 30px; text-align: center; color: var(--text-secondary); font-size: 0.9em;">
+            <p>This is a computer-generated invoice</p>
+            <button class="btn btn-success" onclick="window.print()" style="margin-top: 15px;">🖨️ Print Invoice</button>
+        </div>
+    `;
+    
+    document.getElementById('invoicePreview').innerHTML = html;
+    document.getElementById('invoicePreview').style.display = 'block';
+    showNotification('Invoice generated! ✅', 'success');
+}
+
+// Initialize invoice dropdowns when modal opens
+function initInvoiceModal() {
+    loadVehicleInvoiceData();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('invoiceToDate').value = today;
+    const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    document.getElementById('invoiceFromDate').value = firstDay;
+}
+
+// Initialize JV modal date
+function initJVModal() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('jvDate').value = today;
 }
 
 // THEME TOGGLE FUNCTIONS
