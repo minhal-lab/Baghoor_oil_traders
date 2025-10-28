@@ -9,24 +9,58 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* Light Mode (Default) */
+        :root {
+            --bg-gradient-start: #f5f7fa;
+            --bg-gradient-end: #c3cfe2;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7fafc;
+            --bg-tertiary: #ebf4ff;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --text-tertiary: #1a202c;
+            --border-color: #e2e8f0;
+            --shadow: rgba(0,0,0,0.07);
+            --shadow-lg: rgba(0,0,0,0.1);
+            --primary-color: #667eea;
+        }
+        
+        /* Dark Mode */
+        body.dark-mode {
+            --bg-gradient-start: #1a202c;
+            --bg-gradient-end: #2d3748;
+            --bg-primary: #2d3748;
+            --bg-secondary: #1a202c;
+            --bg-tertiary: #374151;
+            --text-primary: #e2e8f0;
+            --text-secondary: #a0aec0;
+            --text-tertiary: #f7fafc;
+            --border-color: #4a5568;
+            --shadow: rgba(0,0,0,0.3);
+            --shadow-lg: rgba(0,0,0,0.5);
+            --primary-color: #818cf8;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
             min-height: 100vh;
             padding: 20px;
-            color: #2d3748;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
         }
         .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .login-box {
-            background: white;
+            background: var(--bg-primary);
             padding: 40px;
             border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 40px var(--shadow-lg);
             max-width: 450px;
             width: 100%;
         }
-        .login-box h1 { text-align: center; color: #667eea; margin-bottom: 10px; font-size: 2.2em; }
-        .login-box p { text-align: center; color: #718096; margin-bottom: 30px; font-size: 0.95em; }
+        .login-box h1 { text-align: center; color: var(--primary-color); margin-bottom: 10px; font-size: 2.2em; }
+        .login-box p { text-align: center; color: var(--text-secondary); margin-bottom: 30px; font-size: 0.95em; }
         .role-selector {
             display: flex;
             gap: 10px;
@@ -35,27 +69,28 @@
         .role-btn {
             flex: 1;
             padding: 15px;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--border-color);
             border-radius: 10px;
-            background: white;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             cursor: pointer;
             text-align: center;
             transition: all 0.3s;
             font-weight: 600;
             font-size: 14px;
         }
-        .role-btn:hover { border-color: #667eea; background: #f7fafc; }
-        .role-btn.active { border-color: #667eea; background: #667eea; color: white; }
+        .role-btn:hover { border-color: var(--primary-color); background: var(--bg-secondary); }
+        .role-btn.active { border-color: var(--primary-color); background: var(--primary-color); color: white; }
         
         .quick-entry {
-            background: white;
+            background: var(--bg-primary);
             padding: 20px;
             border-radius: 16px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            box-shadow: 0 4px 6px var(--shadow);
             margin-bottom: 20px;
         }
         .quick-entry h3 {
-            color: #667eea;
+            color: var(--primary-color);
             margin-bottom: 15px;
             font-weight: 700;
         }
@@ -66,9 +101,10 @@
         }
         .quick-btn {
             padding: 15px;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--border-color);
             border-radius: 10px;
-            background: white;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             cursor: pointer;
             text-align: center;
             transition: all 0.3s;
@@ -77,27 +113,27 @@
         }
         .quick-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-            border-color: #667eea;
+            box-shadow: 0 6px 12px var(--shadow-lg);
+            border-color: var(--primary-color);
         }
         
         .container { max-width: 1600px; margin: 0 auto; }
         .header {
-            background: white;
+            background: var(--bg-primary);
             padding: 25px;
             border-radius: 16px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            box-shadow: 0 4px 6px var(--shadow);
             margin-bottom: 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-left: 5px solid #667eea;
+            border-left: 5px solid var(--primary-color);
         }
-        .header h1 { color: #1a202c; font-size: 1.8em; font-weight: 700; }
-        .company-tagline { display: block; font-size: 0.4em; color: #667eea; font-weight: 600; margin-top: 5px; text-transform: uppercase; }
+        .header h1 { color: var(--text-tertiary); font-size: 1.8em; font-weight: 700; }
+        .company-tagline { display: block; font-size: 0.4em; color: var(--primary-color); font-weight: 600; margin-top: 5px; text-transform: uppercase; }
         .header-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         .user-info {
-            background: #ebf4ff;
+            background: var(--bg-tertiary);
             padding: 10px 18px;
             border-radius: 10px;
             font-size: 0.9em;
@@ -136,10 +172,10 @@
         
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 25px; }
         .stat-card {
-            background: white;
+            background: var(--bg-primary);
             padding: 22px;
             border-radius: 14px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            box-shadow: 0 4px 6px var(--shadow);
             transition: all 0.3s;
             border-left: 4px solid;
         }
@@ -152,8 +188,8 @@
         .stat-card:nth-child(7) { border-left-color: #38b2ac; }
         .stat-card:nth-child(8) { border-left-color: #f687b3; }
         .stat-card:nth-child(9) { border-left-color: #805ad5; }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
-        .stat-card h3 { color: #718096; font-size: 0.8em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px var(--shadow-lg); }
+        .stat-card h3 { color: var(--text-secondary); font-size: 0.8em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
         .stat-card .value { font-size: 1.8em; font-weight: 700; margin-bottom: 6px; }
         .stat-card:nth-child(1) .value { color: #667eea; }
         .stat-card:nth-child(2) .value { color: #48bb78; }
@@ -165,38 +201,39 @@
         .stat-card:nth-child(8) .value { color: #f687b3; }
         .stat-card:nth-child(9) .value { color: #805ad5; }
         
-        .card { background: white; padding: 22px; border-radius: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); margin-bottom: 20px; }
-        .card h2 { color: #1a202c; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; font-weight: 700; font-size: 1.3em; display: flex; justify-content: space-between; align-items: center; }
+        .card { background: var(--bg-primary); padding: 22px; border-radius: 14px; box-shadow: 0 4px 6px var(--shadow); margin-bottom: 20px; }
+        .card h2 { color: var(--text-tertiary); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid var(--border-color); font-weight: 700; font-size: 1.3em; display: flex; justify-content: space-between; align-items: center; }
         
         .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; margin-bottom: 6px; color: #4a5568; font-weight: 600; font-size: 0.85em; }
+        .form-group label { display: block; margin-bottom: 6px; color: var(--text-primary); font-weight: 600; font-size: 0.85em; }
         .form-group input, .form-group select, .form-group textarea {
             width: 100%;
             padding: 10px;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--border-color);
             border-radius: 8px;
             font-size: 13px;
-            background: #f7fafc;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
         }
         .form-group textarea { min-height: 80px; resize: vertical; font-family: inherit; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             outline: none;
-            border-color: #667eea;
-            background: white;
+            border-color: var(--primary-color);
+            background: var(--bg-primary);
             box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
         }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         
-        .checkbox-group { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f7fafc; border-radius: 8px; margin-bottom: 10px; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 10px; }
         .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
-        .checkbox-group label { margin: 0; font-weight: 600; color: #2d3748; cursor: pointer; }
+        .checkbox-group label { margin: 0; font-weight: 600; color: var(--text-primary); cursor: pointer; }
         
-        .table-container { overflow-x: auto; margin-top: 12px; border-radius: 10px; border: 1px solid #e2e8f0; max-height: 400px; overflow-y: auto; }
+        .table-container { overflow-x: auto; margin-top: 12px; border-radius: 10px; border: 1px solid var(--border-color); max-height: 400px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; }
-        thead { background: #667eea; color: white; position: sticky; top: 0; z-index: 10; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.85em; }
-        th { font-weight: 700; text-transform: uppercase; }
-        tbody tr:hover { background: #f7fafc; }
+        thead { background: var(--primary-color); color: white; position: sticky; top: 0; z-index: 10; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.85em; color: var(--text-primary); }
+        th { font-weight: 700; text-transform: uppercase; color: white; }
+        tbody tr:hover { background: var(--bg-secondary); }
         
         .modal {
             display: none;
@@ -211,12 +248,12 @@
             padding: 20px;
         }
         .modal-content {
-            background: white;
+            background: var(--bg-primary);
             max-width: 800px;
             margin: 40px auto;
             padding: 30px;
             border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 40px var(--shadow-lg);
         }
         .modal-header {
             display: flex;
@@ -224,15 +261,15 @@
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 2px solid var(--border-color);
         }
-        .modal-header h2 { color: #667eea; margin: 0; }
+        .modal-header h2 { color: var(--primary-color); margin: 0; }
         .close-btn {
             background: none;
             border: none;
             font-size: 28px;
             cursor: pointer;
-            color: #a0aec0;
+            color: var(--text-secondary);
             padding: 0;
             width: 30px;
             height: 30px;
@@ -261,7 +298,7 @@
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 2px solid var(--border-color);
             flex-wrap: wrap;
         }
         .tab {
@@ -270,13 +307,13 @@
             border: none;
             background: none;
             font-weight: 600;
-            color: #718096;
+            color: var(--text-secondary);
             border-bottom: 3px solid transparent;
             transition: all 0.3s;
             font-size: 13px;
         }
-        .tab:hover { color: #667eea; background: #f7fafc; }
-        .tab.active { color: #667eea; border-bottom-color: #667eea; }
+        .tab:hover { color: var(--primary-color); background: var(--bg-secondary); }
+        .tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
         
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -286,11 +323,11 @@
             display: flex;
             justify-content: space-between;
             padding: 12px;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--border-color);
             font-size: 0.95em;
         }
         .profit-loss-item.total {
-            background: #f7fafc;
+            background: var(--bg-secondary);
             font-size: 1.1em;
             font-weight: 700;
             border-bottom: none;
@@ -331,11 +368,62 @@
         .stock-pmg { background: #667eea; color: white; }
         .stock-hsd { background: #ed8936; color: white; }
         
+        /* Theme Toggle Button */
+        .theme-toggle {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            border-color: var(--primary-color);
+        }
+        
+        /* Admin Settings Styles */
+        .user-management-grid {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .user-card {
+            background: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid var(--border-color);
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+            align-items: center;
+        }
+        .user-card-info h4 {
+            color: var(--text-tertiary);
+            margin-bottom: 5px;
+        }
+        .user-card-info p {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin: 3px 0;
+        }
+        .user-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
         @media (max-width: 768px) {
             .form-row { grid-template-columns: 1fr; }
             .header { flex-direction: column; gap: 15px; }
             .header-actions { width: 100%; justify-content: center; }
             .ledger-entry { grid-template-columns: 1fr; }
+            .user-card { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -383,6 +471,10 @@
                     <span id="userDisplay"></span>
                     <span class="user-role" id="userRoleDisplay"></span>
                 </div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                    <span id="themeIcon">🌙</span>
+                </button>
+                <button class="btn btn-purple" id="adminSettingsBtn" onclick="openModal('adminSettingsModal')" style="display: none;">⚙️ Admin Settings</button>
                 <button class="btn btn-warning" onclick="openModal('backupModal')">💾 Backup</button>
                 <button class="btn btn-danger" onclick="logout()">Logout</button>
             </div>
@@ -1292,6 +1384,23 @@
     </div>
 </div>
 
+<!-- ADMIN SETTINGS MODAL -->
+<div id="adminSettingsModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h2>⚙️ Admin Settings - User Management</h2>
+            <button class="close-btn" onclick="closeModal('adminSettingsModal')">&times;</button>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: var(--primary-color); margin-bottom: 15px;">🔐 System Users</h3>
+            <div class="user-management-grid" id="userManagementList">
+                <!-- Users will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // DATA STORAGE
 let customers = JSON.parse(localStorage.getItem('customers')) || [];
@@ -1308,6 +1417,16 @@ let ledgerEntries = JSON.parse(localStorage.getItem('ledgerEntries')) || [];
 let currentUser = '';
 let currentRole = 'admin';
 let selectedRole = 'admin';
+
+// User Management Storage
+let systemUsers = JSON.parse(localStorage.getItem('systemUsers')) || [
+    { id: 'user_1', username: 'admin', password: 'admin123', role: 'admin', createdAt: new Date().toISOString() },
+    { id: 'user_2', username: 'manager', password: 'manager123', role: 'manager', createdAt: new Date().toISOString() },
+    { id: 'user_3', username: 'accountant', password: 'accountant123', role: 'accountant', createdAt: new Date().toISOString() }
+];
+
+// Theme preference
+let isDarkMode = localStorage.getItem('darkMode') === 'true';
 
 // Initialize vehicle stocks if not exists
 vehicles.forEach(v => {
@@ -1327,18 +1446,21 @@ function handleLogin(e) {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
-    if (username && password) {
+    // Check if user exists in systemUsers
+    const user = systemUsers.find(u => u.username === username && u.password === password);
+    
+    if (user) {
         currentUser = username;
-        currentRole = selectedRole;
+        currentRole = user.role;
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('userDisplay').textContent = username;
-        document.getElementById('userRoleDisplay').textContent = selectedRole.toUpperCase();
-        document.getElementById('userRoleDisplay').className = `user-role role-${selectedRole}`;
+        document.getElementById('userRoleDisplay').textContent = user.role.toUpperCase();
+        document.getElementById('userRoleDisplay').className = `user-role role-${user.role}`;
         initApp();
         showNotification('Welcome ' + username + '! 🎉', 'success');
     } else {
-        showNotification('Invalid credentials!', 'error');
+        showNotification('Invalid username or password!', 'error');
     }
 }
 
@@ -1355,6 +1477,19 @@ function logout() {
 
 // INITIALIZATION
 function initApp() {
+    // Apply saved theme
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+        document.getElementById('themeIcon').textContent = '☀️';
+    }
+    
+    // Show admin settings button only for admin
+    if (currentRole === 'admin') {
+        document.getElementById('adminSettingsBtn').style.display = 'inline-flex';
+    } else {
+        document.getElementById('adminSettingsBtn').style.display = 'none';
+    }
+    
     updateDashboard();
     renderCustomers();
     renderSuppliers();
@@ -1394,6 +1529,7 @@ function saveToStorage() {
     localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
     localStorage.setItem('rateChangeLogs', JSON.stringify(rateChangeLogs));
     localStorage.setItem('ledgerEntries', JSON.stringify(ledgerEntries));
+    localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
 }
 
 // Add ledger entry function
@@ -3825,6 +3961,14 @@ function switchTab(tabName) {
 }
 
 function openModal(modalId) {
+    // Special handling for admin settings modal
+    if (modalId === 'adminSettingsModal') {
+        if (currentRole !== 'admin') {
+            showNotification('Only admin can access this!', 'error');
+            return;
+        }
+        renderUserManagement();
+    }
     document.getElementById(modalId).style.display = 'flex';
 }
 
@@ -3914,6 +4058,163 @@ function populateDropdowns() {
             });
         }
     });
+}
+
+// THEME TOGGLE FUNCTIONS
+function toggleTheme() {
+    isDarkMode = !isDarkMode;
+    localStorage.setItem('darkMode', isDarkMode);
+    
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+        document.getElementById('themeIcon').textContent = '☀️';
+        showNotification('Dark mode enabled 🌙', 'success');
+    } else {
+        document.body.classList.remove('dark-mode');
+        document.getElementById('themeIcon').textContent = '🌙';
+        showNotification('Light mode enabled ☀️', 'success');
+    }
+}
+
+// USER MANAGEMENT FUNCTIONS
+function openAdminSettings() {
+    if (currentRole !== 'admin') {
+        showNotification('Only admin can access this!', 'error');
+        return;
+    }
+    renderUserManagement();
+    openModal('adminSettingsModal');
+}
+
+function renderUserManagement() {
+    const container = document.getElementById('userManagementList');
+    container.innerHTML = '';
+    
+    systemUsers.forEach(user => {
+        const userCard = document.createElement('div');
+        userCard.className = 'user-card';
+        userCard.innerHTML = `
+            <div class="user-card-info">
+                <h4>${user.username}</h4>
+                <p><strong>Role:</strong> <span style="color: var(--primary-color); text-transform: capitalize;">${user.role}</span></p>
+                <p style="font-size: 0.8em; color: var(--text-secondary);">Created: ${new Date(user.createdAt).toLocaleDateString()}</p>
+            </div>
+            <div class="user-card-actions">
+                <button class="btn btn-info btn-sm" onclick="changeUserPassword('${user.id}')">🔐 Change Password</button>
+                <button class="btn btn-warning btn-sm" onclick="changeUserRole('${user.id}')">👤 Change Role</button>
+                ${user.username !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${user.id}')">Delete</button>` : ''}
+            </div>
+        `;
+        container.appendChild(userCard);
+    });
+    
+    // Add "Add New User" button
+    const addUserBtn = document.createElement('div');
+    addUserBtn.style.textAlign = 'center';
+    addUserBtn.style.marginTop = '20px';
+    addUserBtn.innerHTML = '<button class="btn btn-success" onclick="addNewUser()">➕ Add New User</button>';
+    container.appendChild(addUserBtn);
+}
+
+function changeUserPassword(userId) {
+    const user = systemUsers.find(u => u.id === userId);
+    if (!user) {
+        showNotification('User not found!', 'error');
+        return;
+    }
+    
+    const newPassword = prompt(`Enter new password for ${user.username}:`);
+    if (newPassword && newPassword.length >= 4) {
+        user.password = newPassword;
+        saveToStorage();
+        showNotification(`Password changed for ${user.username}! ✅`, 'success');
+        renderUserManagement();
+    } else if (newPassword !== null) {
+        showNotification('Password must be at least 4 characters!', 'error');
+    }
+}
+
+function changeUserRole(userId) {
+    const user = systemUsers.find(u => u.id === userId);
+    if (!user) {
+        showNotification('User not found!', 'error');
+        return;
+    }
+    
+    if (user.username === 'admin') {
+        showNotification('Cannot change admin role!', 'error');
+        return;
+    }
+    
+    const roles = ['admin', 'manager', 'accountant'];
+    const currentIndex = roles.indexOf(user.role);
+    const roleOptions = roles.map((r, i) => `${i + 1}. ${r.toUpperCase()}`).join('\n');
+    
+    const choice = prompt(`Select new role for ${user.username}:\n\n${roleOptions}\n\nCurrent role: ${user.role.toUpperCase()}\n\nEnter number (1-3):`);
+    
+    if (choice && ['1', '2', '3'].includes(choice)) {
+        const newRole = roles[parseInt(choice) - 1];
+        user.role = newRole;
+        saveToStorage();
+        showNotification(`Role changed to ${newRole.toUpperCase()} for ${user.username}! ✅`, 'success');
+        renderUserManagement();
+    }
+}
+
+function deleteUser(userId) {
+    const user = systemUsers.find(u => u.id === userId);
+    if (!user) {
+        showNotification('User not found!', 'error');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to delete user "${user.username}"?\n\nThis action cannot be undone!`)) {
+        systemUsers = systemUsers.filter(u => u.id !== userId);
+        saveToStorage();
+        showNotification(`User ${user.username} deleted! ✅`, 'success');
+        renderUserManagement();
+    }
+}
+
+function addNewUser() {
+    const username = prompt('Enter username for new user:');
+    if (!username) return;
+    
+    // Check if username already exists
+    if (systemUsers.find(u => u.username === username)) {
+        showNotification('Username already exists!', 'error');
+        return;
+    }
+    
+    const password = prompt('Enter password (min 4 characters):');
+    if (!password || password.length < 4) {
+        showNotification('Password must be at least 4 characters!', 'error');
+        return;
+    }
+    
+    const roles = ['admin', 'manager', 'accountant'];
+    const roleOptions = roles.map((r, i) => `${i + 1}. ${r.toUpperCase()}`).join('\n');
+    const roleChoice = prompt(`Select role:\n\n${roleOptions}\n\nEnter number (1-3):`);
+    
+    if (!roleChoice || !['1', '2', '3'].includes(roleChoice)) {
+        showNotification('Invalid role selection!', 'error');
+        return;
+    }
+    
+    const role = roles[parseInt(roleChoice) - 1];
+    
+    const newUser = {
+        id: 'user_' + Date.now(),
+        username: username,
+        password: password,
+        role: role,
+        createdAt: new Date().toISOString()
+    };
+    
+    systemUsers.push(newUser);
+    saveToStorage();
+    showNotification(`User ${username} created successfully! ✅`, 'success');
+    renderUserManagement();
 }
 
 // Initialize
