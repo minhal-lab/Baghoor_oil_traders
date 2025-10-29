@@ -476,6 +476,7 @@
                 </button>
                 <button class="btn btn-purple" id="adminSettingsBtn" onclick="openModal('adminSettingsModal')" style="display: none;">⚙️ Admin Settings</button>
                 <button class="btn btn-warning" onclick="openModal('backupModal')">💾 Backup</button>
+                <button class="btn btn-danger" onclick="clearAllData()" title="Delete all data and start fresh" style="background: #dc3545;">🗑️ Clear Data</button>
                 <button class="btn btn-danger" onclick="logout()">Logout</button>
             </div>
         </div>
@@ -1674,32 +1675,79 @@
 </div>
 
 <script>
-// DATA STORAGE
-let customers = JSON.parse(localStorage.getItem('customers')) || [];
-let suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
-let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-let payments = JSON.parse(localStorage.getItem('payments')) || [];
-let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
-let customerTransfers = JSON.parse(localStorage.getItem('customerTransfers')) || [];
-let vehicles = JSON.parse(localStorage.getItem('vehicles')) || [];
-let banks = JSON.parse(localStorage.getItem('banks')) || [];
-let bankTransactions = JSON.parse(localStorage.getItem('bankTransactions')) || [];
-let rateChangeLogs = JSON.parse(localStorage.getItem('rateChangeLogs')) || [];
-let ledgerEntries = JSON.parse(localStorage.getItem('ledgerEntries')) || [];
-let jvVouchers = JSON.parse(localStorage.getItem('jvVouchers')) || [];
+// DATA CLEANUP AND VALIDATION FUNCTION
+function safeLoadData(key, defaultValue = []) {
+    try {
+        const data = localStorage.getItem(key);
+        if (!data || data === 'undefined' || data === 'null') {
+            return defaultValue;
+        }
+        const parsed = JSON.parse(data);
+        // Validate that it's an array
+        if (!Array.isArray(parsed)) {
+            console.warn(`Invalid data format for ${key}, resetting to default`);
+            return defaultValue;
+        }
+        return parsed;
+    } catch (error) {
+        console.error(`Error loading ${key}:`, error);
+        return defaultValue;
+    }
+}
+
+// DATA STORAGE - SAFE LOADING
+let customers = safeLoadData('customers', []);
+let suppliers = safeLoadData('suppliers', []);
+let transactions = safeLoadData('transactions', []);
+let payments = safeLoadData('payments', []);
+let expenses = safeLoadData('expenses', []);
+let customerTransfers = safeLoadData('customerTransfers', []);
+let vehicles = safeLoadData('vehicles', []);
+let banks = safeLoadData('banks', []);
+let bankTransactions = safeLoadData('bankTransactions', []);
+let rateChangeLogs = safeLoadData('rateChangeLogs', []);
+let ledgerEntries = safeLoadData('ledgerEntries', []);
+let jvVouchers = safeLoadData('jvVouchers', []);
 let currentUser = '';
 let currentRole = 'admin';
 let selectedRole = 'admin';
 
 // User Management Storage
-let systemUsers = JSON.parse(localStorage.getItem('systemUsers')) || [
+let systemUsers = safeLoadData('systemUsers', [
     { id: 'user_1', username: 'admin', password: 'admin123', role: 'admin', createdAt: new Date().toISOString() },
     { id: 'user_2', username: 'manager', password: 'manager123', role: 'manager', createdAt: new Date().toISOString() },
     { id: 'user_3', username: 'accountant', password: 'accountant123', role: 'accountant', createdAt: new Date().toISOString() }
-];
+]);
 
 // Theme preference
 let isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+// CLEAR ALL DATA FUNCTION
+function clearAllData() {
+    const confirmMsg = '⚠️ WARNING! This will DELETE ALL DATA permanently!\n\n' +
+                      'This includes:\n' +
+                      '• All customers and suppliers\n' +
+                      '• All transactions and payments\n' +
+                      '• All vehicles and stock\n' +
+                      '• All banks and ledgers\n' +
+                      '• Everything!\n\n' +
+                      'Type "DELETE ALL" to confirm:';
+    
+    const userInput = prompt(confirmMsg);
+    
+    if (userInput === 'DELETE ALL') {
+        // Clear all localStorage
+        localStorage.clear();
+        
+        // Show success message
+        alert('✅ All data has been deleted!\n\nThe page will reload with a fresh start.');
+        
+        // Reload page
+        location.reload();
+    } else {
+        showNotification('❌ Data deletion cancelled. Nothing was deleted.', 'info');
+    }
+}
 
 // Initialize vehicle stocks and owner info if not exists
 vehicles.forEach(v => {
@@ -1871,8 +1919,11 @@ function renderCustomers() {
     const tbody = document.getElementById('customersBody');
     tbody.innerHTML = '';
     
+    // Use DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
+    
     customers.forEach(customer => {
-        const row = tbody.insertRow();
+        const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${customer.name}</strong></td>
             <td>${customer.contact || '-'}</td>
@@ -1885,7 +1936,10 @@ function renderCustomers() {
                 <button class="btn btn-danger btn-sm" onclick="deleteCustomer('${customer.id}')">Delete</button>
             </td>
         `;
+        fragment.appendChild(row);
     });
+    
+    tbody.appendChild(fragment);
 }
 
 function editCustomer(customer) {
@@ -2151,34 +2205,79 @@ function savePurchase(e) {
     calculatePurchaseAmount(); // Reset display
 }
 
+// Pagination variables
+let transactionsPage = 1;
+const transactionsPerPage = 50; // Show 50 at a time
+
 function renderTransactions() {
     const tbody = document.getElementById('transactionsBody');
     tbody.innerHTML = '';
     
-    transactions.slice().reverse().forEach(trans => {
-        const vehicle = vehicles.find(v => v.id === trans.vehicleId);
+    // Show loading message for large datasets
+    if (transactions.length > 100) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">⏳ Loading transactions...</td></tr>';
+    }
+    
+    // Use setTimeout to prevent UI blocking for large datasets
+    setTimeout(() => {
+        const fragment = document.createDocumentFragment();
         
-        // Build discount display
-        let discountDisplay = '';
-        if (trans.discountAmount && trans.discountAmount > 0) {
-            discountDisplay = `<br><small style="color: #28a745;">💰 Discount: Rs. ${trans.discountAmount.toFixed(2)}</small>`;
+        // Get paginated transactions
+        const startIndex = (transactionsPage - 1) * transactionsPerPage;
+        const endIndex = startIndex + transactionsPerPage;
+        const paginatedTransactions = transactions.slice().reverse().slice(startIndex, endIndex);
+        
+        paginatedTransactions.forEach(trans => {
+            const vehicle = vehicles.find(v => v.id === trans.vehicleId);
+            
+            // Build discount display
+            let discountDisplay = '';
+            if (trans.discountAmount && trans.discountAmount > 0) {
+                discountDisplay = `<br><small style="color: #28a745;">💰 Discount: Rs. ${trans.discountAmount.toFixed(2)}</small>`;
+            }
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${new Date(trans.date).toLocaleDateString()}</td>
+                <td><span style="background: ${trans.type === 'sale' ? '#48bb78' : '#ed8936'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${trans.type.toUpperCase()}</span></td>
+                <td>${trans.partyName}</td>
+                <td>${trans.fuelType}</td>
+                <td>${trans.quantity.toFixed(2)} L</td>
+                <td>Rs. ${trans.rate.toFixed(4)}</td>
+                <td style="font-weight: 700;">Rs. ${trans.amount.toFixed(2)}${discountDisplay}</td>
+                <td>${vehicle ? vehicle.number : '-'}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deleteTransaction('${trans.id}', '${trans.type}', '${trans.partyId}', '${trans.vehicleId}', '${trans.fuelType}', ${trans.quantity}, ${trans.amount})">Delete</button>
+                </td>
+            `;
+            fragment.appendChild(row);
+        });
+        
+        tbody.innerHTML = '';
+        tbody.appendChild(fragment);
+        
+        // Show pagination info
+        const totalPages = Math.ceil(transactions.length / transactionsPerPage);
+        if (totalPages > 1) {
+            const paginationRow = document.createElement('tr');
+            paginationRow.innerHTML = `
+                <td colspan="9" style="text-align: center; padding: 15px; background: var(--bg-secondary);">
+                    <button class="btn btn-sm btn-secondary" onclick="changeTransactionsPage(-1)" ${transactionsPage === 1 ? 'disabled' : ''}>← Previous</button>
+                    <span style="margin: 0 15px; font-weight: 700;">Page ${transactionsPage} of ${totalPages}</span>
+                    <button class="btn btn-sm btn-secondary" onclick="changeTransactionsPage(1)" ${transactionsPage === totalPages ? 'disabled' : ''}>Next →</button>
+                </td>
+            `;
+            tbody.appendChild(paginationRow);
         }
-        
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${new Date(trans.date).toLocaleDateString()}</td>
-            <td><span style="background: ${trans.type === 'sale' ? '#48bb78' : '#ed8936'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${trans.type.toUpperCase()}</span></td>
-            <td>${trans.partyName}</td>
-            <td>${trans.fuelType}</td>
-            <td>${trans.quantity.toFixed(2)} L</td>
-            <td>Rs. ${trans.rate.toFixed(4)}</td>
-            <td style="font-weight: 700;">Rs. ${trans.amount.toFixed(2)}${discountDisplay}</td>
-            <td>${vehicle ? vehicle.number : '-'}</td>
-            <td>
-                <button class="btn btn-danger btn-sm" onclick="deleteTransaction('${trans.id}', '${trans.type}', '${trans.partyId}', '${trans.vehicleId}', '${trans.fuelType}', ${trans.quantity}, ${trans.amount})">Delete</button>
-            </td>
-        `;
-    });
+    }, 10); // Small delay to prevent UI blocking
+}
+
+function changeTransactionsPage(direction) {
+    const totalPages = Math.ceil(transactions.length / transactionsPerPage);
+    transactionsPage += direction;
+    if (transactionsPage < 1) transactionsPage = 1;
+    if (transactionsPage > totalPages) transactionsPage = totalPages;
+    renderTransactions();
 }
 
 function deleteTransaction(transId, type, partyId, vehicleId, fuelType, quantity, amount) {
@@ -2806,8 +2905,11 @@ function renderVehicles() {
     const tbody = document.getElementById('vehiclesBody');
     tbody.innerHTML = '';
     
+    // Use DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
+    
     vehicles.forEach(vehicle => {
-        const row = tbody.insertRow();
+        const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${vehicle.number}</strong></td>
             <td>${vehicle.driverName}</td>
@@ -2820,7 +2922,10 @@ function renderVehicles() {
                 <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${vehicle.id}')">Delete</button>
             </td>
         `;
+        fragment.appendChild(row);
     });
+    
+    tbody.appendChild(fragment);
 }
 
 function editVehicle(vehicle) {
@@ -5327,6 +5432,30 @@ function addNewUser() {
 // Initialize
 window.addEventListener('load', () => {
     console.log('🚀 Baghoor Oil Traders - Complete Professional System Loaded!');
+    
+    // Clean up any corrupted data on load
+    try {
+        // Remove null/undefined entries
+        customers = customers.filter(c => c && c.id);
+        suppliers = suppliers.filter(s => s && s.id);
+        transactions = transactions.filter(t => t && t.id);
+        vehicles = vehicles.filter(v => v && v.id);
+        banks = banks.filter(b => b && b.id);
+        
+        // Fix any missing properties
+        vehicles.forEach(v => {
+            if (!v.stockPMG) v.stockPMG = 0;
+            if (!v.stockHSD) v.stockHSD = 0;
+            if (!v.ownerName) v.ownerName = '';
+            if (!v.ownerContact) v.ownerContact = '';
+            if (!v.ownerBalance) v.ownerBalance = 0;
+        });
+        
+        console.log('✅ Data validation complete');
+        console.log(`📊 Loaded: ${customers.length} customers, ${transactions.length} transactions, ${vehicles.length} vehicles`);
+    } catch (error) {
+        console.error('⚠️ Error during data cleanup:', error);
+    }
 });
 </script>
 
