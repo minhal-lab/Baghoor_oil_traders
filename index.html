@@ -1004,6 +1004,7 @@
                             <option value="none">No Discount</option>
                             <option value="percentage">Percentage (%)</option>
                             <option value="fixed">Fixed Amount (Rs)</option>
+                            <option value="perlitre">Rupees Per Litre (Rs/L)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1082,6 +1083,7 @@
                             <option value="none">No Discount</option>
                             <option value="percentage">Percentage (%)</option>
                             <option value="fixed">Fixed Amount (Rs)</option>
+                            <option value="perlitre">Rupees Per Litre (Rs/L)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1622,8 +1624,8 @@
                         <input type="text" id="jvCreditOther" placeholder="Account name" style="display: none; margin-top: 10px;">
                     </div>
                     <div class="form-group">
-                        <label>Amount (Rs) *</label>
-                        <input type="number" step="0.01" id="jvCreditAmount" oninput="validateJVAmounts()" required>
+                        <label>Amount (Rs) * <small style="color: #666;">(Auto-synced with Debit)</small></label>
+                        <input type="number" step="0.01" id="jvCreditAmount" readonly required style="background: #e9ecef; cursor: not-allowed;">
                     </div>
                 </div>
             </div>
@@ -2041,34 +2043,45 @@ function saveSale(e) {
         createdAt: new Date().toISOString()
     };
     
+    // Add transaction first
     transactions.push(transaction);
+    
+    // Update customer balance
     customer.balance += amount;
     
-    // Deduct from vehicle stock
+    // Deduct from vehicle stock - CRITICAL: Update the actual vehicle object in the array
+    const vehicleIndex = vehicles.findIndex(v => v.id === vehicleId);
     if (fuelType === 'PMG') {
-        vehicle.stockPMG -= quantity / 1000; // Convert liters to KL
+        vehicles[vehicleIndex].stockPMG -= quantity / 1000; // Convert liters to KL
     } else {
-        vehicle.stockHSD -= quantity / 1000;
+        vehicles[vehicleIndex].stockHSD -= quantity / 1000;
     }
     
     // Ledger entry
     addLedgerEntry('sale', `Sale to ${customer.name} - ${fuelType}`, 
         `Customer: ${customer.name}`, amount, 'Sales Revenue', amount, date);
     
+    // CRITICAL: Force save to localStorage IMMEDIATELY
     saveToStorage();
+    
+    // CRITICAL: Force complete UI refresh
     renderTransactions();
     renderCustomers();
     renderVehicles();
-    closeModal('saleModal');
     updateDashboard();
+    populateDropdowns();
     
-    let msg = 'Sale recorded! Stock updated! ✅';
+    // Close modal and reset form
+    closeModal('saleModal');
+    e.target.reset();
+    calculateSaleAmount(); // Reset display
+    
+    // Success message
+    let msg = '✅ Sale recorded successfully!';
     if (discountAmount > 0) {
         msg += ` (Discount: Rs. ${discountAmount.toFixed(2)})`;
     }
     showNotification(msg, 'success');
-    e.target.reset();
-    calculateSaleAmount(); // Reset display
 }
 
 function savePurchase(e) {
@@ -2185,34 +2198,34 @@ function deleteTransaction(transId, type, partyId, vehicleId, fuelType, quantity
     // Reverse the effects based on transaction type
     if (type === 'sale') {
         // Find customer and reduce their balance
-        const customer = customers.find(c => c.id === partyId);
-        if (customer) {
-            customer.balance -= amount;
+        const customerIndex = customers.findIndex(c => c.id === partyId);
+        if (customerIndex >= 0) {
+            customers[customerIndex].balance -= amount;
         }
         
         // Add stock back to vehicle
-        const vehicle = vehicles.find(v => v.id === vehicleId);
-        if (vehicle) {
+        const vehicleIndex = vehicles.findIndex(v => v.id === vehicleId);
+        if (vehicleIndex >= 0) {
             if (fuelType === 'PMG') {
-                vehicle.stockPMG += quantity / 1000; // Convert liters back to KL
+                vehicles[vehicleIndex].stockPMG += quantity / 1000; // Convert liters back to KL
             } else {
-                vehicle.stockHSD += quantity / 1000;
+                vehicles[vehicleIndex].stockHSD += quantity / 1000;
             }
         }
     } else if (type === 'purchase') {
         // Find supplier and reduce their balance
-        const supplier = suppliers.find(s => s.id === partyId);
-        if (supplier) {
-            supplier.balance -= amount;
+        const supplierIndex = suppliers.findIndex(s => s.id === partyId);
+        if (supplierIndex >= 0) {
+            suppliers[supplierIndex].balance -= amount;
         }
         
         // Remove stock from vehicle
-        const vehicle = vehicles.find(v => v.id === vehicleId);
-        if (vehicle) {
+        const vehicleIndex = vehicles.findIndex(v => v.id === vehicleId);
+        if (vehicleIndex >= 0) {
             if (fuelType === 'PMG') {
-                vehicle.stockPMG -= quantity / 1000; // Convert liters to KL
+                vehicles[vehicleIndex].stockPMG -= quantity / 1000; // Convert liters to KL
             } else {
-                vehicle.stockHSD -= quantity / 1000;
+                vehicles[vehicleIndex].stockHSD -= quantity / 1000;
             }
         }
     }
@@ -2220,14 +2233,16 @@ function deleteTransaction(transId, type, partyId, vehicleId, fuelType, quantity
     // Remove the transaction
     transactions.splice(transIndex, 1);
     
-    // Save and refresh
+    // CRITICAL: Force save and complete refresh
     saveToStorage();
     renderTransactions();
     renderCustomers();
     renderSuppliers();
     renderVehicles();
     updateDashboard();
-    showNotification('Transaction deleted successfully! ✅', 'success');
+    populateDropdowns();
+    
+    showNotification('✅ Transaction deleted successfully! All changes reversed.', 'success');
 }
 
 function updateSaleRate() {
@@ -2267,6 +2282,12 @@ function calculateSaleAmount() {
         finalAmount = subtotal - discountAmount;
         const percentageDiscount = ((discountAmount / subtotal) * 100).toFixed(2);
         discountInfo = `💰 Discount: Rs. ${discountAmount.toFixed(2)} (${percentageDiscount}%)`;
+    } else if (discountType === 'perlitre' && discountValue > 0) {
+        // Per Litre discount: discount_per_litre * quantity
+        discountAmount = discountValue * quantity;
+        finalAmount = subtotal - discountAmount;
+        const percentageDiscount = ((discountAmount / subtotal) * 100).toFixed(2);
+        discountInfo = `💰 Discount: Rs. ${discountValue}/L × ${quantity} L = Rs. ${discountAmount.toFixed(2)} (${percentageDiscount}%)`;
     } else {
         discountInfo = 'No discount applied';
     }
@@ -2313,6 +2334,12 @@ function calculatePurchaseAmount() {
         finalAmount = subtotal - discountAmount;
         const percentageDiscount = ((discountAmount / subtotal) * 100).toFixed(2);
         discountInfo = `💰 Discount: Rs. ${discountAmount.toFixed(2)} (${percentageDiscount}%)`;
+    } else if (discountType === 'perlitre' && discountValue > 0) {
+        // Per Litre discount: discount_per_litre * quantity
+        discountAmount = discountValue * quantity;
+        finalAmount = subtotal - discountAmount;
+        const percentageDiscount = ((discountAmount / subtotal) * 100).toFixed(2);
+        discountInfo = `💰 Discount: Rs. ${discountValue}/L × ${quantity} L = Rs. ${discountAmount.toFixed(2)} (${percentageDiscount}%)`;
     } else {
         discountInfo = 'No discount applied';
     }
@@ -2830,12 +2857,50 @@ function generateLedger() {
         // Get all transactions for this customer
         const customerSales = transactions.filter(t => t.partyId === customer.id && t.type === 'sale');
         const customerPayments = payments.filter(p => p.partyId === customer.id && p.type === 'received');
-        const customerExpenses = expenses.filter(e => e.customerId === customer.id && e.source === 'customer');
+        
+        // EXPENSES with robust checks
+        const customerExpenses = expenses.filter(e => 
+            e.source === 'customer' && 
+            e.customerId && 
+            e.customerId === customer.id
+        );
+        
+        // TRANSFERS with robust checks
+        const transfersFrom = customerTransfers.filter(t => 
+            t.fromCustomerId && 
+            t.fromCustomerId === customer.id
+        );
+        const transfersTo = customerTransfers.filter(t => 
+            t.toCustomerId && 
+            t.toCustomerId === customer.id
+        );
+        
+        // JV ENTRIES with robust checks
+        const jvDebits = jvVouchers.filter(jv => {
+            if (jv.debitType === 'customer' && jv.debitAccount) {
+                return jv.debitAccount === customer.id || 
+                       jv.debitAccount === 'customer_' + customer.id ||
+                       jv.debitAccount.includes(customer.id);
+            }
+            return false;
+        });
+        const jvCredits = jvVouchers.filter(jv => {
+            if (jv.creditType === 'customer' && jv.creditAccount) {
+                return jv.creditAccount === customer.id || 
+                       jv.creditAccount === 'customer_' + customer.id ||
+                       jv.creditAccount.includes(customer.id);
+            }
+            return false;
+        });
         
         // Calculate totals
         const totalSales = customerSales.reduce((sum, t) => sum + t.amount, 0);
         const totalPayments = customerPayments.reduce((sum, p) => sum + p.amount, 0);
         const totalExpenses = customerExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const totalTransfersFrom = transfersFrom.reduce((sum, t) => sum + t.amount, 0);
+        const totalTransfersTo = transfersTo.reduce((sum, t) => sum + t.amount, 0);
+        const totalJVDebits = jvDebits.reduce((sum, jv) => sum + jv.debitAmount, 0);
+        const totalJVCredits = jvCredits.reduce((sum, jv) => sum + jv.creditAmount, 0);
         const balance = customer.balance;
         
         html += `
@@ -2850,26 +2915,43 @@ function generateLedger() {
                     Contact: ${customer.contact || 'N/A'} | CNIC: ${customer.cnic || 'N/A'}
                 </p>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center;">
-                        <div style="color: #718096; font-size: 0.8em;">Total Sales</div>
-                        <div style="color: #48bb78; font-weight: 700; font-size: 1.2em;">Rs. ${totalSales.toFixed(2)}</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 15px;">
+                    <div style="background: white; padding: 8px; border-radius: 8px; text-align: center;">
+                        <div style="color: #718096; font-size: 0.7em;">Sales</div>
+                        <div style="color: #48bb78; font-weight: 700; font-size: 0.95em;">Rs. ${totalSales.toFixed(2)}</div>
                     </div>
-                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center;">
-                        <div style="color: #718096; font-size: 0.8em;">Total Payments</div>
-                        <div style="color: #4299e1; font-weight: 700; font-size: 1.2em;">Rs. ${totalPayments.toFixed(2)}</div>
+                    <div style="background: white; padding: 8px; border-radius: 8px; text-align: center;">
+                        <div style="color: #718096; font-size: 0.7em;">Payments</div>
+                        <div style="color: #4299e1; font-weight: 700; font-size: 0.95em;">Rs. ${totalPayments.toFixed(2)}</div>
                     </div>
-                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center;">
-                        <div style="color: #718096; font-size: 0.8em;">Total Expenses</div>
-                        <div style="color: #f56565; font-weight: 700; font-size: 1.2em;">Rs. ${totalExpenses.toFixed(2)}</div>
+                    <div style="background: white; padding: 8px; border-radius: 8px; text-align: center;">
+                        <div style="color: #718096; font-size: 0.7em;">Expenses</div>
+                        <div style="color: #f56565; font-weight: 700; font-size: 0.95em;">Rs. ${totalExpenses.toFixed(2)}</div>
                     </div>
-                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center;">
-                        <div style="color: #718096; font-size: 0.8em;">Outstanding</div>
-                        <div style="color: ${balance >= 0 ? '#ed8936' : '#48bb78'}; font-weight: 700; font-size: 1.2em;">Rs. ${balance.toFixed(2)}</div>
+                    <div style="background: white; padding: 8px; border-radius: 8px; text-align: center;">
+                        <div style="color: #718096; font-size: 0.7em;">Paid For</div>
+                        <div style="color: #9f7aea; font-weight: 700; font-size: 0.95em;">Rs. ${totalTransfersFrom.toFixed(2)}</div>
+                    </div>
+                    <div style="background: white; padding: 8px; border-radius: 8px; text-align: center;">
+                        <div style="color: #718096; font-size: 0.7em;">Received</div>
+                        <div style="color: #38b2ac; font-weight: 700; font-size: 0.95em;">Rs. ${totalTransfersTo.toFixed(2)}</div>
+                    </div>
+                    <div style="background: white; padding: 8px; border-radius: 8px; text-align: center;">
+                        <div style="color: #718096; font-size: 0.7em;">JV Dr</div>
+                        <div style="color: #ed8936; font-weight: 700; font-size: 0.95em;">Rs. ${totalJVDebits.toFixed(2)}</div>
+                    </div>
+                    <div style="background: white; padding: 8px; border-radius: 8px; text-align: center;">
+                        <div style="color: #718096; font-size: 0.7em;">JV Cr</div>
+                        <div style="color: #f687b3; font-weight: 700; font-size: 0.95em;">Rs. ${totalJVCredits.toFixed(2)}</div>
+                    </div>
+                    <div style="background: white; padding: 8px; border-radius: 8px; text-align: center;">
+                        <div style="color: #718096; font-size: 0.7em;">Balance</div>
+                        <div style="color: ${balance >= 0 ? '#e53e3e' : '#38a169'}; font-weight: 700; font-size: 0.95em;">Rs. ${balance.toFixed(2)}</div>
                     </div>
                 </div>
                 
-                ${customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0 ? `
+                ${customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0 || 
+                  transfersFrom.length > 0 || transfersTo.length > 0 || jvDebits.length > 0 || jvCredits.length > 0 ? `
                 <table style="width: 100%; font-size: 0.85em; background: white; border-radius: 8px;">
                     <thead style="background: #667eea; color: white;">
                         <tr>
@@ -2903,9 +2985,37 @@ function generateLedger() {
             ...customerExpenses.map(e => ({
                 date: e.date,
                 type: 'Expense',
-                details: `${e.category} - ${e.description}`,
+                details: `${e.category || 'Expense'} - ${e.description || ''}`,
                 debit: 0,
                 credit: e.amount
+            })),
+            ...transfersFrom.map(t => ({
+                date: t.date,
+                type: 'Transfer Out',
+                details: `Paid for ${t.toCustomerName || 'Customer'}`,
+                debit: t.amount,
+                credit: 0
+            })),
+            ...transfersTo.map(t => ({
+                date: t.date,
+                type: 'Transfer In',
+                details: `${t.fromCustomerName || 'Customer'} paid`,
+                debit: 0,
+                credit: t.amount
+            })),
+            ...jvDebits.map(jv => ({
+                date: jv.date,
+                type: 'JV Dr',
+                details: jv.description || 'Journal Entry',
+                debit: jv.debitAmount || 0,
+                credit: 0
+            })),
+            ...jvCredits.map(jv => ({
+                date: jv.date,
+                type: 'JV Cr',
+                details: jv.description || 'Journal Entry',
+                debit: 0,
+                credit: jv.creditAmount || 0
             }))
         ].sort((a, b) => new Date(b.date) - new Date(a.date));
         
@@ -2914,7 +3024,15 @@ function generateLedger() {
                 <tr style="border-bottom: 1px solid #e2e8f0;">
                     <td style="padding: 8px;">${new Date(entry.date).toLocaleDateString()}</td>
                     <td style="padding: 8px;">
-                        <span style="background: ${entry.type === 'Sale' ? '#48bb78' : entry.type === 'Payment' ? '#4299e1' : '#f56565'}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75em;">
+                        <span style="background: ${
+                            entry.type === 'Sale' ? '#48bb78' : 
+                            entry.type === 'Payment' ? '#4299e1' : 
+                            entry.type === 'Expense' ? '#f56565' :
+                            entry.type === 'Transfer Out' ? '#9f7aea' :
+                            entry.type === 'Transfer In' ? '#38b2ac' :
+                            entry.type === 'JV Dr' ? '#ed8936' :
+                            entry.type === 'JV Cr' ? '#f687b3' : '#718096'
+                        }; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600;">
                             ${entry.type}
                         </span>
                     </td>
@@ -2929,7 +3047,8 @@ function generateLedger() {
             `;
         });
         
-        if (customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0) {
+        if (customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0 || 
+            transfersFrom.length > 0 || transfersTo.length > 0 || jvDebits.length > 0 || jvCredits.length > 0) {
             html += `
                     </tbody>
                 </table>
@@ -3170,22 +3289,76 @@ function generateCustomerLedgerReport() {
     // Filter transactions by date if dates are provided
     let customerSales = transactions.filter(t => t.partyId === customerId && t.type === 'sale');
     let customerPayments = payments.filter(p => p.partyId === customerId && p.type === 'received');
-    let customerExpenses = expenses.filter(e => e.customerId === customerId && e.source === 'customer');
     
+    // EXPENSES - Check if customerId field exists and matches, AND source is 'customer'
+    let customerExpenses = expenses.filter(e => 
+        e.source === 'customer' && 
+        e.customerId && 
+        e.customerId === customerId
+    );
+    
+    // TRANSFERS FROM - this customer paid for others
+    let transfersFrom = customerTransfers.filter(t => 
+        t.fromCustomerId && 
+        t.fromCustomerId === customerId
+    );
+    
+    // TRANSFERS TO - others paid for this customer  
+    let transfersTo = customerTransfers.filter(t => 
+        t.toCustomerId && 
+        t.toCustomerId === customerId
+    );
+    
+    // JV DEBITS - customer on debit side
+    // Account format can be: "customer_cust_123" or just the ID
+    let jvDebits = jvVouchers.filter(jv => {
+        if (jv.debitType === 'customer' && jv.debitAccount) {
+            // Check if account matches customer ID directly or with prefix
+            return jv.debitAccount === customerId || 
+                   jv.debitAccount === 'customer_' + customerId ||
+                   jv.debitAccount.includes(customerId);
+        }
+        return false;
+    });
+    
+    // JV CREDITS - customer on credit side
+    let jvCredits = jvVouchers.filter(jv => {
+        if (jv.creditType === 'customer' && jv.creditAccount) {
+            return jv.creditAccount === customerId || 
+                   jv.creditAccount === 'customer_' + customerId ||
+                   jv.creditAccount.includes(customerId);
+        }
+        return false;
+    });
+    
+    // Apply date filters
     if (fromDate) {
         customerSales = customerSales.filter(t => t.date >= fromDate);
         customerPayments = customerPayments.filter(p => p.date >= fromDate);
         customerExpenses = customerExpenses.filter(e => e.date >= fromDate);
+        transfersFrom = transfersFrom.filter(t => t.date >= fromDate);
+        transfersTo = transfersTo.filter(t => t.date >= fromDate);
+        jvDebits = jvDebits.filter(jv => jv.date >= fromDate);
+        jvCredits = jvCredits.filter(jv => jv.date >= fromDate);
     }
     if (toDate) {
         customerSales = customerSales.filter(t => t.date <= toDate);
         customerPayments = customerPayments.filter(p => p.date <= toDate);
         customerExpenses = customerExpenses.filter(e => e.date <= toDate);
+        transfersFrom = transfersFrom.filter(t => t.date <= toDate);
+        transfersTo = transfersTo.filter(t => t.date <= toDate);
+        jvDebits = jvDebits.filter(jv => jv.date <= toDate);
+        jvCredits = jvCredits.filter(jv => jv.date <= toDate);
     }
     
+    // Calculate totals
     const totalSales = customerSales.reduce((sum, t) => sum + t.amount, 0);
     const totalPayments = customerPayments.reduce((sum, p) => sum + p.amount, 0);
     const totalExpenses = customerExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalTransfersFrom = transfersFrom.reduce((sum, t) => sum + t.amount, 0);
+    const totalTransfersTo = transfersTo.reduce((sum, t) => sum + t.amount, 0);
+    const totalJVDebits = jvDebits.reduce((sum, jv) => sum + jv.debitAmount, 0);
+    const totalJVCredits = jvCredits.reduce((sum, jv) => sum + jv.creditAmount, 0);
     const balance = customer.balance;
     
     let html = `
@@ -3207,26 +3380,42 @@ function generateCustomerLedgerReport() {
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                <div style="background: #48bb78; color: white; padding: 15px; border-radius: 10px; text-align: center;">
-                    <div style="font-size: 0.9em; opacity: 0.9;">Total Sales</div>
-                    <div style="font-size: 1.8em; font-weight: 700;">Rs. ${totalSales.toFixed(2)}</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                <div style="background: #48bb78; color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.75em; opacity: 0.9;">Sales</div>
+                    <div style="font-size: 1.3em; font-weight: 700;">Rs. ${totalSales.toFixed(2)}</div>
                 </div>
-                <div style="background: #4299e1; color: white; padding: 15px; border-radius: 10px; text-align: center;">
-                    <div style="font-size: 0.9em; opacity: 0.9;">Total Payments</div>
-                    <div style="font-size: 1.8em; font-weight: 700;">Rs. ${totalPayments.toFixed(2)}</div>
+                <div style="background: #4299e1; color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.75em; opacity: 0.9;">Payments</div>
+                    <div style="font-size: 1.3em; font-weight: 700;">Rs. ${totalPayments.toFixed(2)}</div>
                 </div>
-                <div style="background: #f56565; color: white; padding: 15px; border-radius: 10px; text-align: center;">
-                    <div style="font-size: 0.9em; opacity: 0.9;">Total Expenses</div>
-                    <div style="font-size: 1.8em; font-weight: 700;">Rs. ${totalExpenses.toFixed(2)}</div>
+                <div style="background: #f56565; color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.75em; opacity: 0.9;">Expenses</div>
+                    <div style="font-size: 1.3em; font-weight: 700;">Rs. ${totalExpenses.toFixed(2)}</div>
                 </div>
-                <div style="background: ${balance >= 0 ? '#ed8936' : '#48bb78'}; color: white; padding: 15px; border-radius: 10px; text-align: center;">
-                    <div style="font-size: 0.9em; opacity: 0.9;">Current Balance</div>
-                    <div style="font-size: 1.8em; font-weight: 700;">Rs. ${balance.toFixed(2)}</div>
+                <div style="background: #9f7aea; color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.75em; opacity: 0.9;">Paid For Others</div>
+                    <div style="font-size: 1.3em; font-weight: 700;">Rs. ${totalTransfersFrom.toFixed(2)}</div>
+                </div>
+                <div style="background: #38b2ac; color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.75em; opacity: 0.9;">Others Paid</div>
+                    <div style="font-size: 1.3em; font-weight: 700;">Rs. ${totalTransfersTo.toFixed(2)}</div>
+                </div>
+                <div style="background: #ed8936; color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.75em; opacity: 0.9;">JV Debits</div>
+                    <div style="font-size: 1.3em; font-weight: 700;">Rs. ${totalJVDebits.toFixed(2)}</div>
+                </div>
+                <div style="background: #f687b3; color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.75em; opacity: 0.9;">JV Credits</div>
+                    <div style="font-size: 1.3em; font-weight: 700;">Rs. ${totalJVCredits.toFixed(2)}</div>
+                </div>
+                <div style="background: ${balance >= 0 ? '#e53e3e' : '#38a169'}; color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.75em; opacity: 0.9;">Balance</div>
+                    <div style="font-size: 1.3em; font-weight: 700;">Rs. ${balance.toFixed(2)}</div>
                 </div>
             </div>
             
-            ${customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0 ? `
+            ${customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0 || transfersFrom.length > 0 || transfersTo.length > 0 || jvDebits.length > 0 || jvCredits.length > 0 ? `
             <div class="table-container">
                 <table>
                     <thead>
@@ -3262,9 +3451,37 @@ function generateCustomerLedgerReport() {
         ...customerExpenses.map(e => ({
             date: e.date,
             type: 'Expense',
-            details: `${e.category} - ${e.description}`,
+            details: `${e.category || 'Expense'} - ${e.description || ''}`,
             debit: 0,
             credit: e.amount
+        })),
+        ...transfersFrom.map(t => ({
+            date: t.date,
+            type: 'Transfer Out',
+            details: `Paid for ${t.toCustomerName || 'Customer'} - ${t.notes || ''}`,
+            debit: t.amount,
+            credit: 0
+        })),
+        ...transfersTo.map(t => ({
+            date: t.date,
+            type: 'Transfer In',
+            details: `${t.fromCustomerName || 'Customer'} paid for this - ${t.notes || ''}`,
+            debit: 0,
+            credit: t.amount
+        })),
+        ...jvDebits.map(jv => ({
+            date: jv.date,
+            type: 'JV Debit',
+            details: `${jv.description || 'Journal Entry'} (Dr: ${jv.debitAccount || ''})`,
+            debit: jv.debitAmount || 0,
+            credit: 0
+        })),
+        ...jvCredits.map(jv => ({
+            date: jv.date,
+            type: 'JV Credit',
+            details: `${jv.description || 'Journal Entry'} (Cr: ${jv.creditAccount || ''})`,
+            debit: 0,
+            credit: jv.creditAmount || 0
         }))
     ].sort((a, b) => new Date(a.date) - new Date(b.date));
     
@@ -3275,7 +3492,15 @@ function generateCustomerLedgerReport() {
             <tr>
                 <td>${new Date(entry.date).toLocaleDateString()}</td>
                 <td>
-                    <span style="background: ${entry.type === 'Sale' ? '#48bb78' : entry.type === 'Payment' ? '#4299e1' : '#f56565'}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em;">
+                    <span style="background: ${
+                        entry.type === 'Sale' ? '#48bb78' : 
+                        entry.type === 'Payment' ? '#4299e1' : 
+                        entry.type === 'Expense' ? '#f56565' :
+                        entry.type === 'Transfer Out' ? '#9f7aea' :
+                        entry.type === 'Transfer In' ? '#38b2ac' :
+                        entry.type === 'JV Debit' ? '#ed8936' :
+                        entry.type === 'JV Credit' ? '#f687b3' : '#718096'
+                    }; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600;">
                         ${entry.type}
                     </span>
                 </td>
@@ -3293,7 +3518,8 @@ function generateCustomerLedgerReport() {
         `;
     });
     
-    if (customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0) {
+    if (customerSales.length > 0 || customerPayments.length > 0 || customerExpenses.length > 0 || 
+        transfersFrom.length > 0 || transfersTo.length > 0 || jvDebits.length > 0 || jvCredits.length > 0) {
         html += `
                     </tbody>
                 </table>
@@ -4728,12 +4954,15 @@ function updateJVCreditAccounts() {
 }
 
 function validateJVAmounts() {
-    const debit = parseFloat(document.getElementById('jvDebitAmount').value) || 0;
-    const credit = parseFloat(document.getElementById('jvCreditAmount').value) || 0;
+    const debitInput = document.getElementById('jvDebitAmount');
+    const creditInput = document.getElementById('jvCreditAmount');
+    const debit = parseFloat(debitInput.value) || 0;
     const warning = document.getElementById('jvBalanceWarning');
     
-    if (debit > 0 && credit > 0 && debit !== credit) {
-        warning.style.display = 'block';
+    // AUTO-SYNC: When debit amount changes, automatically update credit amount
+    if (debit > 0) {
+        creditInput.value = debit.toFixed(2);
+        warning.style.display = 'none';
     } else {
         warning.style.display = 'none';
     }
