@@ -5459,5 +5459,22 @@ window.addEventListener('load', () => {
 });
 </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = https://druxbksscacocuclnzxs.supabase.co;
+  const SUPABASE_ANON_KEY =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydXhia3NzY2Fjb2N1Y2xuenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NTMyOTQsImV4cCI6MjA3NzMyOTI5NH0._tlLjLoBVwI2hFKqpLFupERMN2ouvyDc-JG1rf574u0;
+
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Example: read data from a table
+  async function getData() {
+    const { data, error } = await supabase.from('your_table_name').select('*');
+    if (error) console.error(error);
+    console.log(data);
+  }
+
+  getData();
+</script>
+
 </body>
 </html>
