@@ -1741,12 +1741,32 @@ let currentUser = '';
 let currentRole = 'admin';
 let selectedRole = 'admin';
 
-// User Management Storage
-let systemUsers = safeLoadData('systemUsers', [
+// User Management Storage - ALWAYS ensure default users exist!
+const DEFAULT_USERS = [
     { id: 'user_1', username: 'admin', password: 'admin123', role: 'admin', createdAt: new Date().toISOString() },
     { id: 'user_2', username: 'manager', password: 'manager123', role: 'manager', createdAt: new Date().toISOString() },
     { id: 'user_3', username: 'accountant', password: 'accountant123', role: 'accountant', createdAt: new Date().toISOString() }
-]);
+];
+
+// Function to ensure default users always exist
+function ensureDefaultUsers() {
+    // If no users at all, use defaults
+    if (!systemUsers || systemUsers.length === 0) {
+        systemUsers = [...DEFAULT_USERS];
+        return;
+    }
+    
+    // Make sure each default user exists
+    DEFAULT_USERS.forEach(defaultUser => {
+        const exists = systemUsers.find(u => u.username === defaultUser.username);
+        if (!exists) {
+            systemUsers.push({...defaultUser});
+        }
+    });
+}
+
+let systemUsers = safeLoadData('systemUsers', []);
+ensureDefaultUsers(); // Make sure defaults exist!
 
 // Theme preference
 let isDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -5538,6 +5558,9 @@ window.addEventListener('load', async () => {
                 if (data.jvVouchers) jvVouchers = data.jvVouchers;
                 if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
                 
+                // CRITICAL: Always ensure default users exist!
+                ensureDefaultUsers();
+                
                 // Save to localStorage as backup
                 localStorage.setItem('customers', JSON.stringify(customers));
                 localStorage.setItem('suppliers', JSON.stringify(suppliers));
@@ -5554,8 +5577,10 @@ window.addEventListener('load', async () => {
                 localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
                 
                 console.log(`✅ Synced: ${customers.length} customers, ${transactions.length} transactions`);
+                console.log(`👥 Users available: ${systemUsers.length} (including defaults)`);
             } else if (!error || error.code === 'PGRST116') {
                 console.log('📝 First time! Uploading local data...');
+                ensureDefaultUsers(); // Make sure defaults exist before first upload!
                 await saveToStorage();
             }
             
@@ -5582,6 +5607,9 @@ window.addEventListener('load', async () => {
                             if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
                             if (data.jvVouchers) jvVouchers = data.jvVouchers;
                             if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
+                            
+                            // CRITICAL: Always ensure default users exist!
+                            ensureDefaultUsers();
                             
                             // Refresh displays if logged in
                             try {
