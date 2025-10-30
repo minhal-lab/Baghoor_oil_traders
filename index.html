@@ -7,6 +7,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- Supabase for Cloud Sync (Multi-Device Support) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -23,7 +27,7 @@
             --border-color: #e2e8f0;
             --shadow: rgba(0,0,0,0.07);
             --shadow-lg: rgba(0,0,0,0.1);
-            --primary-color: #667eea; 
+            --primary-color: #667eea;
         }
         
         /* Dark Mode */
@@ -1675,7 +1679,43 @@
 </div>
 
 <script>
+// ====================================
+// SUPABASE CONFIGURATION (Cloud Sync)
+// ====================================
+
+// 🚀 SUPABASE CONFIG - CONFIGURED WITH YOUR CREDENTIALS!
+const SUPABASE_URL = 'https://druxbksscacocuclnzxs.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydXhia3NzY2Fjb2N1Y2xuenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NTMyOTQsImV4cCI6MjA3NzMyOTI5NH0._tlLjLoBVwI2hFKqpLFupERMN2ouvyDc-JG1rf574u0';
+const TABLE_NAME = 'BOTs'; // Your table name
+
+// Check if Supabase is configured
+const isSupabaseConfigured = true; // Already configured!
+
+let supabaseClient = null;
+let USE_SUPABASE = false;
+let realtimeChannel = null;
+
+if (typeof window.supabase !== 'undefined') {
+    try {
+        // Initialize Supabase
+        const { createClient } = window.supabase;
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        USE_SUPABASE = true;
+        console.log('✅ Supabase initialized! Cloud sync is ACTIVE! 🚀');
+        console.log('📡 Connected to table: ' + TABLE_NAME);
+        console.log('📡 All devices will now sync in real-time!');
+    } catch (error) {
+        console.error('❌ Supabase initialization failed:', error);
+        console.log('⚠️ Falling back to localStorage (single device only)');
+        USE_SUPABASE = false;
+    }
+} else {
+    console.log('⚠️ Supabase SDK not loaded. Using localStorage (single device only).');
+}
+
+// ====================================
 // DATA CLEANUP AND VALIDATION FUNCTION
+// ====================================
 function safeLoadData(key, defaultValue = []) {
     try {
         const data = localStorage.getItem(key);
@@ -1841,7 +1881,8 @@ function initApp() {
     }
 }
 
-function saveToStorage() {
+async function saveToStorage() {
+    // Always save to localStorage as backup
     localStorage.setItem('customers', JSON.stringify(customers));
     localStorage.setItem('suppliers', JSON.stringify(suppliers));
     localStorage.setItem('transactions', JSON.stringify(transactions));
@@ -1855,6 +1896,43 @@ function saveToStorage() {
     localStorage.setItem('ledgerEntries', JSON.stringify(ledgerEntries));
     localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
     localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
+    
+    // Also save to Supabase if configured (for multi-device sync)
+    if (USE_SUPABASE && supabaseClient) {
+        try {
+            const dataToSave = {
+                id: 1, // Fixed ID so we always update the same record
+                customers: customers,
+                suppliers: suppliers,
+                transactions: transactions,
+                payments: payments,
+                expenses: expenses,
+                customerTransfers: customerTransfers,
+                vehicles: vehicles,
+                banks: banks,
+                bankTransactions: bankTransactions,
+                rateChangeLogs: rateChangeLogs,
+                ledgerEntries: ledgerEntries,
+                jvVouchers: jvVouchers,
+                systemUsers: systemUsers,
+                last_updated: new Date().toISOString()
+            };
+            
+            // Upsert (insert or update) the data
+            const { error } = await supabaseClient
+                .from(TABLE_NAME)
+                .upsert(dataToSave);
+            
+            if (error) {
+                console.error('❌ Supabase sync failed:', error);
+                showNotification('Cloud sync failed, but data saved locally', 'warning');
+            } else {
+                console.log('☁️ Data synced to Supabase cloud!');
+            }
+        } catch (error) {
+            console.error('❌ Supabase save error:', error);
+        }
+    }
 }
 
 // Add ledger entry function
@@ -5430,7 +5508,7 @@ function addNewUser() {
 }
 
 // Initialize
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     console.log('🚀 Baghoor Oil Traders - Complete Professional System Loaded!');
     
     // Clean up any corrupted data on load
@@ -5452,49 +5530,153 @@ window.addEventListener('load', () => {
         });
         
         console.log('✅ Data validation complete');
-        console.log(`📊 Loaded: ${customers.length} customers, ${transactions.length} transactions, ${vehicles.length} vehicles`);
+        console.log(`📊 Loaded from localStorage: ${customers.length} customers, ${transactions.length} transactions, ${vehicles.length} vehicles`);
     } catch (error) {
         console.error('⚠️ Error during data cleanup:', error);
     }
+    
+    // ====================================
+    // SUPABASE DATA LOADING & REAL-TIME SYNC
+    // ====================================
+    // SUPABASE DATA LOADING & REAL-TIME SYNC
+    // ====================================
+    if (USE_SUPABASE && supabaseClient) {
+        console.log('🔄 Loading data from Supabase cloud...');
+        console.log('📊 Table: ' + TABLE_NAME);
+        
+        try {
+            // Load data from Supabase
+            const { data, error } = await supabaseClient
+                .from(TABLE_NAME)
+                .select('*')
+                .eq('id', 1)
+                .single();
+            
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found (first time)
+                console.error('❌ Error loading from Supabase:', error);
+            } else if (data) {
+                console.log('📥 Data loaded from Supabase cloud!');
+                
+                // Update all arrays with cloud data
+                if (data.customers) customers = data.customers;
+                if (data.suppliers) suppliers = data.suppliers;
+                if (data.transactions) transactions = data.transactions;
+                if (data.payments) payments = data.payments;
+                if (data.expenses) expenses = data.expenses;
+                if (data.customerTransfers) customerTransfers = data.customerTransfers;
+                if (data.vehicles) vehicles = data.vehicles;
+                if (data.banks) banks = data.banks;
+                if (data.bankTransactions) bankTransactions = data.bankTransactions;
+                if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
+                if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
+                if (data.jvVouchers) jvVouchers = data.jvVouchers;
+                if (data.systemUsers) systemUsers = data.systemUsers;
+                
+                // Save to localStorage as backup
+                localStorage.setItem('customers', JSON.stringify(customers));
+                localStorage.setItem('suppliers', JSON.stringify(suppliers));
+                localStorage.setItem('transactions', JSON.stringify(transactions));
+                localStorage.setItem('payments', JSON.stringify(payments));
+                localStorage.setItem('expenses', JSON.stringify(expenses));
+                localStorage.setItem('customerTransfers', JSON.stringify(customerTransfers));
+                localStorage.setItem('vehicles', JSON.stringify(vehicles));
+                localStorage.setItem('banks', JSON.stringify(banks));
+                localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
+                localStorage.setItem('rateChangeLogs', JSON.stringify(rateChangeLogs));
+                localStorage.setItem('ledgerEntries', JSON.stringify(ledgerEntries));
+                localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
+                localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
+                
+                console.log(`✅ Cloud data loaded: ${customers.length} customers, ${transactions.length} transactions, ${vehicles.length} vehicles`);
+            } else {
+                console.log('📝 No cloud data yet - uploading localStorage data...');
+                // First time - upload current data to cloud
+                await saveToStorage();
+            }
+            
+            // ====================================
+            // SET UP REAL-TIME SUBSCRIPTIONS
+            // ====================================
+            console.log('🔄 Setting up real-time sync...');
+            
+            // Subscribe to changes in the BOTs table
+            const channel = supabaseClient
+                .channel('baghoor_realtime')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+                        schema: 'public',
+                        table: TABLE_NAME
+                    },
+                    (payload) => {
+                        console.log('📡 Received update from Supabase cloud!', payload);
+                        
+                        // Update data from the payload
+                        if (payload.new) {
+                            const data = payload.new;
+                            
+                            if (data.customers) customers = data.customers;
+                            if (data.suppliers) suppliers = data.suppliers;
+                            if (data.transactions) transactions = data.transactions;
+                            if (data.payments) payments = data.payments;
+                            if (data.expenses) expenses = data.expenses;
+                            if (data.customerTransfers) customerTransfers = data.customerTransfers;
+                            if (data.vehicles) vehicles = data.vehicles;
+                            if (data.banks) banks = data.banks;
+                            if (data.bankTransactions) bankTransactions = data.bankTransactions;
+                            if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
+                            if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
+                            if (data.jvVouchers) jvVouchers = data.jvVouchers;
+                            if (data.systemUsers) systemUsers = data.systemUsers;
+                            
+                            // Save to localStorage as backup
+                            localStorage.setItem('customers', JSON.stringify(customers));
+                            localStorage.setItem('suppliers', JSON.stringify(suppliers));
+                            localStorage.setItem('transactions', JSON.stringify(transactions));
+                            localStorage.setItem('payments', JSON.stringify(payments));
+                            localStorage.setItem('expenses', JSON.stringify(expenses));
+                            localStorage.setItem('customerTransfers', JSON.stringify(customerTransfers));
+                            localStorage.setItem('vehicles', JSON.stringify(vehicles));
+                            localStorage.setItem('banks', JSON.stringify(banks));
+                            localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
+                            localStorage.setItem('rateChangeLogs', JSON.stringify(rateChangeLogs));
+                            localStorage.setItem('ledgerEntries', JSON.stringify(ledgerEntries));
+                            localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
+                            localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
+                            
+                            // Refresh all displays
+                            try {
+                                if (typeof renderTransactions === 'function') renderTransactions();
+                                if (typeof renderCustomers === 'function') renderCustomers();
+                                if (typeof renderSuppliers === 'function') renderSuppliers();
+                                if (typeof renderVehicles === 'function') renderVehicles();
+                                if (typeof updateDashboard === 'function') updateDashboard();
+                                if (typeof populateDropdowns === 'function') populateDropdowns();
+                                console.log('✅ Display refreshed with cloud data!');
+                            } catch (refreshError) {
+                                console.log('⚠️ Display refresh skipped (login screen)');
+                            }
+                        }
+                    }
+                )
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ Real-time sync active! All devices will now sync automatically! 🚀');
+                    }
+                });
+            
+            realtimeChannel = channel;
+            
+        } catch (error) {
+            console.error('❌ Supabase initialization error:', error);
+            console.log('⚠️ Using localStorage only');
+        }
+    } else {
+        console.log('💾 Using localStorage only (single device mode)');
+        console.log('💡 Supabase not loaded or configured');
+    }
 });
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  const SUPABASE_URL = "https://druxbksscacocuclnzxs.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydXhia3NzY2Fjb2N1Y2xuenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NTMyOTQsImV4cCI6MjA3NzMyOTI5NH0._tlLjLoBVwI2hFKqpLFupERMN2ouvyDc-JG1rf574u0";
-
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  // Example: read data from a table
-  async function getData() {
-    const { data, error } = await supabase.from('BOTs').select('*');
-    if (error) console.error('Error:', error);
-    else console.log('Supabase data:', data);
-  }
-
-    getData();
-
-// ✅ Insert test BOT
-async function addTestBOT() {
-  const { data, error } = await supabase
-    .from('BOTs')
-    .insert([{ name: 'Test BOT', created_at: new Date() }]);
-
-  if (error) {
-    console.error('❌ Insert error:', error);
-  } else {
-    console.log('✅ Inserted successfully:', data);
-  }
-}
-
-// Call function once (for testing)
-addTestBOT();
-</script>
-
-</body>
-</html>
-
 </script>
 
 </body>
