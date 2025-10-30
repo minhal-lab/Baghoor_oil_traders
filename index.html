@@ -7,10 +7,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    
-    <!-- Supabase for Cloud Sync (Multi-Device Support) -->
+    <!-- Supabase SDK for Cloud Sync -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -1679,43 +1677,34 @@
 </div>
 
 <script>
-// ====================================
-// SUPABASE CONFIGURATION (Cloud Sync)
-// ====================================
-
-// 🚀 SUPABASE CONFIG - CONFIGURED WITH YOUR CREDENTIALS!
+// ==========================================
+// SUPABASE CLOUD SYNC CONFIGURATION
+// ==========================================
 const SUPABASE_URL = 'https://druxbksscacocuclnzxs.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydXhia3NzY2Fjb2N1Y2xuenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NTMyOTQsImV4cCI6MjA3NzMyOTI5NH0._tlLjLoBVwI2hFKqpLFupERMN2ouvyDc-JG1rf574u0';
-const TABLE_NAME = 'BOTs'; // Your table name
-
-// Check if Supabase is configured
-const isSupabaseConfigured = true; // Already configured!
+const TABLE_NAME = 'BOTs';
 
 let supabaseClient = null;
 let USE_SUPABASE = false;
-let realtimeChannel = null;
 
+// Initialize Supabase
 if (typeof window.supabase !== 'undefined') {
     try {
-        // Initialize Supabase
         const { createClient } = window.supabase;
         supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         USE_SUPABASE = true;
-        console.log('✅ Supabase initialized! Cloud sync is ACTIVE! 🚀');
-        console.log('📡 Connected to table: ' + TABLE_NAME);
-        console.log('📡 All devices will now sync in real-time!');
+        console.log('✅ Supabase initialized! Multi-device sync ACTIVE! 🚀');
     } catch (error) {
-        console.error('❌ Supabase initialization failed:', error);
-        console.log('⚠️ Falling back to localStorage (single device only)');
+        console.error('❌ Supabase init failed:', error);
         USE_SUPABASE = false;
     }
 } else {
-    console.log('⚠️ Supabase SDK not loaded. Using localStorage (single device only).');
+    console.log('⚠️ Supabase SDK not loaded. Using localStorage only.');
 }
 
-// ====================================
+// ==========================================
 // DATA CLEANUP AND VALIDATION FUNCTION
-// ====================================
+// ==========================================
 function safeLoadData(key, defaultValue = []) {
     try {
         const data = localStorage.getItem(key);
@@ -1882,7 +1871,7 @@ function initApp() {
 }
 
 async function saveToStorage() {
-    // Always save to localStorage as backup
+    // Save to localStorage (local backup)
     localStorage.setItem('customers', JSON.stringify(customers));
     localStorage.setItem('suppliers', JSON.stringify(suppliers));
     localStorage.setItem('transactions', JSON.stringify(transactions));
@@ -1897,40 +1886,24 @@ async function saveToStorage() {
     localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
     localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
     
-    // Also save to Supabase if configured (for multi-device sync)
+    // Also save to Supabase cloud (for multi-device sync)
     if (USE_SUPABASE && supabaseClient) {
         try {
-            const dataToSave = {
-                id: 1, // Fixed ID so we always update the same record
-                customers: customers,
-                suppliers: suppliers,
-                transactions: transactions,
-                payments: payments,
-                expenses: expenses,
-                customerTransfers: customerTransfers,
-                vehicles: vehicles,
-                banks: banks,
-                bankTransactions: bankTransactions,
-                rateChangeLogs: rateChangeLogs,
-                ledgerEntries: ledgerEntries,
-                jvVouchers: jvVouchers,
-                systemUsers: systemUsers,
-                last_updated: new Date().toISOString()
-            };
-            
-            // Upsert (insert or update) the data
             const { error } = await supabaseClient
                 .from(TABLE_NAME)
-                .upsert(dataToSave);
+                .upsert({
+                    id: 1,
+                    customers, suppliers, transactions, payments, expenses,
+                    customerTransfers, vehicles, banks, bankTransactions,
+                    rateChangeLogs, ledgerEntries, jvVouchers, systemUsers,
+                    last_updated: new Date().toISOString()
+                });
             
-            if (error) {
-                console.error('❌ Supabase sync failed:', error);
-                showNotification('Cloud sync failed, but data saved locally', 'warning');
-            } else {
-                console.log('☁️ Data synced to Supabase cloud!');
+            if (!error) {
+                console.log('☁️ Data synced to cloud!');
             }
         } catch (error) {
-            console.error('❌ Supabase save error:', error);
+            console.error('Cloud sync error:', error);
         }
     }
 }
@@ -5530,34 +5503,27 @@ window.addEventListener('load', async () => {
         });
         
         console.log('✅ Data validation complete');
-        console.log(`📊 Loaded from localStorage: ${customers.length} customers, ${transactions.length} transactions, ${vehicles.length} vehicles`);
+        console.log(`📊 Local: ${customers.length} customers, ${transactions.length} transactions`);
     } catch (error) {
         console.error('⚠️ Error during data cleanup:', error);
     }
     
-    // ====================================
-    // SUPABASE DATA LOADING & REAL-TIME SYNC
-    // ====================================
-    // SUPABASE DATA LOADING & REAL-TIME SYNC
-    // ====================================
+    // Load data from Supabase cloud and set up real-time sync
     if (USE_SUPABASE && supabaseClient) {
-        console.log('🔄 Loading data from Supabase cloud...');
-        console.log('📊 Table: ' + TABLE_NAME);
-        
         try {
+            console.log('🔄 Loading data from cloud...');
+            
             // Load data from Supabase
             const { data, error } = await supabaseClient
                 .from(TABLE_NAME)
                 .select('*')
                 .eq('id', 1)
-                .single();
+                .maybeSingle();
             
-            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found (first time)
-                console.error('❌ Error loading from Supabase:', error);
-            } else if (data) {
-                console.log('📥 Data loaded from Supabase cloud!');
+            if (data) {
+                console.log('📥 Cloud data loaded!');
                 
-                // Update all arrays with cloud data
+                // Update arrays with cloud data
                 if (data.customers) customers = data.customers;
                 if (data.suppliers) suppliers = data.suppliers;
                 if (data.transactions) transactions = data.transactions;
@@ -5570,7 +5536,7 @@ window.addEventListener('load', async () => {
                 if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
                 if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
                 if (data.jvVouchers) jvVouchers = data.jvVouchers;
-                if (data.systemUsers) systemUsers = data.systemUsers;
+                if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
                 
                 // Save to localStorage as backup
                 localStorage.setItem('customers', JSON.stringify(customers));
@@ -5587,35 +5553,22 @@ window.addEventListener('load', async () => {
                 localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
                 localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
                 
-                console.log(`✅ Cloud data loaded: ${customers.length} customers, ${transactions.length} transactions, ${vehicles.length} vehicles`);
-            } else {
-                console.log('📝 No cloud data yet - uploading localStorage data...');
-                // First time - upload current data to cloud
+                console.log(`✅ Synced: ${customers.length} customers, ${transactions.length} transactions`);
+            } else if (!error || error.code === 'PGRST116') {
+                console.log('📝 First time! Uploading local data...');
                 await saveToStorage();
             }
             
-            // ====================================
-            // SET UP REAL-TIME SUBSCRIPTIONS
-            // ====================================
+            // Set up real-time sync
             console.log('🔄 Setting up real-time sync...');
-            
-            // Subscribe to changes in the BOTs table
-            const channel = supabaseClient
-                .channel('baghoor_realtime')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-                        schema: 'public',
-                        table: TABLE_NAME
-                    },
+            supabaseClient
+                .channel('BOTs_realtime')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: TABLE_NAME },
                     (payload) => {
-                        console.log('📡 Received update from Supabase cloud!', payload);
-                        
-                        // Update data from the payload
+                        console.log('📡 Update received!');
                         if (payload.new) {
                             const data = payload.new;
-                            
                             if (data.customers) customers = data.customers;
                             if (data.suppliers) suppliers = data.suppliers;
                             if (data.transactions) transactions = data.transactions;
@@ -5628,53 +5581,31 @@ window.addEventListener('load', async () => {
                             if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
                             if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
                             if (data.jvVouchers) jvVouchers = data.jvVouchers;
-                            if (data.systemUsers) systemUsers = data.systemUsers;
+                            if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
                             
-                            // Save to localStorage as backup
-                            localStorage.setItem('customers', JSON.stringify(customers));
-                            localStorage.setItem('suppliers', JSON.stringify(suppliers));
-                            localStorage.setItem('transactions', JSON.stringify(transactions));
-                            localStorage.setItem('payments', JSON.stringify(payments));
-                            localStorage.setItem('expenses', JSON.stringify(expenses));
-                            localStorage.setItem('customerTransfers', JSON.stringify(customerTransfers));
-                            localStorage.setItem('vehicles', JSON.stringify(vehicles));
-                            localStorage.setItem('banks', JSON.stringify(banks));
-                            localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
-                            localStorage.setItem('rateChangeLogs', JSON.stringify(rateChangeLogs));
-                            localStorage.setItem('ledgerEntries', JSON.stringify(ledgerEntries));
-                            localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
-                            localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
-                            
-                            // Refresh all displays
+                            // Refresh displays if logged in
                             try {
                                 if (typeof renderTransactions === 'function') renderTransactions();
                                 if (typeof renderCustomers === 'function') renderCustomers();
                                 if (typeof renderSuppliers === 'function') renderSuppliers();
                                 if (typeof renderVehicles === 'function') renderVehicles();
                                 if (typeof updateDashboard === 'function') updateDashboard();
-                                if (typeof populateDropdowns === 'function') populateDropdowns();
-                                console.log('✅ Display refreshed with cloud data!');
-                            } catch (refreshError) {
-                                console.log('⚠️ Display refresh skipped (login screen)');
-                            }
+                                console.log('✅ Display updated!');
+                            } catch (e) {}
                         }
                     }
                 )
                 .subscribe((status) => {
                     if (status === 'SUBSCRIBED') {
-                        console.log('✅ Real-time sync active! All devices will now sync automatically! 🚀');
+                        console.log('✅ Real-time sync active! 🎉');
                     }
                 });
-            
-            realtimeChannel = channel;
-            
         } catch (error) {
-            console.error('❌ Supabase initialization error:', error);
-            console.log('⚠️ Using localStorage only');
+            console.error('⚠️ Cloud sync error:', error);
+            console.log('Using local data only');
         }
     } else {
-        console.log('💾 Using localStorage only (single device mode)');
-        console.log('💡 Supabase not loaded or configured');
+        console.log('💾 Local mode only');
     }
 });
 </script>
