@@ -5473,7 +5473,28 @@ window.addEventListener('load', () => {
     else console.log('Supabase data:', data);
   }
 
-  getData();
+    getData();
+
+// ✅ Insert test BOT
+async function addTestBOT() {
+  const { data, error } = await supabase
+    .from('BOTs')
+    .insert([{ name: 'Test BOT', created_at: new Date() }]);
+
+  if (error) {
+    console.error('❌ Insert error:', error);
+  } else {
+    console.log('✅ Inserted successfully:', data);
+  }
+}
+
+// Call function once (for testing)
+addTestBOT();
+</script>
+
+</body>
+</html>
+
 </script>
 
 
