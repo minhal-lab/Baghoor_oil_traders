@@ -1772,24 +1772,37 @@ ensureDefaultUsers(); // Make sure defaults exist!
 let isDarkMode = localStorage.getItem('darkMode') === 'true';
 
 // CLEAR ALL DATA FUNCTION
-function clearAllData() {
+async function clearAllData() {
     const confirmMsg = '⚠️ WARNING! This will DELETE ALL DATA permanently!\n\n' +
                       'This includes:\n' +
                       '• All customers and suppliers\n' +
                       '• All transactions and payments\n' +
                       '• All vehicles and stock\n' +
                       '• All banks and ledgers\n' +
-                      '• Everything!\n\n' +
+                      '• Everything from LOCAL and CLOUD!\n\n' +
                       'Type "DELETE ALL" to confirm:';
     
     const userInput = prompt(confirmMsg);
     
     if (userInput === 'DELETE ALL') {
+        // Clear Supabase cloud data first
+        if (USE_SUPABASE && supabaseClient) {
+            try {
+                await supabaseClient
+                    .from(TABLE_NAME)
+                    .delete()
+                    .eq('id', 1);
+                console.log('☁️ Cloud data deleted!');
+            } catch (error) {
+                console.error('Cloud delete error:', error);
+            }
+        }
+        
         // Clear all localStorage
         localStorage.clear();
         
         // Show success message
-        alert('✅ All data has been deleted!\n\nThe page will reload with a fresh start.');
+        alert('✅ All data has been deleted from both local and cloud!\n\nThe page will reload with a fresh start.');
         
         // Reload page
         location.reload();
@@ -2080,8 +2093,11 @@ function renderSuppliers() {
     const tbody = document.getElementById('suppliersBody');
     tbody.innerHTML = '';
     
+    // Use DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
+    
     suppliers.forEach(supplier => {
-        const row = tbody.insertRow();
+        const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${supplier.name}</strong></td>
             <td>${supplier.contact || '-'}</td>
@@ -2094,7 +2110,10 @@ function renderSuppliers() {
                 <button class="btn btn-danger btn-sm" onclick="deleteSupplier('${supplier.id}')">Delete</button>
             </td>
         `;
+        fragment.appendChild(row);
     });
+    
+    tbody.appendChild(fragment);
 }
 
 function editSupplier(supplier) {
@@ -4983,6 +5002,41 @@ function openModal(modalId) {
             return;
         }
         renderUserManagement();
+    }
+    
+    // Clear supplier form when opening to add new
+    if (modalId === 'supplierModal') {
+        document.getElementById('supplierId').value = '';
+        document.getElementById('supplierName').value = '';
+        document.getElementById('supplierContact').value = '';
+        document.getElementById('supplierCnic').value = '';
+        document.getElementById('supplierPmgRate').value = '';
+        document.getElementById('supplierHsdRate').value = '';
+        document.getElementById('supplierAddress').value = '';
+        document.getElementById('supplierNotes').value = '';
+        document.getElementById('supplierOpeningBalance').value = '0';
+    }
+    
+    // Clear customer form when opening to add new
+    if (modalId === 'customerModal') {
+        document.getElementById('customerId').value = '';
+        document.getElementById('customerName').value = '';
+        document.getElementById('customerContact').value = '';
+        document.getElementById('customerCnic').value = '';
+        document.getElementById('customerPmgRate').value = '';
+        document.getElementById('customerHsdRate').value = '';
+        document.getElementById('customerAddress').value = '';
+        document.getElementById('customerNotes').value = '';
+        document.getElementById('customerOpeningBalance').value = '0';
+    }
+    
+    // Clear vehicle form when opening to add new
+    if (modalId === 'vehicleModal') {
+        document.getElementById('vehicleId').value = '';
+        document.getElementById('vehicleNumber').value = '';
+        document.getElementById('vehicleDriver').value = '';
+        document.getElementById('vehicleContact').value = '';
+        document.getElementById('vehicleStatus').value = 'Active';
     }
     
     // Initialize JV modal
