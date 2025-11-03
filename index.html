@@ -548,6 +548,7 @@
             <button class="tab" onclick="switchTab('suppliers')">🏭 Suppliers</button>
             <button class="tab" onclick="switchTab('transactions')">💳 Transactions</button>
             <button class="tab" onclick="switchTab('payments')">💰 Payments</button>
+            <button class="tab" onclick="switchTab('jvouchers')">📝 JV Vouchers</button>
             <button class="tab" onclick="switchTab('expenses')">💸 Expenses</button>
             <button class="tab" onclick="switchTab('banks')">🏦 Banks</button>
             <button class="tab" onclick="switchTab('vehicles')">🚛 Vehicles</button>
@@ -660,6 +661,40 @@
                         </thead>
                         <tbody id="paymentsBody"></tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- JV VOUCHERS TAB -->
+        <div id="jvouchers-tab" class="tab-content">
+            <div class="card">
+                <h2>
+                    Journal Vouchers (JV) - All Entries
+                    <button class="btn btn-primary" onclick="openModal('jvModal')">Add JV Voucher</button>
+                </h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Debit Account</th>
+                                <th>Credit Account</th>
+                                <th>Amount</th>
+                                <th>Created By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jvVouchersBody"></tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <h4 style="margin: 0 0 10px 0; color: #667eea;">💡 About JV Vouchers:</h4>
+                    <p style="margin: 0; font-size: 0.9em; color: #4a5568;">
+                        Journal Vouchers (JV) are used for internal account adjustments like customer-to-customer transfers, 
+                        customer-to-supplier payments, corrections, and other accounting entries. All JV entries are listed here 
+                        for cross-checking and can be deleted if needed.
+                    </p>
                 </div>
             </div>
         </div>
@@ -926,13 +961,35 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>PMG Rate (Rs/L) *</label>
-                    <input type="number" step="0.0001" id="supplierPmgRate" required>
+                    <label>PMG Rate (Self Carriage) *</label>
+                    <input type="number" step="0.0001" id="supplierPmgRateSelf" required>
+                    <small style="color: var(--text-secondary); font-size: 0.85em;">Rate without transport</small>
                 </div>
                 <div class="form-group">
-                    <label>HSD Rate (Rs/L) *</label>
-                    <input type="number" step="0.0001" id="supplierHsdRate" required>
+                    <label>HSD Rate (Self Carriage) *</label>
+                    <input type="number" step="0.0001" id="supplierHsdRateSelf" required>
+                    <small style="color: var(--text-secondary); font-size: 0.85em;">Rate without transport</small>
                 </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>PMG Rate (PSO Carriage)</label>
+                    <input type="number" step="0.0001" id="supplierPmgRatePSO" placeholder="0.0000">
+                    <small style="color: var(--text-secondary); font-size: 0.85em;">Rate with transport (optional)</small>
+                </div>
+                <div class="form-group">
+                    <label>HSD Rate (PSO Carriage)</label>
+                    <input type="number" step="0.0001" id="supplierHsdRatePSO" placeholder="0.0000">
+                    <small style="color: var(--text-secondary); font-size: 0.85em;">Rate with transport (optional)</small>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Default Carriage Type</label>
+                <select id="supplierDefaultCarriage">
+                    <option value="self">Self Carriage (Without Rent)</option>
+                    <option value="pso">PSO Carriage (With Rent)</option>
+                </select>
+                <small style="color: var(--text-secondary); font-size: 0.85em;">💡 This will be auto-selected in purchases</small>
             </div>
             <div class="form-group">
                 <label>Opening Balance (Rs)</label>
@@ -1041,10 +1098,24 @@
         <form onsubmit="savePurchase(event)">
             <div class="form-group">
                 <label>Supplier *</label>
-                <select id="purchaseSupplierId" required>
+                <select id="purchaseSupplierId" onchange="updatePurchaseCarriageOptions()" required>
                     <option value="">Select Supplier</option>
                 </select>
             </div>
+            
+            <!-- CARRIAGE TYPE SELECTION -->
+            <div id="purchaseCarriageSection" style="display: none; background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 2px solid #2196f3;">
+                <h4 style="color: #1565c0; margin-bottom: 10px; font-size: 0.95em;">🚚 Carriage Type</h4>
+                <div class="form-group">
+                    <label>Select Carriage Type *</label>
+                    <select id="purchaseCarriageType" onchange="updatePurchaseRate()" style="font-size: 1em;">
+                        <option value="self">🚗 Self Carriage (Without Rent)</option>
+                        <option value="pso">🚛 PSO Carriage (With Rent)</option>
+                    </select>
+                </div>
+                <div id="purchaseCarriageInfo" style="font-size: 0.85em; color: #1565c0; margin-top: 5px;"></div>
+            </div>
+            
             <div class="form-row">
                 <div class="form-group">
                     <label>Fuel Type *</label>
@@ -1838,6 +1909,11 @@ function handleLogin(e) {
     if (user) {
         currentUser = username;
         currentRole = user.role;
+        
+        // Save login session to localStorage
+        localStorage.setItem('loggedInUser', username);
+        localStorage.setItem('loggedInRole', user.role);
+        
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('userDisplay').textContent = username;
@@ -1852,12 +1928,35 @@ function handleLogin(e) {
 
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
+        // Clear login session
+        localStorage.removeItem('loggedInUser');
+        localStorage.removeItem('loggedInRole');
+        
         document.getElementById('mainApp').style.display = 'none';
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
         currentUser = '';
+        currentRole = '';
         showNotification('Logged out successfully', 'success');
+    }
+}
+
+// Auto-login if session exists
+function checkLoginSession() {
+    const savedUser = localStorage.getItem('loggedInUser');
+    const savedRole = localStorage.getItem('loggedInRole');
+    
+    if (savedUser && savedRole) {
+        currentUser = savedUser;
+        currentRole = savedRole;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('userDisplay').textContent = savedUser;
+        document.getElementById('userRoleDisplay').textContent = savedRole.toUpperCase();
+        document.getElementById('userRoleDisplay').className = `user-role role-${savedRole}`;
+        initApp();
+        console.log('✅ Auto-logged in as:', savedUser);
     }
 }
 
@@ -2027,7 +2126,13 @@ function renderCustomers() {
 }
 
 function editCustomer(customer) {
+    // Set ID first to prevent clearing
     document.getElementById('customerId').value = customer.id;
+    
+    // Open modal (will detect we're editing and won't clear)
+    openModal('customerModal');
+    
+    // Now fill all fields (they won't be cleared)
     document.getElementById('customerName').value = customer.name;
     document.getElementById('customerContact').value = customer.contact || '';
     document.getElementById('customerCnic').value = customer.cnic || '';
@@ -2035,7 +2140,13 @@ function editCustomer(customer) {
     document.getElementById('customerHsdRate').value = customer.hsdRate;
     document.getElementById('customerAddress').value = customer.address || '';
     document.getElementById('customerNotes').value = customer.notes || '';
-    openModal('customerModal');
+    
+    // Set balance with proper styling
+    const balanceField = document.getElementById('customerOpeningBalance');
+    balanceField.value = customer.balance.toFixed(2);
+    balanceField.disabled = true;
+    balanceField.style.backgroundColor = '#f7fafc';
+    balanceField.title = 'Current balance (cannot edit - use transactions/payments to change)';
 }
 
 function deleteCustomer(id) {
@@ -2060,8 +2171,11 @@ function saveSupplier(e) {
         name: document.getElementById('supplierName').value,
         contact: document.getElementById('supplierContact').value,
         cnic: document.getElementById('supplierCnic').value,
-        pmgRate: parseFloat(document.getElementById('supplierPmgRate').value).toFixed(4),
-        hsdRate: parseFloat(document.getElementById('supplierHsdRate').value).toFixed(4),
+        pmgRateSelf: parseFloat(document.getElementById('supplierPmgRateSelf').value).toFixed(4),
+        hsdRateSelf: parseFloat(document.getElementById('supplierHsdRateSelf').value).toFixed(4),
+        pmgRatePSO: parseFloat(document.getElementById('supplierPmgRatePSO').value || 0).toFixed(4),
+        hsdRatePSO: parseFloat(document.getElementById('supplierHsdRatePSO').value || 0).toFixed(4),
+        defaultCarriage: document.getElementById('supplierDefaultCarriage').value,
         address: document.getElementById('supplierAddress').value,
         notes: document.getElementById('supplierNotes').value,
         balance: 0,
@@ -2097,13 +2211,19 @@ function renderSuppliers() {
     const fragment = document.createDocumentFragment();
     
     suppliers.forEach(supplier => {
+        // Support both old format (pmgRate) and new format (pmgRateSelf)
+        const pmgRate = supplier.pmgRateSelf || supplier.pmgRate || 0;
+        const hsdRate = supplier.hsdRateSelf || supplier.hsdRate || 0;
+        const carriageType = supplier.defaultCarriage || 'self';
+        const carriageIcon = carriageType === 'pso' ? '🚛' : '🚗';
+        
         const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${supplier.name}</strong></td>
             <td>${supplier.contact || '-'}</td>
             <td>${supplier.cnic || '-'}</td>
-            <td>Rs. ${parseFloat(supplier.pmgRate).toFixed(4)}</td>
-            <td>Rs. ${parseFloat(supplier.hsdRate).toFixed(4)}</td>
+            <td>Rs. ${parseFloat(pmgRate).toFixed(4)} ${carriageIcon}</td>
+            <td>Rs. ${parseFloat(hsdRate).toFixed(4)} ${carriageIcon}</td>
             <td class="${supplier.balance >= 0 ? 'balance-positive' : 'balance-negative'}">Rs. ${supplier.balance.toFixed(2)}</td>
             <td>
                 <button class="btn btn-info btn-sm" onclick='editSupplier(${JSON.stringify(supplier).replace(/'/g, "&#39;")})'>Edit</button>
@@ -2117,15 +2237,33 @@ function renderSuppliers() {
 }
 
 function editSupplier(supplier) {
+    // Set ID first to prevent clearing
     document.getElementById('supplierId').value = supplier.id;
+    
+    // Open modal (will detect we're editing and won't clear)
+    openModal('supplierModal');
+    
+    // Now fill all fields (they won't be cleared)
     document.getElementById('supplierName').value = supplier.name;
     document.getElementById('supplierContact').value = supplier.contact || '';
     document.getElementById('supplierCnic').value = supplier.cnic || '';
-    document.getElementById('supplierPmgRate').value = supplier.pmgRate;
-    document.getElementById('supplierHsdRate').value = supplier.hsdRate;
+    
+    // Support both old and new format
+    document.getElementById('supplierPmgRateSelf').value = supplier.pmgRateSelf || supplier.pmgRate || '';
+    document.getElementById('supplierHsdRateSelf').value = supplier.hsdRateSelf || supplier.hsdRate || '';
+    document.getElementById('supplierPmgRatePSO').value = supplier.pmgRatePSO || '';
+    document.getElementById('supplierHsdRatePSO').value = supplier.hsdRatePSO || '';
+    document.getElementById('supplierDefaultCarriage').value = supplier.defaultCarriage || 'self';
+    
     document.getElementById('supplierAddress').value = supplier.address || '';
     document.getElementById('supplierNotes').value = supplier.notes || '';
-    openModal('supplierModal');
+    
+    // Set balance with proper styling
+    const balanceField = document.getElementById('supplierOpeningBalance');
+    balanceField.value = supplier.balance.toFixed(2);
+    balanceField.disabled = true;
+    balanceField.style.backgroundColor = '#f7fafc';
+    balanceField.title = 'Current balance (cannot edit - use transactions/payments to change)';
 }
 
 function deleteSupplier(id) {
@@ -2486,13 +2624,64 @@ function calculateSaleAmount() {
     document.getElementById('saleDiscountInfo').innerHTML = discountInfo;
 }
 
+function updatePurchaseCarriageOptions() {
+    const supplierId = document.getElementById('purchaseSupplierId').value;
+    const carriageSection = document.getElementById('purchaseCarriageSection');
+    const carriageTypeSelect = document.getElementById('purchaseCarriageType');
+    const carriageInfo = document.getElementById('purchaseCarriageInfo');
+    
+    if (!supplierId) {
+        carriageSection.style.display = 'none';
+        return;
+    }
+    
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (!supplier) return;
+    
+    // Show carriage section
+    carriageSection.style.display = 'block';
+    
+    // Set default carriage type
+    carriageTypeSelect.value = supplier.defaultCarriage || 'self';
+    
+    // Show rate information
+    const pmgSelf = supplier.pmgRateSelf || supplier.pmgRate || 0;
+    const hsdSelf = supplier.hsdRateSelf || supplier.hsdRate || 0;
+    const pmgPSO = supplier.pmgRatePSO || 0;
+    const hsdPSO = supplier.hsdRatePSO || 0;
+    
+    carriageInfo.innerHTML = `
+        <strong>🚗 Self Carriage:</strong> PMG: Rs. ${parseFloat(pmgSelf).toFixed(4)}/L, HSD: Rs. ${parseFloat(hsdSelf).toFixed(4)}/L<br>
+        <strong>🚛 PSO Carriage:</strong> PMG: Rs. ${pmgPSO > 0 ? parseFloat(pmgPSO).toFixed(4) : 'N/A'}/L, HSD: Rs. ${hsdPSO > 0 ? parseFloat(hsdPSO).toFixed(4) : 'N/A'}/L
+    `;
+    
+    // Update rate based on selection
+    updatePurchaseRate();
+}
+
 function updatePurchaseRate() {
     const supplierId = document.getElementById('purchaseSupplierId').value;
     const fuelType = document.getElementById('purchaseFuelType').value;
+    const carriageTypeSelect = document.getElementById('purchaseCarriageType');
     
     if (supplierId && fuelType) {
         const supplier = suppliers.find(s => s.id === supplierId);
-        const rate = fuelType === 'PMG' ? supplier.pmgRate : supplier.hsdRate;
+        
+        // Use selected carriage type from dropdown
+        const carriageType = carriageTypeSelect ? carriageTypeSelect.value : (supplier.defaultCarriage || 'self');
+        
+        let rate;
+        if (fuelType === 'PMG') {
+            // Use PSO rate if carriage is pso, otherwise use Self rate
+            rate = carriageType === 'pso' && supplier.pmgRatePSO 
+                ? supplier.pmgRatePSO 
+                : (supplier.pmgRateSelf || supplier.pmgRate || 0);
+        } else {
+            rate = carriageType === 'pso' && supplier.hsdRatePSO 
+                ? supplier.hsdRatePSO 
+                : (supplier.hsdRateSelf || supplier.hsdRate || 0);
+        }
+        
         document.getElementById('purchaseRate').value = rate;
         calculatePurchaseAmount();
     }
@@ -2811,6 +3000,117 @@ function deleteExpense(id) {
         renderExpenses();
         updateDashboard();
         showNotification('Expense deleted!', 'success');
+    }
+}
+
+// JV VOUCHERS FUNCTIONS
+function renderJVVouchers() {
+    const tbody = document.getElementById('jvVouchersBody');
+    tbody.innerHTML = '';
+    
+    if (jvVouchers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #a0aec0; padding: 30px;">No JV entries yet. Click "Add JV Voucher" to create your first entry.</td></tr>';
+        return;
+    }
+    
+    // Show newest first
+    jvVouchers.slice().reverse().forEach(jv => {
+        // Get account names
+        let debitAccountName = jv.debitAccount;
+        let creditAccountName = jv.creditAccount;
+        
+        // Format account names nicely
+        if (jv.debitType === 'customer') {
+            const custId = jv.debitAccount.replace('customer_', '');
+            const cust = customers.find(c => c.id === custId);
+            debitAccountName = cust ? `👤 ${cust.name}` : 'Customer';
+        } else if (jv.debitType === 'supplier') {
+            const suppId = jv.debitAccount.replace('supplier_', '');
+            const supp = suppliers.find(s => s.id === suppId);
+            debitAccountName = supp ? `🏭 ${supp.name}` : 'Supplier';
+        } else if (jv.debitType === 'bank') {
+            const bankId = jv.debitAccount.replace('bank_', '');
+            const bank = banks.find(b => b.id === bankId);
+            debitAccountName = bank ? `🏦 ${bank.name}` : 'Bank';
+        } else if (jv.debitType === 'expense') {
+            debitAccountName = `💸 ${jv.debitAccount}`;
+        } else {
+            debitAccountName = jv.debitAccount;
+        }
+        
+        if (jv.creditType === 'customer') {
+            const custId = jv.creditAccount.replace('customer_', '');
+            const cust = customers.find(c => c.id === custId);
+            creditAccountName = cust ? `👤 ${cust.name}` : 'Customer';
+        } else if (jv.creditType === 'supplier') {
+            const suppId = jv.creditAccount.replace('supplier_', '');
+            const supp = suppliers.find(s => s.id === suppId);
+            creditAccountName = supp ? `🏭 ${supp.name}` : 'Supplier';
+        } else if (jv.creditType === 'bank') {
+            const bankId = jv.creditAccount.replace('bank_', '');
+            const bank = banks.find(b => b.id === bankId);
+            creditAccountName = bank ? `🏦 ${bank.name}` : 'Bank';
+        } else if (jv.creditType === 'expense') {
+            creditAccountName = `💸 ${jv.creditAccount}`;
+        } else {
+            creditAccountName = jv.creditAccount;
+        }
+        
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${new Date(jv.date).toLocaleDateString()}</td>
+            <td><strong>${jv.description}</strong></td>
+            <td>
+                <div style="padding: 4px 8px; background: #fed7d7; color: #c53030; border-radius: 4px; display: inline-block; font-size: 0.85em;">
+                    <strong>DR:</strong> ${debitAccountName}
+                </div>
+            </td>
+            <td>
+                <div style="padding: 4px 8px; background: #c6f6d5; color: #22543d; border-radius: 4px; display: inline-block; font-size: 0.85em;">
+                    <strong>CR:</strong> ${creditAccountName}
+                </div>
+            </td>
+            <td style="font-weight: 700; color: #667eea;">Rs. ${jv.debitAmount.toFixed(2)}</td>
+            <td><span style="background: #e2e8f0; padding: 3px 8px; border-radius: 4px; font-size: 0.75em;">${jv.createdBy || 'System'}</span></td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="deleteJVVoucher('${jv.id}')" title="Delete this JV entry">Delete</button>
+            </td>
+        `;
+    });
+}
+
+function deleteJVVoucher(id) {
+    const jv = jvVouchers.find(j => j.id === id);
+    if (!jv) {
+        showNotification('JV not found!', 'error');
+        return;
+    }
+    
+    const confirmMsg = `⚠️ Delete this JV entry?\n\n` +
+                      `Date: ${new Date(jv.date).toLocaleDateString()}\n` +
+                      `Description: ${jv.description}\n` +
+                      `Amount: Rs. ${jv.debitAmount.toFixed(2)}\n\n` +
+                      `NOTE: This will REVERSE the accounting effect!\n` +
+                      `(Debit and Credit will be reversed)`;
+    
+    if (confirm(confirmMsg)) {
+        // Reverse the JV entry effects
+        const reverseDesc = 'REVERSED: ' + jv.description;
+        // Reverse debit (subtract what was added, or add what was subtracted)
+        updateAccountFromJV(jv.debitType, jv.debitAccount, jv.debitAmount, 'credit', reverseDesc, jv.date); // Reverse debit
+        // Reverse credit
+        updateAccountFromJV(jv.creditType, jv.creditAccount, jv.creditAmount, 'debit', reverseDesc, jv.date); // Reverse credit
+        
+        // Remove the JV from list
+        jvVouchers = jvVouchers.filter(j => j.id !== id);
+        
+        saveToStorage();
+        renderJVVouchers();
+        renderCustomers();
+        renderSuppliers();
+        renderBanks(); // Refresh banks to show reversal transactions
+        updateDashboard();
+        showNotification('JV entry deleted and reversed! ✅', 'success');
     }
 }
 
@@ -3330,8 +3630,9 @@ function previewGovRateChange() {
     let html = '<table style="width:100%; font-size:0.85em;"><thead><tr><th>Name</th><th>Old PMG</th><th>New PMG</th><th>Old HSD</th><th>New HSD</th></tr></thead><tbody>';
     
     affectedParties.slice(0, 5).forEach(party => {
-        const oldPmg = parseFloat(party.pmgRate);
-        const oldHsd = parseFloat(party.hsdRate);
+        // Support both customer format (pmgRate) and supplier format (pmgRateSelf)
+        const oldPmg = parseFloat(party.pmgRateSelf || party.pmgRate || 0);
+        const oldHsd = parseFloat(party.hsdRateSelf || party.hsdRate || 0);
         
         let newPmg, newHsd;
         if (changeType === 'absolute') {
@@ -3426,8 +3727,9 @@ function applyGovRateChange(e) {
     
     if (scope === 'all' || scope === 'suppliers') {
         suppliers.forEach(supplier => {
-            const oldPmg = parseFloat(supplier.pmgRate);
-            const oldHsd = parseFloat(supplier.hsdRate);
+            // Use Self Carriage rate as base, or fallback to old pmgRate
+            const oldPmg = parseFloat(supplier.pmgRateSelf || supplier.pmgRate || 0);
+            const oldHsd = parseFloat(supplier.hsdRateSelf || supplier.hsdRate || 0);
             
             let newPmg, newHsd;
             if (changeType === 'absolute') {
@@ -3448,8 +3750,19 @@ function applyGovRateChange(e) {
                 newHsdRate: newHsd
             });
             
-            supplier.pmgRate = newPmg.toFixed(4);
-            supplier.hsdRate = newHsd.toFixed(4);
+            // Update Self Carriage rates (base rates)
+            supplier.pmgRateSelf = newPmg.toFixed(4);
+            supplier.hsdRateSelf = newHsd.toFixed(4);
+            
+            // If supplier has PSO rates, update those too proportionally
+            if (supplier.pmgRatePSO) {
+                const pmgDiff = newPmg - oldPmg;
+                supplier.pmgRatePSO = (parseFloat(supplier.pmgRatePSO) + pmgDiff).toFixed(4);
+            }
+            if (supplier.hsdRatePSO) {
+                const hsdDiff = newHsd - oldHsd;
+                supplier.hsdRatePSO = (parseFloat(supplier.hsdRatePSO) + hsdDiff).toFixed(4);
+            }
         });
     }
     
@@ -3943,12 +4256,16 @@ function generateAllPartiesReport() {
     let totalPayables = 0;
     suppliers.forEach(supplier => {
         totalPayables += supplier.balance > 0 ? supplier.balance : 0;
+        // Use Self Carriage rate as primary, fallback to old rate
+        const pmgRate = supplier.pmgRateSelf || supplier.pmgRate || 0;
+        const hsdRate = supplier.hsdRateSelf || supplier.hsdRate || 0;
+        const carriageIcon = supplier.defaultCarriage === 'pso' ? ' 🚛' : ' 🚗';
         html += `
             <tr>
                 <td><strong>${supplier.name}</strong></td>
                 <td>${supplier.contact || 'N/A'}</td>
-                <td>Rs. ${supplier.pmgRate}</td>
-                <td>Rs. ${supplier.hsdRate}</td>
+                <td>Rs. ${parseFloat(pmgRate).toFixed(4)}${carriageIcon}</td>
+                <td>Rs. ${parseFloat(hsdRate).toFixed(4)}${carriageIcon}</td>
                 <td style="font-weight: 700; color: ${supplier.balance > 0 ? '#f56565' : '#48bb78'};">
                     Rs. ${supplier.balance.toFixed(2)}
                 </td>
@@ -4614,8 +4931,11 @@ function exportAllDataExcel() {
         Name: s.name,
         Contact: s.contact,
         CNIC: s.cnic,
-        'PMG Rate': s.pmgRate,
-        'HSD Rate': s.hsdRate,
+        'PMG Rate (Self)': s.pmgRateSelf || s.pmgRate || 0,
+        'PMG Rate (PSO)': s.pmgRatePSO || 'N/A',
+        'HSD Rate (Self)': s.hsdRateSelf || s.hsdRate || 0,
+        'HSD Rate (PSO)': s.hsdRatePSO || 'N/A',
+        'Default Carriage': s.defaultCarriage === 'pso' ? 'PSO' : 'Self',
         Balance: s.balance,
         Address: s.address
     }));
@@ -4692,34 +5012,162 @@ function exportAllDataExcel() {
 
 // BACKUP FUNCTIONS
 function createBackup() {
-    const backup = {
-        version: '4.0',
-        timestamp: new Date().toISOString(),
-        createdBy: currentUser,
-        data: {
-            customers,
-            suppliers,
-            vehicles,
-            banks,
-            transactions,
-            payments,
-            expenses,
-            customerTransfers,
-            bankTransactions,
-            rateChangeLogs,
-            ledgerEntries
-        }
-    };
+    // Create workbook
+    const wb = XLSX.utils.book_new();
     
-    const dataStr = JSON.stringify(backup, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `baghoor-backup-${Date.now()}.json`;
-    link.click();
+    // Backup metadata
+    const metadata = [{
+        'Backup Version': '4.0',
+        'Created Date': new Date().toLocaleDateString(),
+        'Created Time': new Date().toLocaleTimeString(),
+        'Created By': currentUser || 'System',
+        'Total Customers': customers.length,
+        'Total Suppliers': suppliers.length,
+        'Total Vehicles': vehicles.length,
+        'Total Banks': banks.length,
+        'Total Transactions': transactions.length
+    }];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(metadata), 'Backup Info');
     
-    showNotification('Backup downloaded! 💾', 'success');
+    // Customers
+    const customersData = customers.map(c => ({
+        ID: c.id,
+        Name: c.name,
+        Contact: c.contact || '',
+        CNIC: c.cnic || '',
+        'PMG Rate': c.pmgRate,
+        'HSD Rate': c.hsdRate,
+        Balance: c.balance,
+        Address: c.address || '',
+        Notes: c.notes || '',
+        'Created At': c.createdAt
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customersData), 'Customers');
+    
+    // Suppliers
+    const suppliersData = suppliers.map(s => ({
+        ID: s.id,
+        Name: s.name,
+        Contact: s.contact || '',
+        CNIC: s.cnic || '',
+        'PMG Rate (Self)': s.pmgRateSelf || s.pmgRate || 0,
+        'PMG Rate (PSO)': s.pmgRatePSO || 0,
+        'HSD Rate (Self)': s.hsdRateSelf || s.hsdRate || 0,
+        'HSD Rate (PSO)': s.hsdRatePSO || 0,
+        'Default Carriage': s.defaultCarriage || 'self',
+        Balance: s.balance,
+        Address: s.address || '',
+        Notes: s.notes || '',
+        'Created At': s.createdAt
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(suppliersData), 'Suppliers');
+    
+    // Vehicles
+    const vehiclesData = vehicles.map(v => ({
+        ID: v.id,
+        Number: v.number,
+        Driver: v.driver,
+        Contact: v.contact,
+        Status: v.status,
+        'Stock PMG (KL)': v.stockPMG,
+        'Stock HSD (KL)': v.stockHSD,
+        'Owner Name': v.ownerName || '',
+        'Owner Contact': v.ownerContact || '',
+        'Owner Balance': v.ownerBalance || 0
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vehiclesData), 'Vehicles');
+    
+    // Banks
+    const banksData = banks.map(b => ({
+        ID: b.id,
+        Name: b.name,
+        'Account Number': b.accountNumber,
+        Balance: b.balance,
+        'Created At': b.createdAt
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(banksData), 'Banks');
+    
+    // Transactions
+    const transactionsData = transactions.map(t => ({
+        ID: t.id,
+        Date: t.date,
+        Type: t.type,
+        'Customer/Supplier': t.customerName || t.supplierName || '',
+        'Fuel Type': t.fuelType,
+        'Quantity (L)': t.quantity,
+        'Rate (Rs/L)': t.rate,
+        Amount: t.amount,
+        Description: t.description || '',
+        Vehicle: t.vehicleNumber || '',
+        'Created By': t.createdBy || '',
+        'Created At': t.createdAt
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(transactionsData), 'Transactions');
+    
+    // Payments
+    const paymentsData = payments.map(p => ({
+        ID: p.id,
+        Date: p.date,
+        Type: p.type,
+        'Party Name': p.partyName,
+        Amount: p.amount,
+        Method: p.method,
+        Description: p.description || '',
+        'Created By': p.createdBy || '',
+        'Created At': p.createdAt
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paymentsData), 'Payments');
+    
+    // Expenses
+    const expensesData = expenses.map(e => ({
+        ID: e.id,
+        Date: e.date,
+        Category: e.category,
+        Description: e.description,
+        Amount: e.amount,
+        Method: e.method,
+        Source: e.source,
+        'Created At': e.createdAt
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expensesData), 'Expenses');
+    
+    // Bank Transactions
+    const bankTransData = bankTransactions.map(bt => ({
+        ID: bt.id,
+        Date: bt.date,
+        Bank: bt.bankName,
+        Type: bt.type,
+        Amount: bt.amount,
+        Description: bt.description || '',
+        'Balance After': bt.balanceAfter,
+        'Created By': bt.createdBy || '',
+        'Created At': bt.createdAt
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bankTransData), 'Bank Transactions');
+    
+    // JV Vouchers
+    if (jvVouchers && jvVouchers.length > 0) {
+        const jvData = jvVouchers.map(jv => ({
+            ID: jv.id,
+            Date: jv.date,
+            Description: jv.description,
+            'Debit Type': jv.debitType,
+            'Debit Account': jv.debitAccount,
+            'Debit Amount': jv.debitAmount,
+            'Credit Type': jv.creditType,
+            'Credit Account': jv.creditAccount,
+            'Credit Amount': jv.creditAmount,
+            'Created By': jv.createdBy || '',
+            'Created At': jv.createdAt
+        }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(jvData), 'JV Vouchers');
+    }
+    
+    // Download
+    const fileName = `Baghoor-Backup-${new Date().toISOString().split('T')[0]}-${Date.now()}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    
+    showNotification('✅ Complete backup downloaded as Excel file! 💾', 'success');
 }
 
 function restoreBackup() {
@@ -4991,6 +5439,8 @@ function switchTab(tabName) {
     
     if (tabName === 'ledger') {
         generateLedger();
+    } else if (tabName === 'jvouchers') {
+        renderJVVouchers();
     }
 }
 
@@ -5004,39 +5454,66 @@ function openModal(modalId) {
         renderUserManagement();
     }
     
-    // Clear supplier form when opening to add new
+    // Clear supplier form ONLY when opening to add new (not when editing)
     if (modalId === 'supplierModal') {
-        document.getElementById('supplierId').value = '';
-        document.getElementById('supplierName').value = '';
-        document.getElementById('supplierContact').value = '';
-        document.getElementById('supplierCnic').value = '';
-        document.getElementById('supplierPmgRate').value = '';
-        document.getElementById('supplierHsdRate').value = '';
-        document.getElementById('supplierAddress').value = '';
-        document.getElementById('supplierNotes').value = '';
-        document.getElementById('supplierOpeningBalance').value = '0';
+        // Check if we're editing (ID exists) or adding new (ID empty)
+        const isEditing = document.getElementById('supplierId').value !== '';
+        
+        if (!isEditing) {
+            // Only clear if adding new
+            document.getElementById('supplierId').value = '';
+            document.getElementById('supplierName').value = '';
+            document.getElementById('supplierContact').value = '';
+            document.getElementById('supplierCnic').value = '';
+            document.getElementById('supplierPmgRateSelf').value = '';
+            document.getElementById('supplierHsdRateSelf').value = '';
+            document.getElementById('supplierPmgRatePSO').value = '';
+            document.getElementById('supplierHsdRatePSO').value = '';
+            document.getElementById('supplierDefaultCarriage').value = 'self';
+            document.getElementById('supplierAddress').value = '';
+            document.getElementById('supplierNotes').value = '';
+            const supplierBalanceField = document.getElementById('supplierOpeningBalance');
+            supplierBalanceField.value = '0';
+            supplierBalanceField.disabled = false;
+            supplierBalanceField.style.backgroundColor = '';
+            supplierBalanceField.title = 'Enter opening balance if supplier has previous balance';
+        }
     }
     
-    // Clear customer form when opening to add new
+    // Clear customer form ONLY when opening to add new (not when editing)
     if (modalId === 'customerModal') {
-        document.getElementById('customerId').value = '';
-        document.getElementById('customerName').value = '';
-        document.getElementById('customerContact').value = '';
-        document.getElementById('customerCnic').value = '';
-        document.getElementById('customerPmgRate').value = '';
-        document.getElementById('customerHsdRate').value = '';
-        document.getElementById('customerAddress').value = '';
-        document.getElementById('customerNotes').value = '';
-        document.getElementById('customerOpeningBalance').value = '0';
+        // Check if we're editing (ID exists) or adding new (ID empty)
+        const isEditing = document.getElementById('customerId').value !== '';
+        
+        if (!isEditing) {
+            // Only clear if adding new
+            document.getElementById('customerId').value = '';
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerContact').value = '';
+            document.getElementById('customerCnic').value = '';
+            document.getElementById('customerPmgRate').value = '';
+            document.getElementById('customerHsdRate').value = '';
+            document.getElementById('customerAddress').value = '';
+            document.getElementById('customerNotes').value = '';
+            const customerBalanceField = document.getElementById('customerOpeningBalance');
+            customerBalanceField.value = '0';
+            customerBalanceField.disabled = false;
+            customerBalanceField.style.backgroundColor = '';
+            customerBalanceField.title = 'Enter opening balance if customer has previous balance';
+        }
     }
     
-    // Clear vehicle form when opening to add new
+    // Clear vehicle form ONLY when opening to add new (not when editing)
     if (modalId === 'vehicleModal') {
-        document.getElementById('vehicleId').value = '';
-        document.getElementById('vehicleNumber').value = '';
-        document.getElementById('vehicleDriver').value = '';
-        document.getElementById('vehicleContact').value = '';
-        document.getElementById('vehicleStatus').value = 'Active';
+        const isEditing = document.getElementById('vehicleId').value !== '';
+        
+        if (!isEditing) {
+            document.getElementById('vehicleId').value = '';
+            document.getElementById('vehicleNumber').value = '';
+            document.getElementById('vehicleDriver').value = '';
+            document.getElementById('vehicleContact').value = '';
+            document.getElementById('vehicleStatus').value = 'Active';
+        }
     }
     
     // Initialize JV modal
@@ -5229,34 +5706,92 @@ function saveJVVoucher(e) {
     
     jvVouchers.push(jv);
     
-    // Update accounts
-    updateAccountFromJV(jv.debitType, jv.debitAccount, debit, 'debit');
-    updateAccountFromJV(jv.creditType, jv.creditAccount, credit, 'credit');
+    // Update accounts and create visible transactions
+    updateAccountFromJV(jv.debitType, jv.debitAccount, debit, 'debit', jv.description, jv.date);
+    updateAccountFromJV(jv.creditType, jv.creditAccount, credit, 'credit', jv.description, jv.date);
     
     saveToStorage();
+    renderJVVouchers();
+    renderCustomers();
+    renderSuppliers();
+    renderBanks(); // Refresh banks to show new transactions
+    updateDashboard();
     showNotification('JV Voucher saved! ✅', 'success');
     closeModal('jvModal');
     e.target.reset();
 }
 
-function updateAccountFromJV(type, account, amount, side) {
+function updateAccountFromJV(type, account, amount, side, jvDescription, jvDate) {
     if (type === 'customer') {
         const custId = account.replace('customer_', '');
         const cust = customers.find(c => c.id === custId);
         if (cust) {
             cust.balance += side === 'debit' ? amount : -amount;
+            
+            // Create visible transaction entry for customer
+            const custTransaction = {
+                id: 'trans_jv_' + Date.now() + '_' + Math.random(),
+                type: 'jv_entry',
+                customerId: custId,
+                customerName: cust.name,
+                fuelType: 'N/A',
+                quantity: 0,
+                rate: 0,
+                amount: side === 'debit' ? -amount : amount, // Debit decreases customer balance (payment), Credit increases (sale)
+                description: '📝 JV Entry: ' + (jvDescription || 'Journal Voucher'),
+                date: jvDate || new Date().toISOString().split('T')[0],
+                source: 'jv',
+                createdBy: currentUser,
+                createdAt: new Date().toISOString()
+            };
+            transactions.push(custTransaction);
         }
     } else if (type === 'supplier') {
         const suppId = account.replace('supplier_', '');
         const supp = suppliers.find(s => s.id === suppId);
         if (supp) {
             supp.balance += side === 'credit' ? amount : -amount;
+            
+            // Create visible transaction entry for supplier
+            const suppTransaction = {
+                id: 'trans_jv_' + Date.now() + '_' + Math.random(),
+                type: 'jv_entry',
+                supplierId: suppId,
+                supplierName: supp.name,
+                fuelType: 'N/A',
+                quantity: 0,
+                rate: 0,
+                amount: side === 'credit' ? -amount : amount, // Credit decreases supplier balance (payment), Debit increases (purchase)
+                description: '📝 JV Entry: ' + (jvDescription || 'Journal Voucher'),
+                date: jvDate || new Date().toISOString().split('T')[0],
+                source: 'jv',
+                createdBy: currentUser,
+                createdAt: new Date().toISOString()
+            };
+            transactions.push(suppTransaction);
         }
     } else if (type === 'bank') {
         const bankId = account.replace('bank_', '');
         const bank = banks.find(b => b.id === bankId);
         if (bank) {
+            // Update bank balance
             bank.balance += side === 'debit' ? amount : -amount;
+            
+            // Create visible bank transaction entry
+            const bankTransaction = {
+                id: 'banktrans_jv_' + Date.now() + '_' + Math.random(),
+                bankId: bankId,
+                bankName: bank.name,
+                type: side === 'debit' ? 'deposit' : 'withdrawal',
+                amount: amount,
+                description: '📝 JV Entry: ' + (jvDescription || 'Journal Voucher'),
+                date: jvDate || new Date().toISOString().split('T')[0],
+                balanceAfter: bank.balance,
+                source: 'jv', // Mark as JV source
+                createdBy: currentUser,
+                createdAt: new Date().toISOString()
+            };
+            bankTransactions.push(bankTransaction);
         }
     } else if (type === 'vehicle') {
         const vehId = account.replace('vehicle_', '');
@@ -5557,6 +6092,9 @@ function addNewUser() {
 // Initialize
 window.addEventListener('load', async () => {
     console.log('🚀 Baghoor Oil Traders - Complete Professional System Loaded!');
+    
+    // Check if user was previously logged in (fix auto-logout on refresh)
+    checkLoginSession();
     
     // Clean up any corrupted data on load
     try {
