@@ -549,6 +549,7 @@
             <button class="tab" onclick="switchTab('transactions')">💳 Transactions</button>
             <button class="tab" onclick="switchTab('payments')">💰 Payments</button>
             <button class="tab" onclick="switchTab('jvouchers')">📝 JV Vouchers</button>
+            <button class="tab" onclick="switchTab('owneraccounts')">👔 Owner Accounts</button>
             <button class="tab" onclick="switchTab('expenses')">💸 Expenses</button>
             <button class="tab" onclick="switchTab('banks')">🏦 Banks</button>
             <button class="tab" onclick="switchTab('vehicles')">🚛 Vehicles</button>
@@ -624,12 +625,9 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Type</th>
-                                <th>Party</th>
-                                <th>Fuel</th>
-                                <th>Quantity</th>
-                                <th>Rate</th>
+                                <th>Description</th>
                                 <th>Amount</th>
-                                <th>Vehicle</th>
+                                <th>Reference</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -657,6 +655,7 @@
                                 <th>Method</th>
                                 <th>Bank</th>
                                 <th>Notes</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="paymentsBody"></tbody>
@@ -694,6 +693,37 @@
                         Journal Vouchers (JV) are used for internal account adjustments like customer-to-customer transfers, 
                         customer-to-supplier payments, corrections, and other accounting entries. All JV entries are listed here 
                         for cross-checking and can be deleted if needed.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- OWNER ACCOUNTS TAB -->
+        <div id="owneraccounts-tab" class="tab-content">
+            <div class="card">
+                <h2>
+                    👔 Owner & Relatives Accounts
+                    <button class="btn btn-primary" onclick="openModal('ownerAccountModal')">Add Account</button>
+                </h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Contact</th>
+                                <th>Balance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ownerAccountsBody"></tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <h4 style="margin: 0 0 10px 0; color: #667eea;">💡 About Owner Accounts:</h4>
+                    <p style="margin: 0; font-size: 0.9em; color: #4a5568;">
+                        <strong>Owner Capital Account:</strong> Main business owner account for capital deposits and withdrawals.<br>
+                        <strong>Relatives Accounts:</strong> Accounts for owner's family members/relatives who have financial dealings with the business (jama/amanti type transactions).
                     </p>
                 </div>
             </div>
@@ -759,6 +789,7 @@
                                 <th>Amount</th>
                                 <th>Description</th>
                                 <th>Balance After</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="bankTransactionsBody"></tbody>
@@ -1747,6 +1778,96 @@
     </div>
 </div>
 
+<!-- OWNER ACCOUNT MODAL -->
+<div id="ownerAccountModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add/Edit Owner Account</h2>
+            <button class="close-btn" onclick="closeModal('ownerAccountModal')">&times;</button>
+        </div>
+        <form onsubmit="saveOwnerAccount(event)">
+            <input type="hidden" id="ownerAccountId">
+            <div class="form-group">
+                <label>Account Type *</label>
+                <select id="ownerAccountType" required>
+                    <option value="">Select Type</option>
+                    <option value="owner">👔 Owner Capital</option>
+                    <option value="relative">👨‍👩‍👧 Owner's Relative</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" id="ownerAccountName" required placeholder="Enter name">
+            </div>
+            <div class="form-group">
+                <label>Contact Number</label>
+                <input type="text" id="ownerAccountContact" placeholder="03XX-XXXXXXX">
+            </div>
+            <div class="form-group">
+                <label>CNIC</label>
+                <input type="text" id="ownerAccountCnic" placeholder="12345-1234567-1">
+            </div>
+            <div class="form-group">
+                <label>Opening Balance (Rs)</label>
+                <input type="number" step="0.01" id="ownerAccountOpeningBalance" value="0" placeholder="Previous balance (if any)">
+                <small style="color: var(--text-secondary); font-size: 0.85em;">💡 Positive = Business owes them, Negative = They owe business</small>
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="ownerAccountNotes" placeholder="Any additional information..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-success">Save Account</button>
+        </form>
+    </div>
+</div>
+
+<!-- OWNER ACCOUNT TRANSACTION MODAL -->
+<div id="ownerAccountTransModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Owner Account Transaction</h2>
+            <button class="close-btn" onclick="closeModal('ownerAccountTransModal')">&times;</button>
+        </div>
+        <form onsubmit="saveOwnerAccountTransaction(event)">
+            <div class="form-group">
+                <label>Account *</label>
+                <select id="ownerTransAccountId" required>
+                    <option value="">Select Account</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Transaction Type *</label>
+                <select id="ownerTransType" required>
+                    <option value="">Select Type</option>
+                    <option value="deposit">💵 Deposit (They gave money to business)</option>
+                    <option value="withdrawal">💸 Withdrawal (Business paid them)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Amount (Rs) *</label>
+                <input type="number" step="0.01" id="ownerTransAmount" required placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>Payment Method</label>
+                <select id="ownerTransMethod">
+                    <option value="cash">Cash</option>
+                    <option value="bank">Bank Transfer</option>
+                    <option value="cheque">Cheque</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="ownerTransDate" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="ownerTransDescription" placeholder="Purpose of transaction..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-success">Record Transaction</button>
+        </form>
+    </div>
+</div>
+
 <script>
 // ==========================================
 // SUPABASE CLOUD SYNC CONFIGURATION
@@ -1808,6 +1929,7 @@ let bankTransactions = safeLoadData('bankTransactions', []);
 let rateChangeLogs = safeLoadData('rateChangeLogs', []);
 let ledgerEntries = safeLoadData('ledgerEntries', []);
 let jvVouchers = safeLoadData('jvVouchers', []);
+let ownerAccounts = safeLoadData('ownerAccounts', []);
 let currentUser = '';
 let currentRole = 'admin';
 let selectedRole = 'admin';
@@ -2016,6 +2138,7 @@ async function saveToStorage() {
     localStorage.setItem('rateChangeLogs', JSON.stringify(rateChangeLogs));
     localStorage.setItem('ledgerEntries', JSON.stringify(ledgerEntries));
     localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
+    localStorage.setItem('ownerAccounts', JSON.stringify(ownerAccounts));
     localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
     
     // Also save to Supabase cloud (for multi-device sync)
@@ -2027,7 +2150,7 @@ async function saveToStorage() {
                     id: 1,
                     customers, suppliers, transactions, payments, expenses,
                     customerTransfers, vehicles, banks, bankTransactions,
-                    rateChangeLogs, ledgerEntries, jvVouchers, systemUsers,
+                    rateChangeLogs, ledgerEntries, jvVouchers, ownerAccounts, systemUsers,
                     last_updated: new Date().toISOString()
                 });
             
@@ -2441,41 +2564,142 @@ function renderTransactions() {
     const tbody = document.getElementById('transactionsBody');
     tbody.innerHTML = '';
     
+    // COMBINE ALL ENTRY TYPES INTO ONE ARRAY!
+    let allEntries = [];
+    
+    // 1. Add regular transactions (sales/purchases)
+    transactions.forEach(trans => {
+        const vehicle = vehicles.find(v => v.id === trans.vehicleId);
+        let discountDisplay = '';
+        if (trans.discountAmount && trans.discountAmount > 0) {
+            discountDisplay = ` (Discount: Rs. ${trans.discountAmount.toFixed(2)})`;
+        }
+        allEntries.push({
+            id: trans.id,
+            date: trans.date,
+            type: trans.type === 'sale' ? 'SALE' : 'PURCHASE',
+            typeColor: trans.type === 'sale' ? '#48bb78' : '#ed8936',
+            description: `${trans.partyName} - ${trans.fuelType} (${trans.quantity.toFixed(2)} L @ Rs. ${trans.rate.toFixed(2)})${discountDisplay}`,
+            amount: trans.amount,
+            reference: vehicle ? vehicle.number : '-',
+            deleteFunction: `deleteTransaction('${trans.id}', '${trans.type}', '${trans.partyId}', '${trans.vehicleId}', '${trans.fuelType}', ${trans.quantity}, ${trans.amount})`,
+            entryType: 'transaction'
+        });
+    });
+    
+    // 2. Add payments
+    payments.forEach(payment => {
+        const party = payment.type === 'received' 
+            ? customers.find(c => c.id === payment.partyId)
+            : suppliers.find(s => s.id === payment.partyId);
+        allEntries.push({
+            id: payment.id,
+            date: payment.date,
+            type: payment.type === 'received' ? 'PAYMENT IN' : 'PAYMENT OUT',
+            typeColor: payment.type === 'received' ? '#4299e1' : '#9f7aea',
+            description: `${party ? party.name : 'Unknown'} - ${payment.method}`,
+            amount: payment.amount,
+            reference: payment.referenceNo || '-',
+            deleteFunction: `deletePayment('${payment.id}')`,
+            entryType: 'payment'
+        });
+    });
+    
+    // 3. Add expenses
+    expenses.forEach(expense => {
+        let expenseDesc = expense.description;
+        if (expense.source === 'customer') {
+            const customer = customers.find(c => c.id === expense.customerId);
+            if (customer) expenseDesc += ` (Paid for ${customer.name})`;
+        }
+        allEntries.push({
+            id: expense.id,
+            date: expense.date,
+            type: 'EXPENSE',
+            typeColor: '#f56565',
+            description: expenseDesc,
+            amount: expense.amount,
+            reference: expense.category || '-',
+            deleteFunction: `deleteExpense('${expense.id}')`,
+            entryType: 'expense'
+        });
+    });
+    
+    // 4. Add customer transfers
+    customerTransfers.forEach(transfer => {
+        const fromCustomer = customers.find(c => c.id === transfer.fromCustomerId);
+        const toCustomer = customers.find(c => c.id === transfer.toCustomerId);
+        allEntries.push({
+            id: transfer.id,
+            date: transfer.date,
+            type: 'TRANSFER',
+            typeColor: '#38b2ac',
+            description: `Transfer from ${fromCustomer ? fromCustomer.name : 'Unknown'} to ${toCustomer ? toCustomer.name : 'Unknown'}`,
+            amount: transfer.amount,
+            reference: transfer.description || '-',
+            deleteFunction: `deleteCustomerTransfer('${transfer.id}')`,
+            entryType: 'transfer'
+        });
+    });
+    
+    // 5. Add JV vouchers
+    jvVouchers.forEach(jv => {
+        allEntries.push({
+            id: jv.id,
+            date: jv.date,
+            type: 'JV VOUCHER',
+            typeColor: '#805ad5',
+            description: `${jv.description} (Dr: ${jv.debitType} / Cr: ${jv.creditType})`,
+            amount: jv.debitAmount,
+            reference: jv.voucherNumber || '-',
+            deleteFunction: `deleteJVVoucher('${jv.id}')`,
+            entryType: 'jv'
+        });
+    });
+    
+    // 6. Add bank transactions
+    bankTransactions.forEach(bankTrans => {
+        const bank = banks.find(b => b.id === bankTrans.bankId);
+        allEntries.push({
+            id: bankTrans.id,
+            date: bankTrans.date,
+            type: bankTrans.type === 'deposit' ? 'BANK DEPOSIT' : 'BANK WITHDRAWAL',
+            typeColor: bankTrans.type === 'deposit' ? '#48bb78' : '#f56565',
+            description: `${bank ? bank.name : 'Unknown Bank'} - ${bankTrans.description}`,
+            amount: bankTrans.amount,
+            reference: bankTrans.referenceNo || '-',
+            deleteFunction: `deleteBankTransaction('${bankTrans.id}')`,
+            entryType: 'bank'
+        });
+    });
+    
+    // Sort all entries by date (newest first)
+    allEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
     // Show loading message for large datasets
-    if (transactions.length > 100) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">⏳ Loading transactions...</td></tr>';
+    if (allEntries.length > 100) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">⏳ Loading all transactions...</td></tr>';
     }
     
     // Use setTimeout to prevent UI blocking for large datasets
     setTimeout(() => {
         const fragment = document.createDocumentFragment();
         
-        // Get paginated transactions
+        // Get paginated entries
         const startIndex = (transactionsPage - 1) * transactionsPerPage;
         const endIndex = startIndex + transactionsPerPage;
-        const paginatedTransactions = transactions.slice().reverse().slice(startIndex, endIndex);
+        const paginatedEntries = allEntries.slice(startIndex, endIndex);
         
-        paginatedTransactions.forEach(trans => {
-            const vehicle = vehicles.find(v => v.id === trans.vehicleId);
-            
-            // Build discount display
-            let discountDisplay = '';
-            if (trans.discountAmount && trans.discountAmount > 0) {
-                discountDisplay = `<br><small style="color: #28a745;">💰 Discount: Rs. ${trans.discountAmount.toFixed(2)}</small>`;
-            }
-            
+        paginatedEntries.forEach(entry => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${new Date(trans.date).toLocaleDateString()}</td>
-                <td><span style="background: ${trans.type === 'sale' ? '#48bb78' : '#ed8936'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${trans.type.toUpperCase()}</span></td>
-                <td>${trans.partyName}</td>
-                <td>${trans.fuelType}</td>
-                <td>${trans.quantity.toFixed(2)} L</td>
-                <td>Rs. ${trans.rate.toFixed(4)}</td>
-                <td style="font-weight: 700;">Rs. ${trans.amount.toFixed(2)}${discountDisplay}</td>
-                <td>${vehicle ? vehicle.number : '-'}</td>
+                <td>${new Date(entry.date).toLocaleDateString()}</td>
+                <td><span style="background: ${entry.typeColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600;">${entry.type}</span></td>
+                <td>${entry.description}</td>
+                <td style="font-weight: 700;">Rs. ${entry.amount.toFixed(2)}</td>
+                <td>${entry.reference}</td>
                 <td>
-                    <button class="btn btn-danger btn-sm" onclick="deleteTransaction('${trans.id}', '${trans.type}', '${trans.partyId}', '${trans.vehicleId}', '${trans.fuelType}', ${trans.quantity}, ${trans.amount})">Delete</button>
+                    <button class="btn btn-danger btn-sm" onclick="${entry.deleteFunction}">🗑️ Delete</button>
                 </td>
             `;
             fragment.appendChild(row);
@@ -2485,17 +2709,28 @@ function renderTransactions() {
         tbody.appendChild(fragment);
         
         // Show pagination info
-        const totalPages = Math.ceil(transactions.length / transactionsPerPage);
+        const totalPages = Math.ceil(allEntries.length / transactionsPerPage);
         if (totalPages > 1) {
             const paginationRow = document.createElement('tr');
             paginationRow.innerHTML = `
-                <td colspan="9" style="text-align: center; padding: 15px; background: var(--bg-secondary);">
+                <td colspan="6" style="text-align: center; padding: 15px; background: var(--bg-secondary);">
                     <button class="btn btn-sm btn-secondary" onclick="changeTransactionsPage(-1)" ${transactionsPage === 1 ? 'disabled' : ''}>← Previous</button>
-                    <span style="margin: 0 15px; font-weight: 700;">Page ${transactionsPage} of ${totalPages}</span>
+                    <span style="margin: 0 15px; font-weight: 700;">Page ${transactionsPage} of ${totalPages} (${allEntries.length} total entries)</span>
                     <button class="btn btn-sm btn-secondary" onclick="changeTransactionsPage(1)" ${transactionsPage === totalPages ? 'disabled' : ''}>Next →</button>
                 </td>
             `;
             tbody.appendChild(paginationRow);
+        }
+        
+        // Show total count
+        if (allEntries.length > 0) {
+            const summaryRow = document.createElement('tr');
+            summaryRow.innerHTML = `
+                <td colspan="6" style="text-align: center; padding: 10px; background: var(--bg-tertiary); font-weight: 600;">
+                    📊 Showing ${allEntries.length} entries: ${transactions.length} Sales/Purchases | ${payments.length} Payments | ${expenses.length} Expenses | ${customerTransfers.length} Transfers | ${jvVouchers.length} JV Vouchers | ${bankTransactions.length} Bank Trans
+                </td>
+            `;
+            tbody.appendChild(summaryRow);
         }
     }, 10); // Small delay to prevent UI blocking
 }
@@ -2818,6 +3053,7 @@ function savePayment(e) {
     
     saveToStorage();
     renderPayments();
+    renderTransactions(); // Update unified transactions view
     renderCustomers();
     renderSuppliers();
     renderBanks();
@@ -2842,6 +3078,9 @@ function renderPayments() {
             <td>${payment.method.toUpperCase()}</td>
             <td>${bank ? bank.name : '-'}</td>
             <td>${payment.notes || '-'}</td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="deletePayment('${payment.id}')">Delete</button>
+            </td>
         `;
     });
 }
@@ -2889,6 +3128,7 @@ function saveCustomerTransfer(e) {
     
     saveToStorage();
     renderCustomers();
+    renderTransactions(); // Update unified transactions view
     closeModal('customerTransferModal');
     updateDashboard();
     showNotification('Customer transfer recorded! 🔄', 'success');
@@ -2955,6 +3195,7 @@ function saveExpense(e) {
     
     saveToStorage();
     renderExpenses();
+    renderTransactions(); // Update unified transactions view
     renderBanks();
     renderCustomers();
     closeModal('expenseModal');
@@ -2998,9 +3239,303 @@ function deleteExpense(id) {
         expenses = expenses.filter(e => e.id !== id);
         saveToStorage();
         renderExpenses();
+        renderTransactions(); // Update unified transactions view
         updateDashboard();
         showNotification('Expense deleted!', 'success');
     }
+}
+
+// DELETE PAYMENT FUNCTION
+function deletePayment(id) {
+    if (!confirm('Are you sure you want to delete this payment? This will reverse all balance changes.')) {
+        return;
+    }
+    
+    const payment = payments.find(p => p.id === id);
+    if (!payment) {
+        showNotification('Payment not found!', 'error');
+        return;
+    }
+    
+    // Reverse the payment effect on balances
+    if (payment.type === 'received') {
+        // Payment received from customer - increase their balance back
+        const customer = customers.find(c => c.id === payment.partyId);
+        if (customer) {
+            customer.balance += payment.amount;
+        }
+    } else if (payment.type === 'paid') {
+        // Payment made to supplier - increase their balance back (we owe them more)
+        const supplier = suppliers.find(s => s.id === payment.partyId);
+        if (supplier) {
+            supplier.balance += payment.amount;
+        }
+    }
+    
+    // Remove the payment
+    payments = payments.filter(p => p.id !== id);
+    
+    saveToStorage();
+    renderPayments();
+    renderTransactions(); // Update unified transactions view
+    renderCustomers();
+    renderSuppliers();
+    updateDashboard();
+    showNotification('Payment deleted successfully! ✅', 'success');
+}
+
+// DELETE CUSTOMER TRANSFER FUNCTION
+function deleteCustomerTransfer(id) {
+    if (!confirm('Are you sure you want to delete this transfer? This will reverse the balance changes.')) {
+        return;
+    }
+    
+    const transfer = customerTransfers.find(t => t.id === id);
+    if (!transfer) {
+        showNotification('Transfer not found!', 'error');
+        return;
+    }
+    
+    // Reverse the transfer
+    const fromCustomer = customers.find(c => c.id === transfer.fromCustomerId);
+    const toCustomer = customers.find(c => c.id === transfer.toCustomerId);
+    
+    if (fromCustomer) {
+        fromCustomer.balance += transfer.amount; // Give back the amount they paid
+    }
+    if (toCustomer) {
+        toCustomer.balance -= transfer.amount; // Take back the amount they received
+    }
+    
+    // Remove the transfer
+    customerTransfers = customerTransfers.filter(t => t.id !== id);
+    
+    saveToStorage();
+    renderCustomerTransfers();
+    renderTransactions(); // Update unified transactions view
+    renderCustomers();
+    updateDashboard();
+    showNotification('Transfer deleted successfully! ✅', 'success');
+}
+
+// DELETE BANK TRANSACTION FUNCTION
+function deleteBankTransaction(id) {
+    if (!confirm('Are you sure you want to delete this bank transaction? This will reverse the balance change.')) {
+        return;
+    }
+    
+    const bankTrans = bankTransactions.find(t => t.id === id);
+    if (!bankTrans) {
+        showNotification('Bank transaction not found!', 'error');
+        return;
+    }
+    
+    // Reverse the bank balance
+    const bank = banks.find(b => b.id === bankTrans.bankId);
+    if (bank) {
+        if (bankTrans.type === 'deposit') {
+            bank.balance -= bankTrans.amount; // Remove the deposit
+        } else if (bankTrans.type === 'withdrawal') {
+            bank.balance += bankTrans.amount; // Add back the withdrawal
+        }
+    }
+    
+    // Remove the transaction
+    bankTransactions = bankTransactions.filter(t => t.id !== id);
+    
+    saveToStorage();
+    renderBankTransactions();
+    renderTransactions(); // Update unified transactions view
+    renderBanks();
+    updateDashboard();
+    showNotification('Bank transaction deleted successfully! ✅', 'success');
+}
+
+
+// OWNER ACCOUNTS FUNCTIONS
+function saveOwnerAccount(e) {
+    e.preventDefault();
+    
+    const accountId = document.getElementById('ownerAccountId').value || 'owner_' + Date.now();
+    const existingIndex = ownerAccounts.findIndex(a => a.id === accountId);
+    
+    const account = {
+        id: accountId,
+        type: document.getElementById('ownerAccountType').value,
+        name: document.getElementById('ownerAccountName').value,
+        contact: document.getElementById('ownerAccountContact').value,
+        cnic: document.getElementById('ownerAccountCnic').value,
+        notes: document.getElementById('ownerAccountNotes').value,
+        createdAt: existingIndex >= 0 ? ownerAccounts[existingIndex].createdAt : new Date().toISOString()
+    };
+    
+    if (existingIndex >= 0) {
+        // Editing - keep current balance
+        account.balance = ownerAccounts[existingIndex].balance || 0;
+        ownerAccounts[existingIndex] = account;
+        showNotification('Owner account updated! ✅', 'success');
+    } else {
+        // New account - set opening balance
+        const openingBalance = parseFloat(document.getElementById('ownerAccountOpeningBalance').value) || 0;
+        account.balance = openingBalance;
+        ownerAccounts.push(account);
+        showNotification('Owner account added! ✅' + (openingBalance !== 0 ? ` (Balance: Rs. ${openingBalance.toFixed(2)})` : ''), 'success');
+    }
+    
+    saveToStorage();
+    renderOwnerAccounts();
+    closeModal('ownerAccountModal');
+    e.target.reset();
+}
+
+function renderOwnerAccounts() {
+    const tbody = document.getElementById('ownerAccountsBody');
+    tbody.innerHTML = '';
+    
+    if (ownerAccounts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #a0aec0; padding: 30px;">No owner accounts yet. Click "Add Account" to create your first account.</td></tr>';
+        return;
+    }
+    
+    ownerAccounts.forEach(account => {
+        const typeIcon = account.type === 'owner' ? '👔' : '👨‍👩‍👧';
+        const typeText = account.type === 'owner' ? 'Owner Capital' : 'Relative';
+        
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><strong>${typeIcon} ${account.name}</strong></td>
+            <td><span style="background: ${account.type === 'owner' ? '#667eea' : '#48bb78'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${typeText}</span></td>
+            <td>${account.contact || '-'}</td>
+            <td class="${account.balance >= 0 ? 'balance-positive' : 'balance-negative'}">Rs. ${account.balance.toFixed(2)}</td>
+            <td>
+                <button class="btn btn-success btn-sm" onclick="openOwnerTransactionModal('${account.id}')" title="Record transaction">Transaction</button>
+                <button class="btn btn-info btn-sm" onclick='editOwnerAccount(${JSON.stringify(account).replace(/'/g, "&#39;")})'>Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteOwnerAccount('${account.id}')">Delete</button>
+            </td>
+        `;
+    });
+}
+
+function editOwnerAccount(account) {
+    // Set ID first to prevent clearing
+    document.getElementById('ownerAccountId').value = account.id;
+    
+    // Open modal
+    openModal('ownerAccountModal');
+    
+    // Fill fields
+    document.getElementById('ownerAccountType').value = account.type;
+    document.getElementById('ownerAccountName').value = account.name;
+    document.getElementById('ownerAccountContact').value = account.contact || '';
+    document.getElementById('ownerAccountCnic').value = account.cnic || '';
+    document.getElementById('ownerAccountNotes').value = account.notes || '';
+    
+    // Show balance (disabled)
+    const balanceField = document.getElementById('ownerAccountOpeningBalance');
+    balanceField.value = account.balance.toFixed(2);
+    balanceField.disabled = true;
+    balanceField.style.backgroundColor = '#f7fafc';
+    balanceField.title = 'Current balance (use transactions to change)';
+}
+
+function deleteOwnerAccount(id) {
+    const account = ownerAccounts.find(a => a.id === id);
+    if (!account) return;
+    
+    if (confirm(`Delete ${account.name}?\n\nThis will remove the account and all its transaction history.`)) {
+        ownerAccounts = ownerAccounts.filter(a => a.id !== id);
+        saveToStorage();
+        renderOwnerAccounts();
+        showNotification('Owner account deleted!', 'success');
+    }
+}
+
+function openOwnerTransactionModal(accountId) {
+    document.getElementById('ownerTransAccountId').value = accountId;
+    
+    // Populate accounts dropdown
+    const select = document.getElementById('ownerTransAccountId');
+    select.innerHTML = '<option value="">Select Account</option>';
+    ownerAccounts.forEach(a => {
+        const icon = a.type === 'owner' ? '👔' : '👨‍👩‍👧';
+        select.innerHTML += `<option value="${a.id}" ${a.id === accountId ? 'selected' : ''}>${icon} ${a.name} (Bal: Rs. ${a.balance.toFixed(2)})</option>`;
+    });
+    
+    // Set today's date
+    document.getElementById('ownerTransDate').value = new Date().toISOString().split('T')[0];
+    
+    openModal('ownerAccountTransModal');
+}
+
+function saveOwnerAccountTransaction(e) {
+    e.preventDefault();
+    
+    const accountId = document.getElementById('ownerTransAccountId').value;
+    const account = ownerAccounts.find(a => a.id === accountId);
+    
+    if (!account) {
+        showNotification('Account not found!', 'error');
+        return;
+    }
+    
+    const transType = document.getElementById('ownerTransType').value;
+    const amount = parseFloat(document.getElementById('ownerTransAmount').value);
+    const method = document.getElementById('ownerTransMethod').value;
+    const date = document.getElementById('ownerTransDate').value;
+    const description = document.getElementById('ownerTransDescription').value;
+    
+    // Create transaction record
+    const transaction = {
+        id: 'ownertrans_' + Date.now(),
+        accountId: accountId,
+        accountName: account.name,
+        type: transType,
+        amount: amount,
+        method: method,
+        date: date,
+        description: description,
+        balanceBefore: account.balance,
+        createdBy: currentUser,
+        createdAt: new Date().toISOString()
+    };
+    
+    // Update account balance
+    if (transType === 'deposit') {
+        // They gave money to business - balance increases (business owes them more)
+        account.balance += amount;
+    } else {
+        // Business paid them - balance decreases (business owes them less)
+        account.balance -= amount;
+    }
+    
+    transaction.balanceAfter = account.balance;
+    
+    // Add to transactions array
+    if (!transactions) transactions = [];
+    transactions.push({
+        id: transaction.id,
+        type: 'owner_account',
+        ownerAccountId: accountId,
+        ownerAccountName: account.name,
+        ownerAccountType: account.type,
+        transactionType: transType,
+        amount: amount,
+        description: description,
+        date: date,
+        method: method,
+        balanceBefore: transaction.balanceBefore,
+        balanceAfter: transaction.balanceAfter,
+        createdBy: currentUser,
+        createdAt: transaction.createdAt
+    });
+    
+    saveToStorage();
+    renderOwnerAccounts();
+    renderTransactions();
+    closeModal('ownerAccountTransModal');
+    
+    showNotification(`✅ Transaction recorded! ${account.name} balance: Rs. ${account.balance.toFixed(2)}`, 'success');
+    e.target.reset();
 }
 
 // JV VOUCHERS FUNCTIONS
@@ -3106,6 +3641,7 @@ function deleteJVVoucher(id) {
         
         saveToStorage();
         renderJVVouchers();
+        renderTransactions(); // Update unified transactions view
         renderCustomers();
         renderSuppliers();
         renderBanks(); // Refresh banks to show reversal transactions
@@ -3224,6 +3760,7 @@ function saveBankTransaction(e) {
     
     saveToStorage();
     renderBankTransactions();
+    renderTransactions(); // Update unified transactions view
     renderBanks();
     closeModal('bankTransModal');
     updateDashboard();
@@ -3244,6 +3781,9 @@ function renderBankTransactions() {
             <td style="font-weight: 700;">Rs. ${trans.amount.toFixed(2)}</td>
             <td>${trans.description || '-'}</td>
             <td style="font-weight: 600;">Rs. ${trans.balanceAfter.toFixed(2)}</td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="deleteBankTransaction('${trans.id}')">Delete</button>
+            </td>
         `;
     });
 }
@@ -3252,22 +3792,21 @@ function renderBankTransactions() {
 function saveVehicle(e) {
     e.preventDefault();
     
+    const vehicleId = document.getElementById('vehicleId').value || 'veh_' + Date.now();
+    const existingIndex = vehicles.findIndex(v => v.id === vehicleId);
+    
     const vehicle = {
-        id: document.getElementById('vehicleId').value || 'veh_' + Date.now(),
+        id: vehicleId,
         number: document.getElementById('vehicleNumber').value,
         driver: document.getElementById('vehicleDriver').value,
         driverName: document.getElementById('vehicleDriver').value, // Keep both for compatibility
         contact: document.getElementById('vehicleContact').value,
         ownerName: document.getElementById('vehicleOwnerName').value,
         ownerContact: document.getElementById('vehicleOwnerContact').value,
-        ownerBalance: 0,
         status: document.getElementById('vehicleStatus').value,
-        stockPMG: 0,
-        stockHSD: 0,
-        createdAt: new Date().toISOString()
+        createdAt: existingIndex >= 0 ? vehicles[existingIndex].createdAt : new Date().toISOString()
     };
     
-    const existingIndex = vehicles.findIndex(v => v.id === vehicle.id);
     if (existingIndex >= 0) {
         // Editing - keep stock and owner balance
         vehicle.stockPMG = vehicles[existingIndex].stockPMG;
@@ -3276,9 +3815,11 @@ function saveVehicle(e) {
         vehicles[existingIndex] = vehicle;
         showNotification('Vehicle updated! ✅', 'success');
     } else {
-        // New vehicle - set opening balance
+        // New vehicle - set opening balance and initial stock
         const openingBalance = parseFloat(document.getElementById('vehicleOwnerBalance').value) || 0;
         vehicle.ownerBalance = openingBalance;
+        vehicle.stockPMG = 0;
+        vehicle.stockHSD = 0;
         vehicles.push(vehicle);
         showNotification('Vehicle added! ✅' + (openingBalance !== 0 ? ` (Owner balance: Rs. ${openingBalance.toFixed(2)})` : ''), 'success');
     }
@@ -5163,6 +5704,21 @@ function createBackup() {
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(jvData), 'JV Vouchers');
     }
     
+    // Owner Accounts
+    if (ownerAccounts && ownerAccounts.length > 0) {
+        const ownerData = ownerAccounts.map(a => ({
+            ID: a.id,
+            Name: a.name,
+            Type: a.type === 'owner' ? 'Owner Capital' : 'Relative',
+            Contact: a.contact || '',
+            CNIC: a.cnic || '',
+            Balance: a.balance,
+            Notes: a.notes || '',
+            'Created At': a.createdAt
+        }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ownerData), 'Owner Accounts');
+    }
+    
     // Download
     const fileName = `Baghoor-Backup-${new Date().toISOString().split('T')[0]}-${Date.now()}.xlsx`;
     XLSX.writeFile(wb, fileName);
@@ -5441,6 +5997,8 @@ function switchTab(tabName) {
         generateLedger();
     } else if (tabName === 'jvouchers') {
         renderJVVouchers();
+    } else if (tabName === 'owneraccounts') {
+        renderOwnerAccounts();
     }
 }
 
@@ -5513,6 +6071,25 @@ function openModal(modalId) {
             document.getElementById('vehicleDriver').value = '';
             document.getElementById('vehicleContact').value = '';
             document.getElementById('vehicleStatus').value = 'Active';
+        }
+    }
+    
+    // Clear owner account form ONLY when opening to add new
+    if (modalId === 'ownerAccountModal') {
+        const isEditing = document.getElementById('ownerAccountId').value !== '';
+        
+        if (!isEditing) {
+            document.getElementById('ownerAccountId').value = '';
+            document.getElementById('ownerAccountType').value = '';
+            document.getElementById('ownerAccountName').value = '';
+            document.getElementById('ownerAccountContact').value = '';
+            document.getElementById('ownerAccountCnic').value = '';
+            document.getElementById('ownerAccountNotes').value = '';
+            const balanceField = document.getElementById('ownerAccountOpeningBalance');
+            balanceField.value = '0';
+            balanceField.disabled = false;
+            balanceField.style.backgroundColor = '';
+            balanceField.title = 'Enter opening balance if account has previous balance';
         }
     }
     
@@ -5712,6 +6289,7 @@ function saveJVVoucher(e) {
     
     saveToStorage();
     renderJVVouchers();
+    renderTransactions(); // Update unified transactions view
     renderCustomers();
     renderSuppliers();
     renderBanks(); // Refresh banks to show new transactions
@@ -6148,6 +6726,7 @@ window.addEventListener('load', async () => {
                 if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
                 if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
                 if (data.jvVouchers) jvVouchers = data.jvVouchers;
+                if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
                 if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
                 
                 // CRITICAL: Always ensure default users exist!
@@ -6166,6 +6745,7 @@ window.addEventListener('load', async () => {
                 localStorage.setItem('rateChangeLogs', JSON.stringify(rateChangeLogs));
                 localStorage.setItem('ledgerEntries', JSON.stringify(ledgerEntries));
                 localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
+                localStorage.setItem('ownerAccounts', JSON.stringify(ownerAccounts));
                 localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
                 
                 console.log(`✅ Synced: ${customers.length} customers, ${transactions.length} transactions`);
@@ -6198,6 +6778,7 @@ window.addEventListener('load', async () => {
                             if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
                             if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
                             if (data.jvVouchers) jvVouchers = data.jvVouchers;
+                            if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
                             if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
                             
                             // CRITICAL: Always ensure default users exist!
