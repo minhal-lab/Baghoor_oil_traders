@@ -127,9 +127,10 @@ Baghoor_oil_traders/
 - **Authentication** - Supabase Auth integration
 
 ### Configuration:
-- **URL:** `https://druxbksscacocuclnzxs.supabase.co`
+- **URL:** `https://uztrfcernyyplopzsqzb.supabase.co`
 - **Table:** `BOTs` (Baghoor Oil Traders)
 - **Auth:** Enabled with legacy fallback
+- **Setup:** See `SETUP-NEW-SUPABASE.md` for database setup
 
 ### Data Entities Managed:
 - Customers with individual rates
