@@ -32,12 +32,11 @@ python -m http.server 8000
 
 ```
 Baghoor_oil_traders/
-├── index.html                    # Main enhanced dashboard (recommended)
+├── index.html                    # Main enhanced dashboard with Supabase Auth
 ├── README.md                     # This file
-├── backup/                       # Alternative dashboard versions
-│   ├── baghoor-system-fixed.html
-│   └── petrol-accounting-dashboard.html
-└── docs-archive/                 # Original documentation (archived)
+└── backup/                       # Alternative dashboard versions
+    ├── baghoor-system-fixed.html
+    └── petrol-accounting-dashboard.html
 ```
 
 ---
@@ -103,9 +102,17 @@ Baghoor_oil_traders/
 
 ---
 
-## 💾 Data Storage & Sync
+## 💾 Data Storage & Authentication
 
-### Current Implementation: Dual Storage System
+### Authentication: Supabase Auth
+- **Professional authentication** - Email/password login
+- **Password reset** - "Forgot Password?" link on login
+- **Secure sessions** - JWT token-based
+- **Password hashing** - bcrypt encryption via Supabase
+- **Backward compatible** - Old credentials still work (admin/admin123)
+- **Auto-login** - Stays logged in across sessions
+
+### Data Storage: Dual System
 
 #### Primary: Browser localStorage
 - **Instant access** - No network delay
@@ -117,13 +124,12 @@ Baghoor_oil_traders/
 - **Multi-device sync** - Access from anywhere
 - **Automatic backup** - Cloud-based persistence
 - **Real-time updates** - Changes sync across devices
-- **Optional** - Falls back to localStorage if unavailable
+- **Authentication** - Supabase Auth integration
 
 ### Configuration:
-The system uses Supabase for cloud synchronization:
 - **URL:** `https://druxbksscacocuclnzxs.supabase.co`
 - **Table:** `BOTs` (Baghoor Oil Traders)
-- **Status:** Enabled by default (configurable via `USE_SUPABASE` flag)
+- **Auth:** Enabled with legacy fallback
 
 ### Data Entities Managed:
 - Customers with individual rates
@@ -211,12 +217,14 @@ Even with Supabase sync, you should:
 3. **Store backups** in multiple locations (USB + Cloud)
 4. **Test restoration** periodically
 
-### Security Considerations:
-- ⚠️ **Basic authentication** - Passwords not encrypted in current version
-- ⚠️ **localStorage is not encrypted** - Data stored in plain text
-- ⚠️ **Recommended for trusted environments** - Single-user or trusted team
-- ✅ **Supabase connection** is secured via API key
-- 🔐 **For production:** Consider implementing proper encryption
+### Security Features:
+- ✅ **Supabase Authentication** - Professional auth system with bcrypt password hashing
+- ✅ **JWT tokens** - Secure session management
+- ✅ **Password reset** - Email-based password recovery
+- ✅ **Auto-logout** - Sessions expire properly
+- ✅ **Backward compatible** - Legacy auth works as fallback
+- ⚠️ **localStorage not encrypted** - Data stored in plain text locally
+- ✅ **Supabase connection secured** - API key authentication
 
 ### Browser Compatibility:
 - ✅ Chrome (Recommended)
