@@ -445,17 +445,14 @@
         
         <form onsubmit="handleLogin(event)">
             <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="username" placeholder="admin@baghoor.com" required>
+                <label>Username</label>
+                <input type="text" id="username" required>
             </div>
             <div class="form-group">
                 <label>Password</label>
                 <input type="password" id="password" required>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Login</button>
-            <div style="text-align: center; margin-top: 15px;">
-                <a href="#" onclick="showPasswordReset(); return false;" style="color: var(--primary-color); font-size: 0.9em;">Forgot Password?</a>
-            </div>
         </form>
     </div>
 </div>
@@ -1830,63 +1827,14 @@ function selectRole(role) {
     event.target.classList.add('active');
 }
 
-async function handleLogin(e) {
+function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('username').value;
+    const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
-
-    try {
-        // Try Supabase Auth first
-        if (USE_SUPABASE && supabaseClient) {
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-
-            if (error) {
-                // Fallback to old system for backward compatibility
-                console.log('Supabase login failed, trying legacy auth:', error.message);
-                await handleLegacyLogin(email, password);
-                return;
-            }
-
-            if (data && data.user) {
-                // Get user role from metadata or systemUsers
-                const userMetadata = data.user.user_metadata || {};
-                let userRole = userMetadata.role || 'manager';
-
-                // Check systemUsers for role (backward compatibility)
-                const existingUser = systemUsers.find(u => u.username === email || u.email === email);
-                if (existingUser) {
-                    userRole = existingUser.role;
-                }
-
-                currentUser = email;
-                currentRole = userRole;
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                document.getElementById('userDisplay').textContent = email;
-                document.getElementById('userRoleDisplay').textContent = userRole.toUpperCase();
-                document.getElementById('userRoleDisplay').className = `user-role role-${userRole}`;
-                initApp();
-                showNotification('Welcome ' + email + '! 🎉', 'success');
-                return;
-            }
-        }
-
-        // Fallback to legacy auth if Supabase not available
-        await handleLegacyLogin(email, password);
-
-    } catch (error) {
-        console.error('Login error:', error);
-        showNotification('Login failed: ' + error.message, 'error');
-    }
-}
-
-// Legacy authentication for backward compatibility
-async function handleLegacyLogin(username, password) {
-    const user = systemUsers.find(u => (u.username === username || u.email === username) && u.password === password);
-
+    
+    // Check if user exists in systemUsers
+    const user = systemUsers.find(u => u.username === username && u.password === password);
+    
     if (user) {
         currentUser = username;
         currentRole = user.role;
@@ -1896,100 +1844,20 @@ async function handleLegacyLogin(username, password) {
         document.getElementById('userRoleDisplay').textContent = user.role.toUpperCase();
         document.getElementById('userRoleDisplay').className = `user-role role-${user.role}`;
         initApp();
-        showNotification('Welcome ' + username + '! 🎉 (Legacy Auth)', 'success');
+        showNotification('Welcome ' + username + '! 🎉', 'success');
     } else {
-        showNotification('Invalid email or password!', 'error');
+        showNotification('Invalid username or password!', 'error');
     }
 }
 
-async function logout() {
+function logout() {
     if (confirm('Are you sure you want to logout?')) {
-        // Logout from Supabase Auth if available
-        if (USE_SUPABASE && supabaseClient) {
-            try {
-                await supabaseClient.auth.signOut();
-            } catch (error) {
-                console.error('Supabase logout error:', error);
-            }
-        }
-
         document.getElementById('mainApp').style.display = 'none';
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
         currentUser = '';
-        currentRole = '';
         showNotification('Logged out successfully', 'success');
-    }
-}
-
-// PASSWORD RESET FUNCTIONALITY
-async function showPasswordReset() {
-    const email = prompt('Enter your email address to reset password:');
-    if (!email) return;
-
-    if (USE_SUPABASE && supabaseClient) {
-        try {
-            const { error} = await supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + '/index.html'
-            });
-
-            if (error) {
-                showNotification('Password reset failed: ' + error.message, 'error');
-            } else {
-                showNotification('Password reset email sent! Check your inbox. 📧', 'success');
-            }
-        } catch (error) {
-            showNotification('Error: ' + error.message, 'error');
-        }
-    } else {
-        showNotification('Password reset requires Supabase Auth to be configured', 'warning');
-    }
-}
-
-// CHECK FOR AUTH STATE ON PAGE LOAD
-async function checkAuthState() {
-    if (USE_SUPABASE && supabaseClient) {
-        try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-
-            if (session && session.user) {
-                // User is already logged in
-                const userMetadata = session.user.user_metadata || {};
-                let userRole = userMetadata.role || 'manager';
-
-                // Check systemUsers for role
-                const existingUser = systemUsers.find(u => u.username === session.user.email || u.email === session.user.email);
-                if (existingUser) {
-                    userRole = existingUser.role;
-                }
-
-                currentUser = session.user.email;
-                currentRole = userRole;
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                document.getElementById('userDisplay').textContent = session.user.email;
-                document.getElementById('userRoleDisplay').textContent = userRole.toUpperCase();
-                document.getElementById('userRoleDisplay').className = `user-role role-${userRole}`;
-                initApp();
-            }
-
-            // Listen for auth changes
-            supabaseClient.auth.onAuthStateChange((event, session) => {
-                console.log('Auth state changed:', event);
-                if (event === 'SIGNED_OUT') {
-                    document.getElementById('mainApp').style.display = 'none';
-                    document.getElementById('loginScreen').style.display = 'flex';
-                    currentUser = '';
-                    currentRole = '';
-                }
-                if (event === 'PASSWORD_RECOVERY') {
-                    showNotification('Please enter your new password', 'info');
-                }
-            });
-        } catch (error) {
-            console.error('Error checking auth state:', error);
-        }
     }
 }
 
@@ -5689,9 +5557,6 @@ function addNewUser() {
 // Initialize
 window.addEventListener('load', async () => {
     console.log('🚀 Baghoor Oil Traders - Complete Professional System Loaded!');
-
-    // Check if user is already logged in via Supabase Auth
-    await checkAuthState();
     
     // Clean up any corrupted data on load
     try {
