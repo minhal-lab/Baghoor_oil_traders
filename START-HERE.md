@@ -480,8 +480,10 @@ You now have a **professional accounting system** for Baghoor Oil Traders!
 
 ---
 
-*Baghoor Oil Traders - Complete Package Documentation*  
-*Version 1.0 - Created: October 26, 2025*  
+*Baghoor Oil Traders - Complete Package Documentation*
+*Version 1.1 - Updated: November 5, 2025*
 *Package includes: Dashboard + Complete Documentation*
+
+**Latest Update (Nov 5):** JV system fixed, Bank/Customer/Supplier ledger views added!
 
 **Need help? Re-read the README.md - it has everything you need!**

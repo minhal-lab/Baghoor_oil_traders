@@ -1491,6 +1491,108 @@
     </div>
 </div>
 
+<!-- BANK LEDGER MODAL -->
+<div id="bankLedgerModal" class="modal">
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header">
+            <h2 id="bankLedgerTitle">Bank Ledger Statement</h2>
+            <button class="close-btn" onclick="closeModal('bankLedgerModal')">&times;</button>
+        </div>
+        <div id="bankLedgerContent" style="padding: 20px;">
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div id="bankLedgerInfo"></div>
+                <div>
+                    <button class="btn btn-primary" onclick="printBankLedger()">🖨️ Print Statement</button>
+                    <button class="btn btn-success" onclick="downloadBankLedgerPDF()">📄 Download PDF</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="bankLedgerTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Debit</th>
+                            <th>Credit</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bankLedgerBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CUSTOMER LEDGER MODAL -->
+<div id="customerLedgerModal" class="modal">
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header">
+            <h2 id="customerLedgerTitle">Customer Ledger</h2>
+            <button class="close-btn" onclick="closeModal('customerLedgerModal')">&times;</button>
+        </div>
+        <div id="customerLedgerContent" style="padding: 20px;">
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div id="customerLedgerInfo"></div>
+                <div>
+                    <button class="btn btn-primary" onclick="printCustomerLedger()">🖨️ Print</button>
+                    <button class="btn btn-success" onclick="downloadCustomerLedgerPDF()">📄 PDF</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="customerLedgerTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Debit</th>
+                            <th>Credit</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerLedgerBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SUPPLIER LEDGER MODAL -->
+<div id="supplierLedgerModal" class="modal">
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header">
+            <h2 id="supplierLedgerTitle">Supplier Ledger</h2>
+            <button class="close-btn" onclick="closeModal('supplierLedgerModal')">&times;</button>
+        </div>
+        <div id="supplierLedgerContent" style="padding: 20px;">
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div id="supplierLedgerInfo"></div>
+                <div>
+                    <button class="btn btn-primary" onclick="printSupplierLedger()">🖨️ Print</button>
+                    <button class="btn btn-success" onclick="downloadSupplierLedgerPDF()">📄 PDF</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="supplierLedgerTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Debit</th>
+                            <th>Credit</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="supplierLedgerBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- GOVERNMENT RATE CHANGE MODAL -->
 <div id="govRateModal" class="modal">
     <div class="modal-content">
@@ -2224,10 +2326,10 @@ function saveCustomer(e) {
 function renderCustomers() {
     const tbody = document.getElementById('customersBody');
     tbody.innerHTML = '';
-    
+
     // Use DocumentFragment for better performance
     const fragment = document.createDocumentFragment();
-    
+
     customers.forEach(customer => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -2238,13 +2340,14 @@ function renderCustomers() {
             <td>Rs. ${parseFloat(customer.hsdRate).toFixed(4)}</td>
             <td class="${customer.balance >= 0 ? 'balance-positive' : 'balance-negative'}">Rs. ${customer.balance.toFixed(2)}</td>
             <td>
+                <button class="btn btn-success btn-sm" onclick="viewCustomerLedger('${customer.id}')">📊 Ledger</button>
                 <button class="btn btn-info btn-sm" onclick='editCustomer(${JSON.stringify(customer).replace(/'/g, "&#39;")})'>Edit</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteCustomer('${customer.id}')">Delete</button>
             </td>
         `;
         fragment.appendChild(row);
     });
-    
+
     tbody.appendChild(fragment);
 }
 
@@ -2349,6 +2452,7 @@ function renderSuppliers() {
             <td>Rs. ${parseFloat(hsdRate).toFixed(4)} ${carriageIcon}</td>
             <td class="${supplier.balance >= 0 ? 'balance-positive' : 'balance-negative'}">Rs. ${supplier.balance.toFixed(2)}</td>
             <td>
+                <button class="btn btn-success btn-sm" onclick="viewSupplierLedger('${supplier.id}')">📊 Ledger</button>
                 <button class="btn btn-info btn-sm" onclick='editSupplier(${JSON.stringify(supplier).replace(/'/g, "&#39;")})'>Edit</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteSupplier('${supplier.id}')">Delete</button>
             </td>
@@ -3620,33 +3724,65 @@ function deleteJVVoucher(id) {
         showNotification('JV not found!', 'error');
         return;
     }
-    
+
     const confirmMsg = `⚠️ Delete this JV entry?\n\n` +
                       `Date: ${new Date(jv.date).toLocaleDateString()}\n` +
                       `Description: ${jv.description}\n` +
                       `Amount: Rs. ${jv.debitAmount.toFixed(2)}\n\n` +
-                      `NOTE: This will REVERSE the accounting effect!\n` +
-                      `(Debit and Credit will be reversed)`;
-    
+                      `This will reverse the accounting effect.`;
+
     if (confirm(confirmMsg)) {
-        // Reverse the JV entry effects
-        const reverseDesc = 'REVERSED: ' + jv.description;
-        // Reverse debit (subtract what was added, or add what was subtracted)
-        updateAccountFromJV(jv.debitType, jv.debitAccount, jv.debitAmount, 'credit', reverseDesc, jv.date); // Reverse debit
-        // Reverse credit
-        updateAccountFromJV(jv.creditType, jv.creditAccount, jv.creditAmount, 'debit', reverseDesc, jv.date); // Reverse credit
-        
+        // FIXED: Directly reverse balances without creating new transaction entries
+
+        // Reverse debit side (opposite of what was done)
+        if (jv.debitType === 'customer') {
+            const custId = jv.debitAccount.replace('customer_', '');
+            const cust = customers.find(c => c.id === custId);
+            if (cust) cust.balance -= jv.debitAmount; // Reverse the debit
+        } else if (jv.debitType === 'supplier') {
+            const suppId = jv.debitAccount.replace('supplier_', '');
+            const supp = suppliers.find(s => s.id === suppId);
+            if (supp) supp.balance += jv.debitAmount; // Reverse the debit
+        } else if (jv.debitType === 'bank') {
+            const bankId = jv.debitAccount.replace('bank_', '');
+            const bank = banks.find(b => b.id === bankId);
+            if (bank) bank.balance -= jv.debitAmount; // Reverse the debit
+        } else if (jv.debitType === 'vehicle') {
+            const vehId = jv.debitAccount.replace('vehicle_', '');
+            const veh = vehicles.find(v => v.id === vehId);
+            if (veh) veh.ownerBalance += jv.debitAmount; // Reverse the debit
+        }
+
+        // Reverse credit side (opposite of what was done)
+        if (jv.creditType === 'customer') {
+            const custId = jv.creditAccount.replace('customer_', '');
+            const cust = customers.find(c => c.id === custId);
+            if (cust) cust.balance += jv.creditAmount; // Reverse the credit
+        } else if (jv.creditType === 'supplier') {
+            const suppId = jv.creditAccount.replace('supplier_', '');
+            const supp = suppliers.find(s => s.id === suppId);
+            if (supp) supp.balance -= jv.creditAmount; // Reverse the credit
+        } else if (jv.creditType === 'bank') {
+            const bankId = jv.creditAccount.replace('bank_', '');
+            const bank = banks.find(b => b.id === bankId);
+            if (bank) bank.balance += jv.creditAmount; // Reverse the credit
+        } else if (jv.creditType === 'vehicle') {
+            const vehId = jv.creditAccount.replace('vehicle_', '');
+            const veh = vehicles.find(v => v.id === vehId);
+            if (veh) veh.ownerBalance -= jv.creditAmount; // Reverse the credit
+        }
+
         // Remove the JV from list
         jvVouchers = jvVouchers.filter(j => j.id !== id);
-        
+
         saveToStorage();
         renderJVVouchers();
         renderTransactions(); // Update unified transactions view
         renderCustomers();
         renderSuppliers();
-        renderBanks(); // Refresh banks to show reversal transactions
+        renderBanks();
         updateDashboard();
-        showNotification('JV entry deleted and reversed! ✅', 'success');
+        showNotification('JV entry deleted successfully! ✅', 'success');
     }
 }
 
@@ -3682,7 +3818,7 @@ function saveBank(e) {
 function renderBanks() {
     const tbody = document.getElementById('banksBody');
     tbody.innerHTML = '';
-    
+
     banks.forEach(bank => {
         const row = tbody.insertRow();
         row.innerHTML = `
@@ -3690,6 +3826,7 @@ function renderBanks() {
             <td>${bank.accountNumber}</td>
             <td class="${bank.balance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${bank.balance.toFixed(2)}</td>
             <td>
+                <button class="btn btn-success btn-sm" onclick="viewBankLedger('${bank.id}')">📊 View Ledger</button>
                 <button class="btn btn-info btn-sm" onclick='editBank(${JSON.stringify(bank).replace(/'/g, "&#39;")})'>Edit</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteBank('${bank.id}')">Delete</button>
             </td>
@@ -3714,6 +3851,620 @@ function deleteBank(id) {
         populateDropdowns();
         showNotification('Bank deleted!', 'success');
     }
+}
+
+// BANK LEDGER FUNCTIONS
+function viewBankLedger(bankId) {
+    const bank = banks.find(b => b.id === bankId);
+    if (!bank) {
+        showNotification('Bank not found!', 'error');
+        return;
+    }
+
+    // Set title and info
+    document.getElementById('bankLedgerTitle').textContent = `${bank.name} - Ledger Statement`;
+    document.getElementById('bankLedgerInfo').innerHTML = `
+        <div style="font-size: 0.95em;">
+            <strong>Account Number:</strong> ${bank.accountNumber}<br>
+            <strong>Current Balance:</strong> <span class="${bank.balance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${bank.balance.toFixed(2)}</span>
+        </div>
+    `;
+
+    // Get all transactions for this bank
+    const bankTrans = bankTransactions
+        .filter(t => t.bankId === bankId)
+        .sort((a, b) => new Date(a.date) - new Date(b.date)); // Oldest first for running balance
+
+    // Also get JV entries that affect this bank from jvVouchers
+    const jvEntries = jvVouchers.filter(jv =>
+        (jv.debitType === 'bank' && jv.debitAccount === 'bank_' + bankId) ||
+        (jv.creditType === 'bank' && jv.creditAccount === 'bank_' + bankId)
+    ).map(jv => {
+        const isDebit = jv.debitType === 'bank' && jv.debitAccount === 'bank_' + bankId;
+        return {
+            date: jv.date,
+            description: `📝 JV: ${jv.description}`,
+            type: isDebit ? 'deposit' : 'withdrawal',
+            amount: isDebit ? jv.debitAmount : jv.creditAmount,
+            source: 'jv',
+            id: jv.id
+        };
+    });
+
+    // Combine and sort all entries
+    const allEntries = [...bankTrans, ...jvEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Calculate opening balance (work backwards from current balance)
+    let openingBalance = bank.balance;
+    allEntries.forEach(entry => {
+        if (entry.type === 'deposit') {
+            openingBalance -= entry.amount;
+        } else {
+            openingBalance += entry.amount;
+        }
+    });
+
+    // Render ledger table
+    const tbody = document.getElementById('bankLedgerBody');
+    tbody.innerHTML = '';
+
+    let runningBalance = openingBalance;
+
+    // Opening balance row
+    const openingRow = tbody.insertRow();
+    openingRow.innerHTML = `
+        <td colspan="3"><strong>Opening Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
+        <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+    `;
+
+    // Transaction rows
+    allEntries.forEach(entry => {
+        const row = tbody.insertRow();
+        const isDebit = entry.type === 'deposit';
+
+        if (isDebit) {
+            runningBalance += entry.amount;
+        } else {
+            runningBalance -= entry.amount;
+        }
+
+        row.innerHTML = `
+            <td>${new Date(entry.date).toLocaleDateString()}</td>
+            <td>${entry.description || '-'}</td>
+            <td><span class="badge" style="background: ${isDebit ? '#48bb78' : '#f56565'}">${isDebit ? 'DEPOSIT' : 'WITHDRAWAL'}</span></td>
+            <td style="color: #48bb78; font-weight: 600;">${isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td style="color: #f56565; font-weight: 600;">${!isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+        `;
+    });
+
+    // Closing balance row
+    const closingRow = tbody.insertRow();
+    closingRow.innerHTML = `
+        <td colspan="3"><strong>Closing Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
+        <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+    `;
+
+    // Store bank ID for print/PDF functions
+    window.currentBankLedger = { bankId, bank, allEntries, openingBalance };
+
+    openModal('bankLedgerModal');
+}
+
+function printBankLedger() {
+    if (!window.currentBankLedger) return;
+
+    const { bank, allEntries, openingBalance } = window.currentBankLedger;
+
+    let printContent = `
+        <html>
+        <head>
+            <title>${bank.name} - Bank Statement</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { text-align: center; color: #2d3748; }
+                .info { margin: 20px 0; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+                th { background: #667eea; color: white; }
+                .balance-positive { color: #48bb78; }
+                .balance-negative { color: #f56565; }
+                .total-row { font-weight: bold; background: #f7fafc; }
+            </style>
+        </head>
+        <body>
+            <h1>${bank.name} - Bank Statement</h1>
+            <div class="info">
+                <strong>Account Number:</strong> ${bank.accountNumber}<br>
+                <strong>Current Balance:</strong> Rs. ${bank.balance.toFixed(2)}<br>
+                <strong>Statement Date:</strong> ${new Date().toLocaleDateString()}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    let runningBalance = openingBalance;
+    printContent += `
+        <tr class="total-row">
+            <td colspan="3">Opening Balance</td>
+            <td>-</td>
+            <td>-</td>
+            <td>Rs. ${runningBalance.toFixed(2)}</td>
+        </tr>
+    `;
+
+    allEntries.forEach(entry => {
+        const isDebit = entry.type === 'deposit';
+        if (isDebit) {
+            runningBalance += entry.amount;
+        } else {
+            runningBalance -= entry.amount;
+        }
+
+        printContent += `
+            <tr>
+                <td>${new Date(entry.date).toLocaleDateString()}</td>
+                <td>${entry.description || '-'}</td>
+                <td>${isDebit ? 'DEPOSIT' : 'WITHDRAWAL'}</td>
+                <td>${isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>${!isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>Rs. ${runningBalance.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    printContent += `
+        <tr class="total-row">
+            <td colspan="3">Closing Balance</td>
+            <td>-</td>
+            <td>-</td>
+            <td>Rs. ${runningBalance.toFixed(2)}</td>
+        </tr>
+    `;
+
+    printContent += `
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function downloadBankLedgerPDF() {
+    showNotification('💡 Tip: Use your browser Print > Save as PDF option from the print dialog!', 'info');
+    printBankLedger();
+}
+
+// CUSTOMER LEDGER FUNCTIONS
+function viewCustomerLedger(customerId) {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) {
+        showNotification('Customer not found!', 'error');
+        return;
+    }
+
+    // Set title and info
+    document.getElementById('customerLedgerTitle').textContent = `${customer.name} - Customer Ledger`;
+    document.getElementById('customerLedgerInfo').innerHTML = `
+        <div style="font-size: 0.95em;">
+            <strong>Contact:</strong> ${customer.contact || 'N/A'}<br>
+            <strong>Current Balance:</strong> <span class="${customer.balance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${customer.balance.toFixed(2)}</span>
+        </div>
+    `;
+
+    // Get all transactions for this customer (sales)
+    const custTrans = transactions
+        .filter(t => t.customerId === customerId)
+        .map(t => ({
+            date: t.date,
+            description: `${t.description || 'Sale'} - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
+            type: t.type === 'sale' ? 'sale' : 'jv',
+            amount: Math.abs(t.amount),
+            isDebit: t.amount < 0, // Negative amount = customer paying (debit/reduces balance)
+            source: t.source || 'transaction',
+            id: t.id
+        }));
+
+    // Get payments by this customer
+    const custPayments = payments
+        .filter(p => p.customerId === customerId)
+        .map(p => ({
+            date: p.date,
+            description: `Payment Received - ${p.paymentMethod}`,
+            type: 'payment',
+            amount: p.amount,
+            isDebit: true, // Payment reduces customer balance
+            source: 'payment',
+            id: p.id
+        }));
+
+    // Get customer transfers (from and to)
+    const custTransfers = customerTransfers.filter(ct =>
+        ct.fromCustomerId === customerId || ct.toCustomerId === customerId
+    ).map(ct => {
+        const isFrom = ct.fromCustomerId === customerId;
+        return {
+            date: ct.date,
+            description: isFrom ? `Transfer TO: ${ct.toCustomerName}` : `Transfer FROM: ${ct.fromCustomerName}`,
+            type: 'transfer',
+            amount: ct.amount,
+            isDebit: isFrom, // If paying for someone, it's debit
+            source: 'transfer',
+            id: ct.id
+        };
+    });
+
+    // Get JV entries
+    const jvEntries = jvVouchers.filter(jv =>
+        (jv.debitType === 'customer' && jv.debitAccount === 'customer_' + customerId) ||
+        (jv.creditType === 'customer' && jv.creditAccount === 'customer_' + customerId)
+    ).map(jv => {
+        const isDebit = jv.debitType === 'customer' && jv.debitAccount === 'customer_' + customerId;
+        return {
+            date: jv.date,
+            description: `📝 JV: ${jv.description}`,
+            type: 'jv',
+            amount: isDebit ? jv.debitAmount : jv.creditAmount,
+            isDebit: isDebit,
+            source: 'jv',
+            id: jv.id
+        };
+    });
+
+    // Combine and sort all entries
+    const allEntries = [...custTrans, ...custPayments, ...custTransfers, ...jvEntries]
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Calculate opening balance
+    let openingBalance = customer.balance;
+    allEntries.forEach(entry => {
+        if (entry.isDebit) {
+            openingBalance -= entry.amount;
+        } else {
+            openingBalance += entry.amount;
+        }
+    });
+
+    // Render ledger table
+    const tbody = document.getElementById('customerLedgerBody');
+    tbody.innerHTML = '';
+    let runningBalance = openingBalance;
+
+    // Opening balance row
+    const openingRow = tbody.insertRow();
+    openingRow.innerHTML = `
+        <td colspan="3"><strong>Opening Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
+        <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+    `;
+
+    // Transaction rows
+    allEntries.forEach(entry => {
+        const row = tbody.insertRow();
+
+        if (entry.isDebit) {
+            runningBalance -= entry.amount;
+        } else {
+            runningBalance += entry.amount;
+        }
+
+        const typeLabel = entry.type === 'sale' ? 'SALE' :
+                         entry.type === 'payment' ? 'PAYMENT' :
+                         entry.type === 'transfer' ? 'TRANSFER' : 'JV';
+        const typeBg = entry.type === 'sale' ? '#805ad5' :
+                      entry.type === 'payment' ? '#48bb78' :
+                      entry.type === 'transfer' ? '#ed8936' : '#667eea';
+
+        row.innerHTML = `
+            <td>${new Date(entry.date).toLocaleDateString()}</td>
+            <td>${entry.description}</td>
+            <td><span class="badge" style="background: ${typeBg}">${typeLabel}</span></td>
+            <td style="color: #f56565; font-weight: 600;">${!entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td style="color: #48bb78; font-weight: 600;">${entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+        `;
+    });
+
+    // Closing balance row
+    const closingRow = tbody.insertRow();
+    closingRow.innerHTML = `
+        <td colspan="3"><strong>Closing Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
+        <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+    `;
+
+    window.currentCustomerLedger = { customerId, customer, allEntries, openingBalance };
+    openModal('customerLedgerModal');
+}
+
+function printCustomerLedger() {
+    if (!window.currentCustomerLedger) return;
+    const { customer, allEntries, openingBalance } = window.currentCustomerLedger;
+
+    let printContent = `
+        <html>
+        <head>
+            <title>${customer.name} - Customer Ledger</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { text-align: center; color: #2d3748; }
+                .info { margin: 20px 0; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+                th { background: #667eea; color: white; }
+                .total-row { font-weight: bold; background: #f7fafc; }
+            </style>
+        </head>
+        <body>
+            <h1>${customer.name} - Customer Ledger</h1>
+            <div class="info">
+                <strong>Contact:</strong> ${customer.contact || 'N/A'}<br>
+                <strong>Current Balance:</strong> Rs. ${customer.balance.toFixed(2)}<br>
+                <strong>Statement Date:</strong> ${new Date().toLocaleDateString()}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    let runningBalance = openingBalance;
+    printContent += `<tr class="total-row"><td colspan="3">Opening Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+
+    allEntries.forEach(entry => {
+        if (entry.isDebit) {
+            runningBalance -= entry.amount;
+        } else {
+            runningBalance += entry.amount;
+        }
+        const typeLabel = entry.type === 'sale' ? 'SALE' : entry.type === 'payment' ? 'PAYMENT' : entry.type === 'transfer' ? 'TRANSFER' : 'JV';
+        printContent += `
+            <tr>
+                <td>${new Date(entry.date).toLocaleDateString()}</td>
+                <td>${entry.description}</td>
+                <td>${typeLabel}</td>
+                <td>${!entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>${entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>Rs. ${runningBalance.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    printContent += `<tr class="total-row"><td colspan="3">Closing Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+    printContent += `</tbody></table></body></html>`;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function downloadCustomerLedgerPDF() {
+    showNotification('💡 Tip: Use Print > Save as PDF option!', 'info');
+    printCustomerLedger();
+}
+
+// SUPPLIER LEDGER FUNCTIONS
+function viewSupplierLedger(supplierId) {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (!supplier) {
+        showNotification('Supplier not found!', 'error');
+        return;
+    }
+
+    document.getElementById('supplierLedgerTitle').textContent = `${supplier.name} - Supplier Ledger`;
+    document.getElementById('supplierLedgerInfo').innerHTML = `
+        <div style="font-size: 0.95em;">
+            <strong>Contact:</strong> ${supplier.contact || 'N/A'}<br>
+            <strong>Current Balance:</strong> <span class="${supplier.balance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${supplier.balance.toFixed(2)}</span>
+        </div>
+    `;
+
+    // Get all transactions for this supplier (purchases)
+    const suppTrans = transactions
+        .filter(t => t.supplierId === supplierId)
+        .map(t => ({
+            date: t.date,
+            description: `${t.description || 'Purchase'} - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
+            type: t.type === 'purchase' ? 'purchase' : 'jv',
+            amount: Math.abs(t.amount),
+            isCredit: t.amount < 0, // Negative amount = we are paying supplier (credit/reduces our liability)
+            source: 'transaction',
+            id: t.id
+        }));
+
+    // Get payments to this supplier
+    const suppPayments = payments
+        .filter(p => p.supplierId === supplierId)
+        .map(p => ({
+            date: p.date,
+            description: `Payment Made - ${p.paymentMethod}`,
+            type: 'payment',
+            amount: p.amount,
+            isCredit: true, // Payment reduces supplier balance (we owe less)
+            source: 'payment',
+            id: p.id
+        }));
+
+    // Get JV entries
+    const jvEntries = jvVouchers.filter(jv =>
+        (jv.debitType === 'supplier' && jv.debitAccount === 'supplier_' + supplierId) ||
+        (jv.creditType === 'supplier' && jv.creditAccount === 'supplier_' + supplierId)
+    ).map(jv => {
+        const isCredit = jv.creditType === 'supplier' && jv.creditAccount === 'supplier_' + supplierId;
+        return {
+            date: jv.date,
+            description: `📝 JV: ${jv.description}`,
+            type: 'jv',
+            amount: isCredit ? jv.creditAmount : jv.debitAmount,
+            isCredit: isCredit,
+            source: 'jv',
+            id: jv.id
+        };
+    });
+
+    const allEntries = [...suppTrans, ...suppPayments, ...jvEntries]
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let openingBalance = supplier.balance;
+    allEntries.forEach(entry => {
+        if (entry.isCredit) {
+            openingBalance -= entry.amount;
+        } else {
+            openingBalance += entry.amount;
+        }
+    });
+
+    const tbody = document.getElementById('supplierLedgerBody');
+    tbody.innerHTML = '';
+    let runningBalance = openingBalance;
+
+    const openingRow = tbody.insertRow();
+    openingRow.innerHTML = `
+        <td colspan="3"><strong>Opening Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
+        <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+    `;
+
+    allEntries.forEach(entry => {
+        const row = tbody.insertRow();
+
+        if (entry.isCredit) {
+            runningBalance -= entry.amount;
+        } else {
+            runningBalance += entry.amount;
+        }
+
+        const typeLabel = entry.type === 'purchase' ? 'PURCHASE' :
+                         entry.type === 'payment' ? 'PAYMENT' : 'JV';
+        const typeBg = entry.type === 'purchase' ? '#ed8936' :
+                      entry.type === 'payment' ? '#48bb78' : '#667eea';
+
+        row.innerHTML = `
+            <td>${new Date(entry.date).toLocaleDateString()}</td>
+            <td>${entry.description}</td>
+            <td><span class="badge" style="background: ${typeBg}">${typeLabel}</span></td>
+            <td style="color: #f56565; font-weight: 600;">${!entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td style="color: #48bb78; font-weight: 600;">${entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+        `;
+    });
+
+    const closingRow = tbody.insertRow();
+    closingRow.innerHTML = `
+        <td colspan="3"><strong>Closing Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
+        <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+    `;
+
+    window.currentSupplierLedger = { supplierId, supplier, allEntries, openingBalance };
+    openModal('supplierLedgerModal');
+}
+
+function printSupplierLedger() {
+    if (!window.currentSupplierLedger) return;
+    const { supplier, allEntries, openingBalance } = window.currentSupplierLedger;
+
+    let printContent = `
+        <html>
+        <head>
+            <title>${supplier.name} - Supplier Ledger</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { text-align: center; color: #2d3748; }
+                .info { margin: 20px 0; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+                th { background: #667eea; color: white; }
+                .total-row { font-weight: bold; background: #f7fafc; }
+            </style>
+        </head>
+        <body>
+            <h1>${supplier.name} - Supplier Ledger</h1>
+            <div class="info">
+                <strong>Contact:</strong> ${supplier.contact || 'N/A'}<br>
+                <strong>Current Balance:</strong> Rs. ${supplier.balance.toFixed(2)}<br>
+                <strong>Statement Date:</strong> ${new Date().toLocaleDateString()}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    let runningBalance = openingBalance;
+    printContent += `<tr class="total-row"><td colspan="3">Opening Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+
+    allEntries.forEach(entry => {
+        if (entry.isCredit) {
+            runningBalance -= entry.amount;
+        } else {
+            runningBalance += entry.amount;
+        }
+        const typeLabel = entry.type === 'purchase' ? 'PURCHASE' : entry.type === 'payment' ? 'PAYMENT' : 'JV';
+        printContent += `
+            <tr>
+                <td>${new Date(entry.date).toLocaleDateString()}</td>
+                <td>${entry.description}</td>
+                <td>${typeLabel}</td>
+                <td>${!entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>${entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>Rs. ${runningBalance.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    printContent += `<tr class="total-row"><td colspan="3">Closing Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+    printContent += `</tbody></table></body></html>`;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function downloadSupplierLedgerPDF() {
+    showNotification('💡 Tip: Use Print > Save as PDF option!', 'info');
+    printSupplierLedger();
 }
 
 // BANK TRANSACTION FUNCTIONS
@@ -6300,83 +7051,40 @@ function saveJVVoucher(e) {
 }
 
 function updateAccountFromJV(type, account, amount, side, jvDescription, jvDate) {
+    // FIXED: Only update balances, don't create duplicate transaction entries
+    // The JV voucher entry itself will show in the unified transactions view
+
     if (type === 'customer') {
         const custId = account.replace('customer_', '');
         const cust = customers.find(c => c.id === custId);
         if (cust) {
+            // Debit increases customer balance (they owe more), Credit decreases (they paid)
             cust.balance += side === 'debit' ? amount : -amount;
-            
-            // Create visible transaction entry for customer
-            const custTransaction = {
-                id: 'trans_jv_' + Date.now() + '_' + Math.random(),
-                type: 'jv_entry',
-                customerId: custId,
-                customerName: cust.name,
-                fuelType: 'N/A',
-                quantity: 0,
-                rate: 0,
-                amount: side === 'debit' ? -amount : amount, // Debit decreases customer balance (payment), Credit increases (sale)
-                description: '📝 JV Entry: ' + (jvDescription || 'Journal Voucher'),
-                date: jvDate || new Date().toISOString().split('T')[0],
-                source: 'jv',
-                createdBy: currentUser,
-                createdAt: new Date().toISOString()
-            };
-            transactions.push(custTransaction);
         }
     } else if (type === 'supplier') {
         const suppId = account.replace('supplier_', '');
         const supp = suppliers.find(s => s.id === suppId);
         if (supp) {
+            // Credit increases supplier balance (we owe more), Debit decreases (we paid)
             supp.balance += side === 'credit' ? amount : -amount;
-            
-            // Create visible transaction entry for supplier
-            const suppTransaction = {
-                id: 'trans_jv_' + Date.now() + '_' + Math.random(),
-                type: 'jv_entry',
-                supplierId: suppId,
-                supplierName: supp.name,
-                fuelType: 'N/A',
-                quantity: 0,
-                rate: 0,
-                amount: side === 'credit' ? -amount : amount, // Credit decreases supplier balance (payment), Debit increases (purchase)
-                description: '📝 JV Entry: ' + (jvDescription || 'Journal Voucher'),
-                date: jvDate || new Date().toISOString().split('T')[0],
-                source: 'jv',
-                createdBy: currentUser,
-                createdAt: new Date().toISOString()
-            };
-            transactions.push(suppTransaction);
         }
     } else if (type === 'bank') {
         const bankId = account.replace('bank_', '');
         const bank = banks.find(b => b.id === bankId);
         if (bank) {
-            // Update bank balance
+            // Debit increases bank balance (deposit), Credit decreases (withdrawal)
             bank.balance += side === 'debit' ? amount : -amount;
-            
-            // Create visible bank transaction entry
-            const bankTransaction = {
-                id: 'banktrans_jv_' + Date.now() + '_' + Math.random(),
-                bankId: bankId,
-                bankName: bank.name,
-                type: side === 'debit' ? 'deposit' : 'withdrawal',
-                amount: amount,
-                description: '📝 JV Entry: ' + (jvDescription || 'Journal Voucher'),
-                date: jvDate || new Date().toISOString().split('T')[0],
-                balanceAfter: bank.balance,
-                source: 'jv', // Mark as JV source
-                createdBy: currentUser,
-                createdAt: new Date().toISOString()
-            };
-            bankTransactions.push(bankTransaction);
         }
     } else if (type === 'vehicle') {
         const vehId = account.replace('vehicle_', '');
         const veh = vehicles.find(v => v.id === vehId);
         if (veh) {
+            // Credit increases vehicle owner balance, Debit decreases
             veh.ownerBalance += side === 'credit' ? amount : -amount;
         }
+    } else if (type === 'expense') {
+        // Handle expense accounts if needed
+        // Expenses typically increase with debit
     }
 }
 

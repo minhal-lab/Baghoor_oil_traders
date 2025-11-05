@@ -393,5 +393,6 @@ You now have a **fully functional accounting dashboard** for Baghoor Oil Traders
 
 ---
 
-*Built with ❤️ for Baghoor Oil Traders*  
-*Last Updated: October 26, 2025*
+*Built with ❤️ for Baghoor Oil Traders*
+*Last Updated: November 5, 2025*
+*Latest Fixes: JV System improvements, Bank/Customer/Supplier Ledger views added*
