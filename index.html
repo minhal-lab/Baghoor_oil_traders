@@ -2126,18 +2126,18 @@ function handleLogin(e) {
     e.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
-    
+
     // Check if user exists in systemUsers
     const user = systemUsers.find(u => u.username === username && u.password === password);
-    
+
     if (user) {
         currentUser = username;
         currentRole = user.role;
-        
-        // Save login session to localStorage
-        localStorage.setItem('loggedInUser', username);
-        localStorage.setItem('loggedInRole', user.role);
-        
+
+        // DO NOT save login session - require login every time for security
+        // localStorage.setItem('loggedInUser', username);
+        // localStorage.setItem('loggedInRole', user.role);
+
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('userDisplay').textContent = username;
@@ -2166,22 +2166,17 @@ function logout() {
     }
 }
 
-// Auto-login if session exists
+// Auto-login DISABLED - Users must login every time for security
 function checkLoginSession() {
-    const savedUser = localStorage.getItem('loggedInUser');
-    const savedRole = localStorage.getItem('loggedInRole');
-    
-    if (savedUser && savedRole) {
-        currentUser = savedUser;
-        currentRole = savedRole;
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        document.getElementById('userDisplay').textContent = savedUser;
-        document.getElementById('userRoleDisplay').textContent = savedRole.toUpperCase();
-        document.getElementById('userRoleDisplay').className = `user-role role-${savedRole}`;
-        initApp();
-        console.log('✅ Auto-logged in as:', savedUser);
-    }
+    // Clear any old session data to force fresh login
+    localStorage.removeItem('loggedInUser');
+    localStorage.removeItem('loggedInRole');
+
+    // Always show login screen on page load
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+
+    console.log('🔐 Login required - Auto-login disabled for security');
 }
 
 // INITIALIZATION
