@@ -2111,14 +2111,19 @@ async function forceCloudSync() {
 
         if (error) {
             console.error('❌ Force sync failed:', error);
-            showNotification('❌ Force sync failed: ' + error.message, 'error');
+            console.error('Error details:', JSON.stringify(error, null, 2));
+            console.error('Error message:', error.message);
+            console.error('Error hint:', error.hint);
+            console.error('Error code:', error.code);
+            showNotification('❌ Force sync failed: ' + (error.message || 'Unknown error'), 'error');
         } else {
             console.log('✅ Force sync successful!');
             showNotification('✅ Successfully synced to cloud! All data is now saved.', 'success');
         }
     } catch (error) {
         console.error('❌ Force sync error:', error);
-        showNotification('❌ Force sync error: ' + error.message, 'error');
+        console.error('Error message:', error.message);
+        showNotification('❌ Force sync error: ' + (error.message || 'Unknown error'), 'error');
     }
 }
 
@@ -2322,11 +2327,16 @@ async function saveToStorage() {
                 console.log('☁️ Data synced to cloud!');
             } else {
                 console.error('❌ Cloud sync failed:', error);
-                showNotification('⚠️ Warning: Cloud sync failed. Data saved locally only.', 'warning');
+                console.error('Error details:', JSON.stringify(error, null, 2));
+                console.error('Error message:', error.message);
+                console.error('Error hint:', error.hint);
+                console.error('Error code:', error.code);
+                showNotification('⚠️ Cloud sync failed: ' + (error.message || 'Unknown error'), 'warning');
             }
         } catch (error) {
             console.error('❌ Cloud sync error:', error);
-            showNotification('⚠️ Warning: Cloud sync failed. Data saved locally only.', 'warning');
+            console.error('Error details:', error.message);
+            showNotification('⚠️ Cloud sync error: ' + (error.message || 'Unknown error'), 'warning');
         }
     }
 }
