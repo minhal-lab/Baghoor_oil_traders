@@ -2280,9 +2280,13 @@ async function saveToStorage() {
             
             if (!error) {
                 console.log('☁️ Data synced to cloud!');
+            } else {
+                console.error('❌ Cloud sync failed:', error);
+                showNotification('⚠️ Warning: Cloud sync failed. Data saved locally only.', 'warning');
             }
         } catch (error) {
-            console.error('Cloud sync error:', error);
+            console.error('❌ Cloud sync error:', error);
+            showNotification('⚠️ Warning: Cloud sync failed. Data saved locally only.', 'warning');
         }
     }
 }
@@ -3247,11 +3251,10 @@ function saveCustomerTransfer(e) {
     toCustomer.balance -= amount;   // Credit (receiving customer's balance decreases)
     
     customerTransfers.push(transfer);
-    
-    // Ledger entry
-    addLedgerEntry('customer_transfer', `Transfer: ${fromCustomer.name} paid for ${toCustomer.name}`, 
-        `Customer: ${fromCustomer.name}`, amount, `Customer: ${toCustomer.name}`, amount, date);
-    
+
+    // NOTE: No ledger entry needed - customer transfers are tracked in customerTransfers array only
+    // Removed addLedgerEntry() to prevent duplicate/phantom entries
+
     saveToStorage();
     renderCustomers();
     renderTransactions(); // Update unified transactions view
@@ -3435,7 +3438,19 @@ function deleteCustomerTransfer(id) {
     
     // Remove the transfer
     customerTransfers = customerTransfers.filter(t => t.id !== id);
-    
+
+    // IMPORTANT: Also remove any related ledger entries to prevent phantom entries
+    // Clean up ledger entries that might reference this transfer
+    ledgerEntries = ledgerEntries.filter(entry => {
+        // Remove ledger entries that reference these customers and match the transfer amount and date
+        const isRelatedEntry = entry.type === 'customer_transfer' &&
+                              entry.date === transfer.date &&
+                              (entry.debitAmount === transfer.amount || entry.creditAmount === transfer.amount) &&
+                              (entry.debitAccount?.includes(fromCustomer?.name) ||
+                               entry.creditAccount?.includes(toCustomer?.name));
+        return !isRelatedEntry;
+    });
+
     saveToStorage();
     renderCustomerTransfers();
     renderTransactions(); // Update unified transactions view
@@ -5317,14 +5332,14 @@ function generateCustomerLedgerReport() {
         ...transfersFrom.map(t => ({
             date: t.date,
             type: 'Transfer Out',
-            details: `Paid for ${t.toCustomerName || 'Customer'} - ${t.notes || ''}`,
+            details: `Paid for ${t.toCustomerName || 'Customer'} - ${t.description || ''}`,
             debit: t.amount,
             credit: 0
         })),
         ...transfersTo.map(t => ({
             date: t.date,
             type: 'Transfer In',
-            details: `${t.fromCustomerName || 'Customer'} paid for this - ${t.notes || ''}`,
+            details: `${t.fromCustomerName || 'Customer'} paid for this - ${t.description || ''}`,
             debit: 0,
             credit: t.amount
         })),
