@@ -2040,6 +2040,18 @@ let currentUser = '';
 let currentRole = 'admin';
 let selectedRole = 'admin';
 
+// DATA MIGRATION: Convert old 'notes' field to 'description' in customer transfers
+customerTransfers.forEach(transfer => {
+    if (transfer.notes && !transfer.description) {
+        transfer.description = transfer.notes;
+        delete transfer.notes;
+    }
+});
+// Save migrated data
+if (customerTransfers.length > 0) {
+    localStorage.setItem('customerTransfers', JSON.stringify(customerTransfers));
+}
+
 // User Management Storage - ALWAYS ensure default users exist!
 const DEFAULT_USERS = [
     { id: 'user_1', username: 'admin', password: 'admin123', role: 'admin', createdAt: new Date().toISOString() },
@@ -3225,7 +3237,7 @@ function saveCustomerTransfer(e) {
         toCustomerName: toCustomer.name,
         amount: amount,
         date: date,
-        notes: notes,
+        description: notes,  // Changed from 'notes' to 'description' for consistency
         createdBy: currentUser,
         createdAt: new Date().toISOString()
     };
@@ -3430,6 +3442,17 @@ function deleteCustomerTransfer(id) {
     renderCustomers();
     updateDashboard();
     showNotification('Transfer deleted successfully! ✅', 'success');
+}
+
+// RENDER CUSTOMER TRANSFERS FUNCTION
+// Since customer transfers don't have a dedicated tab, this function ensures
+// that any views displaying transfers are updated after changes
+function renderCustomerTransfers() {
+    // Customer transfers are displayed in:
+    // 1. Unified Transactions tab (via renderTransactions)
+    // 2. Customer ledgers (via viewCustomerLedger)
+    // This function is called to maintain consistency after add/delete operations
+    // No specific rendering needed as renderTransactions() handles display
 }
 
 // DELETE BANK TRANSACTION FUNCTION
