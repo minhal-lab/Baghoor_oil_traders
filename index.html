@@ -1547,6 +1547,8 @@
                             <th>Date</th>
                             <th>Description</th>
                             <th>Type</th>
+                            <th>PMG (L)</th>
+                            <th>HSD (L)</th>
                             <th>Debit</th>
                             <th>Credit</th>
                             <th>Balance</th>
@@ -1581,6 +1583,8 @@
                             <th>Date</th>
                             <th>Description</th>
                             <th>Type</th>
+                            <th>PMG (L)</th>
+                            <th>HSD (L)</th>
                             <th>Debit</th>
                             <th>Credit</th>
                             <th>Balance</th>
@@ -2134,9 +2138,9 @@ function handleLogin(e) {
         currentUser = username;
         currentRole = user.role;
 
-        // DO NOT save login session - require login every time for security
-        // localStorage.setItem('loggedInUser', username);
-        // localStorage.setItem('loggedInRole', user.role);
+        // Save login session to localStorage - keeps user logged in on refresh
+        localStorage.setItem('loggedInUser', username);
+        localStorage.setItem('loggedInRole', user.role);
 
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
@@ -2166,17 +2170,28 @@ function logout() {
     }
 }
 
-// Auto-login DISABLED - Users must login every time for security
+// Auto-login ENABLED - Keep users logged in on refresh
 function checkLoginSession() {
-    // Clear any old session data to force fresh login
-    localStorage.removeItem('loggedInUser');
-    localStorage.removeItem('loggedInRole');
+    const savedUser = localStorage.getItem('loggedInUser');
+    const savedRole = localStorage.getItem('loggedInRole');
 
-    // Always show login screen on page load
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
-
-    console.log('🔐 Login required - Auto-login disabled for security');
+    if (savedUser && savedRole) {
+        // User was previously logged in, restore session
+        currentUser = savedUser;
+        currentRole = savedRole;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('userDisplay').textContent = savedUser;
+        document.getElementById('userRoleDisplay').textContent = savedRole.toUpperCase();
+        document.getElementById('userRoleDisplay').className = `user-role role-${savedRole}`;
+        initApp();
+        console.log('✅ Auto-logged in as:', savedUser);
+    } else {
+        // No saved session, show login screen
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('mainApp').style.display = 'none';
+        console.log('🔐 Login required');
+    }
 }
 
 // INITIALIZATION
@@ -4074,6 +4089,8 @@ function viewCustomerLedger(customerId) {
             description: `${t.description || 'Sale'} - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
             type: t.type === 'sale' ? 'sale' : 'jv',
             amount: Math.abs(t.amount),
+            pmgQty: (t.fuelType === 'PMG' || t.fuelType === 'Petrol') ? (t.quantity || 0) : 0,
+            hsdQty: (t.fuelType === 'HSD' || t.fuelType === 'Diesel') ? (t.quantity || 0) : 0,
             isDebit: t.amount < 0, // Negative amount = customer paying (debit/reduces balance)
             source: t.source || 'transaction',
             id: t.id
@@ -4087,6 +4104,8 @@ function viewCustomerLedger(customerId) {
             description: `Payment Received - ${p.paymentMethod}`,
             type: 'payment',
             amount: p.amount,
+            pmgQty: 0,
+            hsdQty: 0,
             isDebit: true, // Payment reduces customer balance
             source: 'payment',
             id: p.id
@@ -4102,6 +4121,8 @@ function viewCustomerLedger(customerId) {
             description: isFrom ? `Transfer TO: ${ct.toCustomerName}` : `Transfer FROM: ${ct.fromCustomerName}`,
             type: 'transfer',
             amount: ct.amount,
+            pmgQty: 0,
+            hsdQty: 0,
             isDebit: isFrom, // If paying for someone, it's debit
             source: 'transfer',
             id: ct.id
@@ -4119,6 +4140,8 @@ function viewCustomerLedger(customerId) {
             description: `📝 JV: ${jv.description}`,
             type: 'jv',
             amount: isDebit ? jv.debitAmount : jv.creditAmount,
+            pmgQty: 0,
+            hsdQty: 0,
             isDebit: isDebit,
             source: 'jv',
             id: jv.id
@@ -4150,6 +4173,8 @@ function viewCustomerLedger(customerId) {
         <td colspan="3"><strong>Opening Balance</strong></td>
         <td>-</td>
         <td>-</td>
+        <td>-</td>
+        <td>-</td>
         <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
     `;
 
@@ -4174,6 +4199,8 @@ function viewCustomerLedger(customerId) {
             <td>${new Date(entry.date).toLocaleDateString()}</td>
             <td>${entry.description}</td>
             <td><span class="badge" style="background: ${typeBg}">${typeLabel}</span></td>
+            <td style="color: #667eea; font-weight: 600;">${entry.pmgQty > 0 ? entry.pmgQty.toFixed(2) : '-'}</td>
+            <td style="color: #f59e0b; font-weight: 600;">${entry.hsdQty > 0 ? entry.hsdQty.toFixed(2) : '-'}</td>
             <td style="color: #f56565; font-weight: 600;">${!entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
             <td style="color: #48bb78; font-weight: 600;">${entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
             <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
@@ -4184,6 +4211,8 @@ function viewCustomerLedger(customerId) {
     const closingRow = tbody.insertRow();
     closingRow.innerHTML = `
         <td colspan="3"><strong>Closing Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
@@ -4292,6 +4321,8 @@ function viewSupplierLedger(supplierId) {
             description: `${t.description || 'Purchase'} - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
             type: t.type === 'purchase' ? 'purchase' : 'jv',
             amount: Math.abs(t.amount),
+            pmgQty: (t.fuelType === 'PMG' || t.fuelType === 'Petrol') ? (t.quantity || 0) : 0,
+            hsdQty: (t.fuelType === 'HSD' || t.fuelType === 'Diesel') ? (t.quantity || 0) : 0,
             isCredit: t.amount < 0, // Negative amount = we are paying supplier (credit/reduces our liability)
             source: 'transaction',
             id: t.id
@@ -4305,6 +4336,8 @@ function viewSupplierLedger(supplierId) {
             description: `Payment Made - ${p.paymentMethod}`,
             type: 'payment',
             amount: p.amount,
+            pmgQty: 0,
+            hsdQty: 0,
             isCredit: true, // Payment reduces supplier balance (we owe less)
             source: 'payment',
             id: p.id
@@ -4321,6 +4354,8 @@ function viewSupplierLedger(supplierId) {
             description: `📝 JV: ${jv.description}`,
             type: 'jv',
             amount: isCredit ? jv.creditAmount : jv.debitAmount,
+            pmgQty: 0,
+            hsdQty: 0,
             isCredit: isCredit,
             source: 'jv',
             id: jv.id
@@ -4348,6 +4383,8 @@ function viewSupplierLedger(supplierId) {
         <td colspan="3"><strong>Opening Balance</strong></td>
         <td>-</td>
         <td>-</td>
+        <td>-</td>
+        <td>-</td>
         <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
     `;
 
@@ -4369,6 +4406,8 @@ function viewSupplierLedger(supplierId) {
             <td>${new Date(entry.date).toLocaleDateString()}</td>
             <td>${entry.description}</td>
             <td><span class="badge" style="background: ${typeBg}">${typeLabel}</span></td>
+            <td style="color: #667eea; font-weight: 600;">${entry.pmgQty > 0 ? entry.pmgQty.toFixed(2) : '-'}</td>
+            <td style="color: #f59e0b; font-weight: 600;">${entry.hsdQty > 0 ? entry.hsdQty.toFixed(2) : '-'}</td>
             <td style="color: #f56565; font-weight: 600;">${!entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
             <td style="color: #48bb78; font-weight: 600;">${entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
             <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
@@ -4378,6 +4417,8 @@ function viewSupplierLedger(supplierId) {
     const closingRow = tbody.insertRow();
     closingRow.innerHTML = `
         <td colspan="3"><strong>Closing Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
