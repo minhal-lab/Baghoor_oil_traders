@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Supabase Database - Baghoor Oil Traders</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; margin-bottom: 10px; font-size: 2em; }
+        .info {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #0c5460;
+        }
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #721c24;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .log-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Database Setup Tool</h1>
+        <p style="color: #6c757d; margin-bottom: 20px;">Baghoor Oil Traders - Supabase Database Setup</p>
+
+        <div class="info">
+            <strong>📋 What This Tool Does:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li>Tests connection to your Supabase database</li>
+                <li>Checks if the table structure is correct</li>
+                <li>Identifies missing columns causing 400 errors</li>
+                <li>Provides SQL commands to fix the database</li>
+                <li>Optionally initializes empty data structure</li>
+            </ul>
+        </div>
+
+        <div style="margin: 30px 0;">
+            <button onclick="testConnection()" id="testBtn">
+                🔌 Test Database Connection
+            </button>
+            <button onclick="checkTableStructure()" id="checkBtn" disabled>
+                🔍 Check Table Structure
+            </button>
+            <button onclick="initializeDatabase()" id="initBtn" disabled>
+                🚀 Initialize Database
+            </button>
+        </div>
+
+        <div id="log" class="log" style="display: none;"></div>
+        <div id="sqlCommands" style="display: none;"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://druxbksscacocuclnzxs.supabase.co';
+        const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydXhia3NzY2Fjb2N1Y2xuenhzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTc1MzI5NCwiZXhwIjoyMDc3MzI5Mjk0fQ.d1sUxqRbhB6jJLT9xqp3Hu8EIdTVFex8DFnC58LBP50';
+        const TABLE_NAME = 'BOTs';
+
+        let supabase = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logItem.innerHTML = `<strong>[${timestamp}]</strong> ${icon} ${message}`;
+            logDiv.appendChild(logItem);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function testConnection() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Testing...';
+
+            log('Initializing Supabase client...');
+
+            try {
+                const { createClient } = supabase;
+                supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+                log('✅ Supabase client created!', 'success');
+                log('Testing connection to database...');
+
+                // Try to query the table
+                const { data, error } = await supabase
+                    .from(TABLE_NAME)
+                    .select('*')
+                    .eq('id', 1)
+                    .maybeSingle();
+
+                if (error) {
+                    log('❌ Database query error: ' + error.message, 'error');
+                    log('Error code: ' + error.code, 'error');
+                    log('Error hint: ' + (error.hint || 'N/A'), 'error');
+
+                    if (error.code === '42P01') {
+                        log('⚠️ Table "BOTs" does not exist!', 'warning');
+                        showCreateTableSQL();
+                    } else if (error.code === '42703') {
+                        log('⚠️ Table exists but missing columns!', 'warning');
+                        document.getElementById('checkBtn').disabled = false;
+                    }
+
+                    btn.innerHTML = '❌ Connection Failed';
+                    return;
+                }
+
+                if (!data) {
+                    log('⚠️ Table exists but no data found', 'warning');
+                    document.getElementById('initBtn').disabled = false;
+                } else {
+                    log('✅ Database connected successfully!', 'success');
+                    log('Found data record with ID: ' + data.id, 'success');
+                    log('Last updated: ' + new Date(data.last_updated).toLocaleString());
+                }
+
+                btn.innerHTML = '✅ Connected';
+                document.getElementById('checkBtn').disabled = false;
+
+            } catch (error) {
+                log('❌ Connection failed: ' + error.message, 'error');
+                btn.innerHTML = '❌ Failed';
+            }
+        }
+
+        async function checkTableStructure() {
+            const btn = document.getElementById('checkBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Checking...';
+
+            log('Checking table structure...');
+
+            const requiredColumns = [
+                'id', 'customers', 'suppliers', 'transactions', 'payments', 'expenses',
+                'customerTransfers', 'vehicles', 'banks', 'bankTransactions',
+                'rateChangeLogs', 'ledgerEntries', 'jvVouchers', 'ownerAccounts',
+                'systemUsers', 'last_updated'
+            ];
+
+            log('Required columns: ' + requiredColumns.length);
+
+            // Try a simple insert to see what columns are missing
+            const testData = {
+                id: 999,
+                customers: [],
+                suppliers: [],
+                transactions: [],
+                payments: [],
+                expenses: [],
+                customerTransfers: [],
+                vehicles: [],
+                banks: [],
+                bankTransactions: [],
+                rateChangeLogs: [],
+                ledgerEntries: [],
+                jvVouchers: [],
+                ownerAccounts: [],
+                systemUsers: [],
+                last_updated: new Date().toISOString()
+            };
+
+            const { data, error } = await supabase
+                .from(TABLE_NAME)
+                .insert(testData)
+                .select();
+
+            // Delete the test record
+            await supabase.from(TABLE_NAME).delete().eq('id', 999);
+
+            if (error) {
+                log('❌ Structure check failed: ' + error.message, 'error');
+                log('Missing or invalid column detected!', 'error');
+                showFixTableSQL();
+            } else {
+                log('✅ Table structure is correct!', 'success');
+                document.getElementById('initBtn').disabled = false;
+            }
+
+            btn.innerHTML = '✅ Checked';
+        }
+
+        async function initializeDatabase() {
+            if (!confirm('Initialize database with empty data structure?\n\nThis will NOT delete existing data, just ensure proper structure.')) {
+                return;
+            }
+
+            const btn = document.getElementById('initBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Initializing...';
+
+            log('Initializing database...');
+
+            const initialData = {
+                id: 1,
+                customers: [],
+                suppliers: [],
+                transactions: [],
+                payments: [],
+                expenses: [],
+                customerTransfers: [],
+                vehicles: [],
+                banks: [],
+                bankTransactions: [],
+                rateChangeLogs: [],
+                ledgerEntries: [],
+                jvVouchers: [],
+                ownerAccounts: [],
+                systemUsers: [
+                    { id: 'user_1', username: 'admin', password: 'admin123', role: 'admin', createdAt: new Date().toISOString() }
+                ],
+                last_updated: new Date().toISOString()
+            };
+
+            const { data, error } = await supabase
+                .from(TABLE_NAME)
+                .upsert(initialData)
+                .select();
+
+            if (error) {
+                log('❌ Initialization failed: ' + error.message, 'error');
+                log('Error details: ' + JSON.stringify(error, null, 2), 'error');
+                btn.innerHTML = '❌ Failed';
+            } else {
+                log('✅ Database initialized successfully!', 'success');
+                log('You can now use your main application!', 'success');
+
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success';
+                successDiv.innerHTML = `
+                    <strong>✅ SETUP COMPLETE!</strong><br><br>
+                    Your Supabase database is now properly configured.<br><br>
+                    <strong>Next steps:</strong><br>
+                    1. Close this page<br>
+                    2. Go to your main application: <a href="/" target="_blank">Open Application</a><br>
+                    3. Hard refresh (Ctrl + Shift + R)<br>
+                    4. Cloud sync should now work perfectly!
+                `;
+                document.body.appendChild(successDiv);
+
+                btn.innerHTML = '✅ Initialized';
+            }
+        }
+
+        function showCreateTableSQL() {
+            const sqlDiv = document.getElementById('sqlCommands');
+            sqlDiv.style.display = 'block';
+            sqlDiv.innerHTML = `
+                <h3 style="color: #dc3545;">⚠️ Table Does Not Exist</h3>
+                <p>Please run this SQL in your Supabase SQL Editor:</p>
+                <div class="code-block">
+CREATE TABLE "BOTs" (
+    id INTEGER PRIMARY KEY,
+    customers JSONB DEFAULT '[]'::jsonb,
+    suppliers JSONB DEFAULT '[]'::jsonb,
+    transactions JSONB DEFAULT '[]'::jsonb,
+    payments JSONB DEFAULT '[]'::jsonb,
+    expenses JSONB DEFAULT '[]'::jsonb,
+    "customerTransfers" JSONB DEFAULT '[]'::jsonb,
+    vehicles JSONB DEFAULT '[]'::jsonb,
+    banks JSONB DEFAULT '[]'::jsonb,
+    "bankTransactions" JSONB DEFAULT '[]'::jsonb,
+    "rateChangeLogs" JSONB DEFAULT '[]'::jsonb,
+    "ledgerEntries" JSONB DEFAULT '[]'::jsonb,
+    "jvVouchers" JSONB DEFAULT '[]'::jsonb,
+    "ownerAccounts" JSONB DEFAULT '[]'::jsonb,
+    "systemUsers" JSONB DEFAULT '[]'::jsonb,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE "BOTs" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all" ON "BOTs" FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO "BOTs" (id) VALUES (1);
+                </div>
+                <p><strong>Steps:</strong></p>
+                <ol>
+                    <li>Go to: <a href="${SUPABASE_URL.replace('/rest/v1', '')}/project/_/sql" target="_blank">Supabase SQL Editor</a></li>
+                    <li>Copy the SQL above</li>
+                    <li>Paste and run it</li>
+                    <li>Come back and click "Test Connection" again</li>
+                </ol>
+            `;
+        }
+
+        function showFixTableSQL() {
+            const sqlDiv = document.getElementById('sqlCommands');
+            sqlDiv.style.display = 'block';
+            sqlDiv.innerHTML = `
+                <h3 style="color: #f59e0b;">⚠️ Table Structure Issue</h3>
+                <p>The table exists but has missing or incorrect columns. Run this SQL to fix it:</p>
+                <div class="code-block">
+-- Add missing columns (if any)
+ALTER TABLE "BOTs" ADD COLUMN IF NOT EXISTS "customerTransfers" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE "BOTs" ADD COLUMN IF NOT EXISTS "bankTransactions" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE "BOTs" ADD COLUMN IF NOT EXISTS "rateChangeLogs" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE "BOTs" ADD COLUMN IF NOT EXISTS "ledgerEntries" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE "BOTs" ADD COLUMN IF NOT EXISTS "jvVouchers" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE "BOTs" ADD COLUMN IF NOT EXISTS "ownerAccounts" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE "BOTs" ADD COLUMN IF NOT EXISTS "systemUsers" JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE "BOTs" ADD COLUMN IF NOT EXISTS last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
