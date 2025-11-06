@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Cleanup Tool - Baghoor Oil Traders</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #0c5460;
+        }
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #721c24;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.success:hover {
+            background: #218838;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .log-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .log-item:last-child {
+            border-bottom: none;
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .data-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .data-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        .phantom-entry {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Database Cleanup Tool</h1>
+        <p style="color: #6c757d; margin-bottom: 20px;">Baghoor Oil Traders - Supabase Cloud Database</p>
+
+        <div class="warning">
+            <strong>⚠️ ADMIN TOOL - USE WITH CAUTION</strong><br>
+            This tool directly modifies your Supabase cloud database.<br>
+            Only use if you understand what each action does.
+        </div>
+
+        <div class="info">
+            <strong>📋 What This Tool Does:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li>Connects to your Supabase cloud database</li>
+                <li>Inspects current customer transfers</li>
+                <li>Identifies phantom entries (300 and 11)</li>
+                <li>Removes them permanently from cloud</li>
+                <li>Cleans up orphaned ledger entries</li>
+            </ul>
+        </div>
+
+        <div style="margin: 30px 0;">
+            <button onclick="connectDatabase()" id="connectBtn">
+                🔌 Connect to Database
+            </button>
+            <button onclick="inspectData()" id="inspectBtn" disabled>
+                🔍 Inspect Data
+            </button>
+            <button onclick="cleanupPhantomEntries()" id="cleanupBtn" class="danger" disabled>
+                🗑️ Delete Phantom Entries
+            </button>
+            <button onclick="forceSync()" id="syncBtn" class="success" disabled>
+                ☁️ Force Sync All Data
+            </button>
+        </div>
+
+        <div id="log" class="log" style="display: none;"></div>
+        <div id="dataPreview" style="display: none;"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://druxbksscacocuclnzxs.supabase.co';
+        const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydXhia3NzY2Fjb2N1Y2xuenhzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTc1MzI5NCwiZXhwIjoyMDc3MzI5Mjk0fQ.d1sUxqRbhB6jJLT9xqp3Hu8EIdTVFex8DFnC58LBP50';
+        const TABLE_NAME = 'BOTs';
+
+        let supabase = null;
+        let currentData = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logItem.innerHTML = `<strong>[${timestamp}]</strong> ${icon} ${message}`;
+            logDiv.appendChild(logItem);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function connectDatabase() {
+            const btn = document.getElementById('connectBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Connecting...';
+
+            log('Connecting to Supabase database...');
+
+            try {
+                const { createClient } = supabase;
+                supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+                log('✅ Connected to Supabase!', 'success');
+                log('Database URL: ' + SUPABASE_URL);
+                log('Table: ' + TABLE_NAME);
+
+                // Test connection
+                const { data, error } = await supabase
+                    .from(TABLE_NAME)
+                    .select('last_updated')
+                    .eq('id', 1)
+                    .maybeSingle();
+
+                if (error) {
+                    throw error;
+                }
+
+                if (data) {
+                    log('✅ Database connection verified!', 'success');
+                    log('Last updated: ' + new Date(data.last_updated).toLocaleString());
+                } else {
+                    log('⚠️ No data found in database. Database might be empty.', 'warning');
+                }
+
+                btn.innerHTML = '✅ Connected';
+                document.getElementById('inspectBtn').disabled = false;
+                document.getElementById('syncBtn').disabled = false;
+
+            } catch (error) {
+                log('❌ Connection failed: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '🔌 Connect to Database';
+            }
+        }
+
+        async function inspectData() {
+            const btn = document.getElementById('inspectBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Inspecting...';
+
+            log('Fetching data from cloud database...');
+
+            try {
+                const { data, error } = await supabase
+                    .from(TABLE_NAME)
+                    .select('*')
+                    .eq('id', 1)
+                    .single();
+
+                if (error) throw error;
+
+                currentData = data;
+                log('✅ Data fetched successfully!', 'success');
+
+                // Analyze customer transfers
+                const transfers = data.customerTransfers || [];
+                log(`Found ${transfers.length} customer transfers in database`);
+
+                // Find phantom entries
+                const phantomEntries = transfers.filter(t =>
+                    (t.amount === 11 || t.amount === 300) &&
+                    (t.toCustomerName?.includes('Ali') || t.fromCustomerName?.includes('Ali'))
+                );
+
+                if (phantomEntries.length > 0) {
+                    log(`🎯 Found ${phantomEntries.length} phantom entries!`, 'warning');
+                    displayPhantomEntries(phantomEntries, transfers);
+                    document.getElementById('cleanupBtn').disabled = false;
+                } else {
+                    log('✅ No phantom entries found! Database is clean.', 'success');
+                }
+
+                // Show other stats
+                log(`Total customers: ${data.customers?.length || 0}`);
+                log(`Total transactions: ${data.transactions?.length || 0}`);
+                log(`Total ledger entries: ${data.ledgerEntries?.length || 0}`);
+
+                btn.innerHTML = '✅ Inspected';
+
+            } catch (error) {
+                log('❌ Inspection failed: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '🔍 Inspect Data';
+            }
+        }
+
+        function displayPhantomEntries(phantomEntries, allTransfers) {
+            const previewDiv = document.getElementById('dataPreview');
+            previewDiv.style.display = 'block';
+            previewDiv.innerHTML = '<h3 style="color: #dc3545; margin-bottom: 15px;">👻 Phantom Entries Found:</h3>';
+
+            phantomEntries.forEach(entry => {
+                const div = document.createElement('div');
+                div.className = 'data-item phantom-entry';
+                div.innerHTML = `
+                    <strong>ID:</strong> ${entry.id}<br>
+                    <strong>Date:</strong> ${new Date(entry.date).toLocaleDateString()}<br>
+                    <strong>From:</strong> ${entry.fromCustomerName}<br>
+                    <strong>To:</strong> ${entry.toCustomerName}<br>
+                    <strong>Amount:</strong> Rs. ${entry.amount}<br>
+                    <strong>Description:</strong> ${entry.description || entry.notes || 'N/A'}
+                `;
+                previewDiv.appendChild(div);
+            });
+
+            const info = document.createElement('div');
+            info.className = 'info';
+            info.style.marginTop = '15px';
+            info.innerHTML = `
+                <strong>Ready to delete these entries?</strong><br>
+                Click "Delete Phantom Entries" to remove them permanently from the cloud database.
+            `;
+            previewDiv.appendChild(info);
+        }
+
+        async function cleanupPhantomEntries() {
+            if (!confirm('⚠️ Are you sure you want to delete the phantom entries?\n\nThis will permanently remove them from the cloud database.')) {
+                return;
+            }
+
+            const btn = document.getElementById('cleanupBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Cleaning...';
+
+            log('Starting cleanup of phantom entries...');
+
+            try {
+                if (!currentData) {
+                    throw new Error('No data loaded. Please inspect data first.');
+                }
+
+                // Filter out phantom entries
+                const originalTransfers = currentData.customerTransfers || [];
+                log(`Original transfer count: ${originalTransfers.length}`);
+
+                const cleanedTransfers = originalTransfers.filter(t => {
+                    const isPhantom = (t.amount === 11 || t.amount === 300) &&
+                                     (t.toCustomerName?.includes('Ali') || t.fromCustomerName?.includes('Ali'));
+                    return !isPhantom;
+                });
+
+                log(`Cleaned transfer count: ${cleanedTransfers.length}`);
+                log(`Removed ${originalTransfers.length - cleanedTransfers.length} phantom entries`);
+
+                // Also clean up related ledger entries
+                const originalLedger = currentData.ledgerEntries || [];
+                const cleanedLedger = originalLedger.filter(entry => {
+                    const isRelated = entry.type === 'customer_transfer' &&
+                                     (entry.debitAmount === 11 || entry.debitAmount === 300 ||
+                                      entry.creditAmount === 11 || entry.creditAmount === 300) &&
+                                     (entry.debitAccount?.includes('Ali') || entry.creditAccount?.includes('Ali'));
+                    return !isRelated;
+                });
+
+                log(`Cleaned ledger entries: ${originalLedger.length} → ${cleanedLedger.length}`);
+
+                // Update cloud database
+                log('Updating cloud database...');
+
+                const { error } = await supabase
+                    .from(TABLE_NAME)
+                    .update({
+                        customerTransfers: cleanedTransfers,
+                        ledgerEntries: cleanedLedger,
+                        last_updated: new Date().toISOString()
+                    })
+                    .eq('id', 1);
+
+                if (error) throw error;
+
+                log('✅ Cloud database updated successfully!', 'success');
+                log('✅ Phantom entries deleted permanently!', 'success');
+
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success';
+                successDiv.innerHTML = `
+                    <strong>✅ CLEANUP COMPLETE!</strong><br><br>
+                    The phantom entries (300 and 11) have been permanently deleted from the cloud database.<br><br>
+                    <strong>Next steps:</strong><br>
+                    1. Close this page<br>
+                    2. Go back to your main application<br>
+                    3. Refresh the page (Ctrl + Shift + R)<br>
+                    4. The phantom entries should be gone forever!
+                `;
+                document.getElementById('dataPreview').appendChild(successDiv);
+
+                btn.innerHTML = '✅ Cleanup Complete';
+
+            } catch (error) {
+                log('❌ Cleanup failed: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '🗑️ Delete Phantom Entries';
+            }
+        }
+
+        async function forceSync() {
+            const localDataStr = prompt('Paste your LOCAL data (from localStorage) here:\n\nOpen browser console on your main site and run:\nJSON.stringify(localStorage)');
+
+            if (!localDataStr) return;
+
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Syncing...';
+
+            log('Parsing local data...');
+
+            try {
+                const localStorage = JSON.parse(localDataStr);
+
+                const syncData = {
+                    id: 1,
+                    customers: JSON.parse(localStorage.customers || '[]'),
+                    suppliers: JSON.parse(localStorage.suppliers || '[]'),
+                    transactions: JSON.parse(localStorage.transactions || '[]'),
+                    payments: JSON.parse(localStorage.payments || '[]'),
+                    expenses: JSON.parse(localStorage.expenses || '[]'),
+                    customerTransfers: JSON.parse(localStorage.customerTransfers || '[]'),
+                    vehicles: JSON.parse(localStorage.vehicles || '[]'),
+                    banks: JSON.parse(localStorage.banks || '[]'),
+                    bankTransactions: JSON.parse(localStorage.bankTransactions || '[]'),
+                    rateChangeLogs: JSON.parse(localStorage.rateChangeLogs || '[]'),
+                    ledgerEntries: JSON.parse(localStorage.ledgerEntries || '[]'),
+                    jvVouchers: JSON.parse(localStorage.jvVouchers || '[]'),
+                    ownerAccounts: JSON.parse(localStorage.ownerAccounts || '[]'),
+                    systemUsers: JSON.parse(localStorage.systemUsers || '[]'),
+                    last_updated: new Date().toISOString()
+                };
+
+                log('Syncing to cloud...');
+
+                const { error } = await supabase
+                    .from(TABLE_NAME)
+                    .upsert(syncData);
+
+                if (error) throw error;
+
+                log('✅ Force sync complete!', 'success');
+                alert('✅ Local data synced to cloud successfully!');
+
+                btn.innerHTML = '✅ Synced';
+
+            } catch (error) {
+                log('❌ Sync failed: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '☁️ Force Sync All Data';
+            }
+        }
+    </script>
+</body>
+</html>
