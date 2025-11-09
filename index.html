@@ -7683,12 +7683,43 @@ function openModal(modalId) {
     if (modalId === 'jvModal') {
         initJVModal();
     }
-    
+
     // Initialize invoice modal
     if (modalId === 'invoiceModal') {
         initInvoiceModal();
     }
-    
+
+    // Populate dropdowns for payment modal
+    if (modalId === 'paymentModal') {
+        populateDropdowns();
+        updatePaymentParties();
+    }
+
+    // Populate dropdowns for expense modal
+    if (modalId === 'expenseModal') {
+        populateDropdowns();
+    }
+
+    // Populate dropdowns for bank transaction modal
+    if (modalId === 'bankTransModal') {
+        populateDropdowns();
+    }
+
+    // Populate dropdowns for customer transfer modal
+    if (modalId === 'customerTransferModal') {
+        populateDropdowns();
+    }
+
+    // Populate dropdowns for sale modal
+    if (modalId === 'saleModal') {
+        populateDropdowns();
+    }
+
+    // Populate dropdowns for purchase modal
+    if (modalId === 'purchaseModal') {
+        populateDropdowns();
+    }
+
     document.getElementById(modalId).style.display = 'flex';
 }
 
