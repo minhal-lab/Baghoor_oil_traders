@@ -1356,6 +1356,21 @@
                 <input type="number" step="0.01" id="expenseAmount" required>
             </div>
             <div class="form-group">
+                <label>Expense Type *</label>
+                <select id="expenseType" onchange="toggleExpenseTypeField()" required>
+                    <option value="general">General Expense</option>
+                    <option value="vehicle">Vehicle Expense</option>
+                    <option value="owner">Owner Expense</option>
+                </select>
+            </div>
+            <div class="form-group" id="expenseVehicleGroup" style="display: none;">
+                <label>Vehicle *</label>
+                <select id="expenseVehicleId">
+                    <option value="">Select Vehicle</option>
+                </select>
+                <small style="color: #718096;">Links expense to specific vehicle for profit tracking</small>
+            </div>
+            <div class="form-group">
                 <label>Paid From *</label>
                 <select id="expenseSource" onchange="toggleExpenseSourceField()" required>
                     <option value="bank">Bank Account</option>
@@ -1374,7 +1389,7 @@
                 <select id="expenseCustomerId">
                     <option value="">Select Customer</option>
                 </select>
-                <small style="color: #718096;">Customer's balance will decrease</small>
+                <small style="color: #718096;">Customer's balance will decrease (customer covers expense)</small>
             </div>
             <div class="form-group">
                 <label>Payment Method *</label>
@@ -1607,6 +1622,39 @@
                         </tr>
                     </thead>
                     <tbody id="supplierLedgerBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VEHICLE LEDGER MODAL -->
+<div id="vehicleLedgerModal" class="modal">
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header">
+            <h2 id="vehicleLedgerTitle">Vehicle Ledger</h2>
+            <button class="close-btn" onclick="closeModal('vehicleLedgerModal')">&times;</button>
+        </div>
+        <div id="vehicleLedgerContent" style="padding: 20px;">
+            <div style="margin-bottom: 20px;">
+                <div id="vehicleLedgerInfo"></div>
+                <div id="vehicleProfitSummary" style="margin-top: 15px; padding: 15px; background: var(--bg-secondary); border-radius: 8px;">
+                    <h3 style="margin-bottom: 10px;">📊 Profit/Loss Summary</h3>
+                    <div id="vehicleProfitDetails"></div>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="vehicleLedgerTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vehicleLedgerBody"></tbody>
                 </table>
             </div>
         </div>
@@ -3471,14 +3519,25 @@ function saveCustomerTransfer(e) {
 }
 
 // EXPENSE FUNCTIONS (UPDATED)
+function toggleExpenseTypeField() {
+    const type = document.getElementById('expenseType').value;
+    const vehicleGroup = document.getElementById('expenseVehicleGroup');
+
+    if (type === 'vehicle') {
+        vehicleGroup.style.display = 'block';
+    } else {
+        vehicleGroup.style.display = 'none';
+    }
+}
+
 function toggleExpenseSourceField() {
     const source = document.getElementById('expenseSource').value;
     const bankGroup = document.getElementById('expenseBankGroup');
     const customerGroup = document.getElementById('expenseCustomerGroup');
-    
+
     bankGroup.style.display = 'none';
     customerGroup.style.display = 'none';
-    
+
     if (source === 'bank') {
         bankGroup.style.display = 'block';
     } else if (source === 'customer') {
@@ -3488,7 +3547,10 @@ function toggleExpenseSourceField() {
 
 function saveExpense(e) {
     e.preventDefault();
-    
+
+    const expenseType = document.getElementById('expenseType').value;
+    const vehicleId = document.getElementById('expenseVehicleId').value;
+
     const expense = {
         id: document.getElementById('expenseId').value || 'exp_' + Date.now(),
         category: document.getElementById('expenseCategory').value,
@@ -3499,35 +3561,46 @@ function saveExpense(e) {
         customerId: document.getElementById('expenseCustomerId').value,
         method: document.getElementById('expenseMethod').value,
         date: document.getElementById('expenseDate').value,
+        expenseType: expenseType,
+        vehicleId: (expenseType === 'vehicle' ? vehicleId : ''),
         createdBy: currentUser,
         createdAt: new Date().toISOString()
     };
-    
+
     const existingIndex = expenses.findIndex(e => e.id === expense.id);
     if (existingIndex >= 0) {
         expenses[existingIndex] = expense;
         showNotification('Expense updated! ✅', 'success');
     } else {
         expenses.push(expense);
-        
+
         // Update balance based on source
         if (expense.source === 'bank' && expense.bankId) {
             const bank = banks.find(b => b.id === expense.bankId);
             if (bank) bank.balance -= expense.amount;
         } else if (expense.source === 'customer' && expense.customerId) {
             const customer = customers.find(c => c.id === expense.customerId);
-            if (customer) customer.balance -= expense.amount;
+            if (customer) {
+                customer.balance -= expense.amount;
+
+                // If customer covers vehicle expense, link it to vehicle
+                if (expenseType === 'vehicle' && vehicleId) {
+                    // This expense is tracked in vehicle ledger automatically
+                }
+            }
         }
-        
+
         // Ledger entry
-        const sourceAccount = expense.source === 'bank' ? 'Bank' : 
+        const sourceAccount = expense.source === 'bank' ? 'Bank' :
                              expense.source === 'customer' ? 'Customer' : 'Cash';
-        addLedgerEntry('expense', `Expense: ${expense.category} - ${expense.description}`, 
+        const expenseTypeLabel = expenseType === 'vehicle' ? '🚗 Vehicle' :
+                                expenseType === 'owner' ? '👤 Owner' : '📋 General';
+        addLedgerEntry('expense', `${expenseTypeLabel} Expense: ${expense.category} - ${expense.description}`,
             expense.category, expense.amount, sourceAccount, expense.amount, expense.date);
-        
+
         showNotification('Expense added! 💸', 'success');
     }
-    
+
     saveToStorage();
     renderExpenses();
     renderTransactions(); // Update unified transactions view
@@ -4886,6 +4959,7 @@ function renderVehicles() {
             <td><span class="stock-badge stock-hsd">${vehicle.stockHSD.toFixed(2)} KL</span></td>
             <td><span style="background: ${vehicle.status === 'Active' ? '#48bb78' : '#ed8936'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${vehicle.status}</span></td>
             <td>
+                <button class="btn btn-success btn-sm" onclick="viewVehicleLedger('${vehicle.id}')">📊 Ledger</button>
                 <button class="btn btn-info btn-sm" onclick='editVehicle(${JSON.stringify(vehicle).replace(/'/g, "&#39;")})'>Edit</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${vehicle.id}')">Delete</button>
             </td>
@@ -4923,6 +4997,144 @@ function deleteVehicle(id) {
         populateDropdowns();
         showNotification('Vehicle deleted!', 'success');
     }
+}
+
+function viewVehicleLedger(vehicleId) {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (!vehicle) {
+        showNotification('Vehicle not found!', 'error');
+        return;
+    }
+
+    // Set title and info
+    document.getElementById('vehicleLedgerTitle').textContent = `${vehicle.number} - Vehicle Ledger`;
+    document.getElementById('vehicleLedgerInfo').innerHTML = `
+        <div style="font-size: 0.95em;">
+            <strong>Driver:</strong> ${vehicle.driverName || 'N/A'}<br>
+            <strong>Owner:</strong> ${vehicle.ownerName || 'N/A'}<br>
+            <strong>Owner Balance:</strong> <span class="${vehicle.ownerBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${(vehicle.ownerBalance || 0).toFixed(2)}</span>
+        </div>
+    `;
+
+    // Get all transactions involving this vehicle
+    const vehicleTrans = transactions
+        .filter(t => t.vehicleId === vehicleId)
+        .map(t => ({
+            date: t.date,
+            description: `${t.type === 'sale' ? 'Sale to' : 'Purchase from'} ${t.partyName} - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
+            type: t.type,
+            amount: Math.abs(t.amount),
+            isIncome: t.type === 'sale',
+            source: 'transaction',
+            id: t.id
+        }));
+
+    // Get vehicle expenses
+    const vehicleExpenses = expenses
+        .filter(e => e.source === 'vehicle' && e.vehicleId === vehicleId)
+        .map(e => ({
+            date: e.date,
+            description: `Expense: ${e.category} - ${e.description}`,
+            type: 'expense',
+            amount: e.amount,
+            isIncome: false,
+            source: 'expense',
+            id: e.id
+        }));
+
+    // Get JV entries for this vehicle
+    const jvEntries = jvVouchers.filter(jv =>
+        (jv.debitType === 'vehicle' && jv.debitAccount === 'vehicle_' + vehicleId) ||
+        (jv.creditType === 'vehicle' && jv.creditAccount === 'vehicle_' + vehicleId)
+    ).map(jv => {
+        const isDebit = jv.debitType === 'vehicle' && jv.debitAccount === 'vehicle_' + vehicleId;
+        return {
+            date: jv.date,
+            description: `📝 JV: ${jv.description}`,
+            type: 'jv',
+            amount: isDebit ? jv.debitAmount : jv.creditAmount,
+            isIncome: !isDebit,
+            source: 'jv',
+            id: jv.id
+        };
+    });
+
+    // Combine all entries
+    const allEntries = [...vehicleTrans, ...vehicleExpenses, ...jvEntries]
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Calculate profit/loss
+    let totalIncome = 0;
+    let totalExpenses = 0;
+
+    allEntries.forEach(entry => {
+        if (entry.isIncome) {
+            totalIncome += entry.amount;
+        } else {
+            totalExpenses += entry.amount;
+        }
+    });
+
+    const netProfit = totalIncome - totalExpenses;
+
+    // Display profit summary
+    document.getElementById('vehicleProfitDetails').innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+            <div>
+                <div style="color: var(--text-secondary); font-size: 0.85em;">Total Income</div>
+                <div style="color: #48bb78; font-weight: 700; font-size: 1.3em;">Rs. ${totalIncome.toFixed(2)}</div>
+            </div>
+            <div>
+                <div style="color: var(--text-secondary); font-size: 0.85em;">Total Expenses</div>
+                <div style="color: #f56565; font-weight: 700; font-size: 1.3em;">Rs. ${totalExpenses.toFixed(2)}</div>
+            </div>
+            <div>
+                <div style="color: var(--text-secondary); font-size: 0.85em;">Net Profit/Loss</div>
+                <div class="${netProfit >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700; font-size: 1.3em;">Rs. ${netProfit.toFixed(2)}</div>
+            </div>
+        </div>
+    `;
+
+    // Render ledger table
+    const tbody = document.getElementById('vehicleLedgerBody');
+    tbody.innerHTML = '';
+    let runningBalance = vehicle.ownerBalance || 0;
+
+    // Opening balance row
+    const openingRow = tbody.insertRow();
+    openingRow.innerHTML = `
+        <td colspan="3"><strong>Opening Balance</strong></td>
+        <td>-</td>
+        <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+    `;
+
+    // Transaction rows
+    allEntries.forEach(entry => {
+        const row = tbody.insertRow();
+
+        if (entry.isIncome) {
+            runningBalance += entry.amount;
+        } else {
+            runningBalance -= entry.amount;
+        }
+
+        const typeLabel = entry.type === 'sale' ? 'SALE' :
+                         entry.type === 'purchase' ? 'PURCHASE' :
+                         entry.type === 'expense' ? 'EXPENSE' : 'JV';
+        const typeBg = entry.type === 'sale' ? '#805ad5' :
+                      entry.type === 'purchase' ? '#ed8936' :
+                      entry.type === 'expense' ? '#f56565' : '#667eea';
+
+        row.innerHTML = `
+            <td>${new Date(entry.date).toLocaleDateString()}</td>
+            <td>${entry.description}</td>
+            <td><span class="badge" style="background: ${typeBg}">${typeLabel}</span></td>
+            <td style="color: ${entry.isIncome ? '#48bb78' : '#f56565'}; font-weight: 600;">${entry.isIncome ? '+' : '-'} Rs. ${entry.amount.toFixed(2)}</td>
+            <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+        `;
+    });
+
+    openModal('vehicleLedgerModal');
 }
 
 // LEDGER FUNCTIONS (NEW)
@@ -5992,10 +6204,16 @@ function generateAllPartiesReport() {
 function generateProfitLossReport() {
     const totalSales = transactions.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
     const totalPurchases = transactions.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+    // Breakdown expenses by type
+    const vehicleExpenses = expenses.filter(e => e.expenseType === 'vehicle').reduce((sum, e) => sum + e.amount, 0);
+    const ownerExpenses = expenses.filter(e => e.expenseType === 'owner').reduce((sum, e) => sum + e.amount, 0);
+    const generalExpenses = expenses.filter(e => !e.expenseType || e.expenseType === 'general').reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = vehicleExpenses + ownerExpenses + generalExpenses;
+
     const grossProfit = totalSales - totalPurchases;
     const netProfit = grossProfit - totalExpenses;
-    
+
     const html = `
         <div class="card">
             <h2>📊 Profit & Loss Statement</h2>
@@ -6012,9 +6230,24 @@ function generateProfitLossReport() {
                     <span>Gross Profit</span>
                     <span style="font-weight: 600;">Rs. ${grossProfit.toFixed(2)}</span>
                 </div>
-                <div class="profit-loss-item">
-                    <span>Total Expenses</span>
-                    <span style="color: #ed8936; font-weight: 600;">Rs. ${totalExpenses.toFixed(2)}</span>
+                <div style="margin: 15px 0; padding: 10px; background: var(--bg-secondary); border-radius: 8px;">
+                    <h3 style="margin-bottom: 10px; color: var(--text-secondary); font-size: 0.9em;">💸 Expense Breakdown</h3>
+                    <div class="profit-loss-item" style="padding: 5px 0;">
+                        <span>🚗 Vehicle Expenses</span>
+                        <span style="color: #ed8936; font-weight: 600;">Rs. ${vehicleExpenses.toFixed(2)}</span>
+                    </div>
+                    <div class="profit-loss-item" style="padding: 5px 0;">
+                        <span>👤 Owner Expenses</span>
+                        <span style="color: #ed8936; font-weight: 600;">Rs. ${ownerExpenses.toFixed(2)}</span>
+                    </div>
+                    <div class="profit-loss-item" style="padding: 5px 0;">
+                        <span>📋 General Expenses</span>
+                        <span style="color: #ed8936; font-weight: 600;">Rs. ${generalExpenses.toFixed(2)}</span>
+                    </div>
+                    <div class="profit-loss-item" style="padding: 5px 0; border-top: 1px solid var(--border-color); margin-top: 5px; padding-top: 10px;">
+                        <span>Total Expenses</span>
+                        <span style="color: #ed8936; font-weight: 700;">Rs. ${totalExpenses.toFixed(2)}</span>
+                    </div>
                 </div>
                 <div class="profit-loss-item total">
                     <span>Net Profit</span>
@@ -6023,7 +6256,7 @@ function generateProfitLossReport() {
             </div>
         </div>
     `;
-    
+
     document.getElementById('reportOutput').innerHTML = html;
     showNotification('Profit & Loss generated!', 'success');
 }
@@ -6032,21 +6265,27 @@ function generateMonthlyReport() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     const monthlyTransactions = transactions.filter(t => {
         const tDate = new Date(t.date);
         return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
     });
-    
-    const monthlyExpenses = expenses.filter(e => {
+
+    const filteredExpenses = expenses.filter(e => {
         const eDate = new Date(e.date);
         return eDate.getMonth() === currentMonth && eDate.getFullYear() === currentYear;
-    }).reduce((sum, e) => sum + e.amount, 0);
-    
+    });
+
+    // Breakdown monthly expenses by type
+    const monthlyVehicleExpenses = filteredExpenses.filter(e => e.expenseType === 'vehicle').reduce((sum, e) => sum + e.amount, 0);
+    const monthlyOwnerExpenses = filteredExpenses.filter(e => e.expenseType === 'owner').reduce((sum, e) => sum + e.amount, 0);
+    const monthlyGeneralExpenses = filteredExpenses.filter(e => !e.expenseType || e.expenseType === 'general').reduce((sum, e) => sum + e.amount, 0);
+    const monthlyExpenses = monthlyVehicleExpenses + monthlyOwnerExpenses + monthlyGeneralExpenses;
+
     const monthlySales = monthlyTransactions.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
     const monthlyPurchases = monthlyTransactions.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
     const monthlyProfit = monthlySales - monthlyPurchases - monthlyExpenses;
-    
+
     const html = `
         <div class="card">
             <h2>📅 Monthly Report - ${now.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
@@ -6059,9 +6298,24 @@ function generateMonthlyReport() {
                     <span>Monthly Purchases</span>
                     <span style="color: #f56565; font-weight: 600;">Rs. ${monthlyPurchases.toFixed(2)}</span>
                 </div>
-                <div class="profit-loss-item">
-                    <span>Monthly Expenses</span>
-                    <span style="color: #ed8936; font-weight: 600;">Rs. ${monthlyExpenses.toFixed(2)}</span>
+                <div style="margin: 15px 0; padding: 10px; background: var(--bg-secondary); border-radius: 8px;">
+                    <h3 style="margin-bottom: 10px; color: var(--text-secondary); font-size: 0.9em;">💸 Monthly Expense Breakdown</h3>
+                    <div class="profit-loss-item" style="padding: 5px 0;">
+                        <span>🚗 Vehicle Expenses</span>
+                        <span style="color: #ed8936; font-weight: 600;">Rs. ${monthlyVehicleExpenses.toFixed(2)}</span>
+                    </div>
+                    <div class="profit-loss-item" style="padding: 5px 0;">
+                        <span>👤 Owner Expenses</span>
+                        <span style="color: #ed8936; font-weight: 600;">Rs. ${monthlyOwnerExpenses.toFixed(2)}</span>
+                    </div>
+                    <div class="profit-loss-item" style="padding: 5px 0;">
+                        <span>📋 General Expenses</span>
+                        <span style="color: #ed8936; font-weight: 600;">Rs. ${monthlyGeneralExpenses.toFixed(2)}</span>
+                    </div>
+                    <div class="profit-loss-item" style="padding: 5px 0; border-top: 1px solid var(--border-color); margin-top: 5px; padding-top: 10px;">
+                        <span>Total Monthly Expenses</span>
+                        <span style="color: #ed8936; font-weight: 700;">Rs. ${monthlyExpenses.toFixed(2)}</span>
+                    </div>
                 </div>
                 <div class="profit-loss-item">
                     <span>Total Transactions</span>
@@ -6074,7 +6328,7 @@ function generateMonthlyReport() {
             </div>
         </div>
     `;
-    
+
     document.getElementById('reportOutput').innerHTML = html;
     showNotification('Monthly report generated!', 'success');
 }
@@ -7204,14 +7458,17 @@ function populateDropdowns() {
     // Vehicles
     const vehicleSelects = [
         document.getElementById('saleVehicleId'),
-        document.getElementById('purchaseVehicleId')
+        document.getElementById('purchaseVehicleId'),
+        document.getElementById('expenseVehicleId')
     ];
-    
+
     vehicleSelects.forEach(select => {
-        select.innerHTML = '<option value="">Select Vehicle</option>';
-        vehicles.forEach(v => {
-            select.innerHTML += `<option value="${v.id}">${v.number} - ${v.driverName} (PMG: ${v.stockPMG.toFixed(2)}KL, HSD: ${v.stockHSD.toFixed(2)}KL)</option>`;
-        });
+        if (select) {
+            select.innerHTML = '<option value="">Select Vehicle</option>';
+            vehicles.forEach(v => {
+                select.innerHTML += `<option value="${v.id}">${v.number} - ${v.driverName} (PMG: ${v.stockPMG.toFixed(2)}KL, HSD: ${v.stockHSD.toFixed(2)}KL)</option>`;
+            });
+        }
     });
     
     // Vehicle Report Dropdown
