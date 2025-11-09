@@ -1667,6 +1667,40 @@
     </div>
 </div>
 
+<!-- OWNER ACCOUNT LEDGER MODAL -->
+<div id="ownerAccountLedgerModal" class="modal">
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header">
+            <h2 id="ownerAccountLedgerTitle">Owner Account Ledger</h2>
+            <button class="close-btn" onclick="closeModal('ownerAccountLedgerModal')">&times;</button>
+        </div>
+        <div id="ownerAccountLedgerContent" style="padding: 20px;">
+            <div style="margin-bottom: 20px;">
+                <div id="ownerAccountLedgerInfo"></div>
+            </div>
+            <div class="table-container">
+                <table id="ownerAccountLedgerTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Debit</th>
+                            <th>Credit</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ownerAccountLedgerBody"></tbody>
+                </table>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button class="btn btn-secondary" onclick="printOwnerAccountLedger()">🖨️ Print</button>
+                <button class="btn btn-success" onclick="downloadOwnerAccountLedgerPDF()">📄 Download PDF</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- GOVERNMENT RATE CHANGE MODAL -->
 <div id="govRateModal" class="modal">
     <div class="modal-content">
@@ -3867,6 +3901,7 @@ function renderOwnerAccounts() {
             <td>${account.contact || '-'}</td>
             <td class="${account.balance >= 0 ? 'balance-positive' : 'balance-negative'}">Rs. ${account.balance.toFixed(2)}</td>
             <td>
+                <button class="btn btn-primary btn-sm" onclick="viewOwnerAccountLedger('${account.id}')" title="View ledger">Ledger</button>
                 <button class="btn btn-success btn-sm" onclick="openOwnerTransactionModal('${account.id}')" title="Record transaction">Transaction</button>
                 <button class="btn btn-info btn-sm" onclick='editOwnerAccount(${JSON.stringify(account).replace(/'/g, "&#39;")})'>Edit</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteOwnerAccount('${account.id}')">Delete</button>
@@ -3900,13 +3935,192 @@ function editOwnerAccount(account) {
 function deleteOwnerAccount(id) {
     const account = ownerAccounts.find(a => a.id === id);
     if (!account) return;
-    
+
     if (confirm(`Delete ${account.name}?\n\nThis will remove the account and all its transaction history.`)) {
         ownerAccounts = ownerAccounts.filter(a => a.id !== id);
         saveToStorage();
         renderOwnerAccounts();
         showNotification('Owner account deleted!', 'success');
     }
+}
+
+function viewOwnerAccountLedger(accountId) {
+    const account = ownerAccounts.find(a => a.id === accountId);
+    if (!account) {
+        showNotification('Owner account not found!', 'error');
+        return;
+    }
+
+    const typeIcon = account.type === 'owner' ? '👔' : '👨‍👩‍👧';
+    const typeText = account.type === 'owner' ? 'Owner Capital' : 'Relative';
+
+    // Set title and info
+    document.getElementById('ownerAccountLedgerTitle').textContent = `${typeIcon} ${account.name} - Ledger`;
+    document.getElementById('ownerAccountLedgerInfo').innerHTML = `
+        <div style="font-size: 0.95em;">
+            <strong>Type:</strong> ${typeText}<br>
+            <strong>Contact:</strong> ${account.contact || 'N/A'}<br>
+            <strong>Current Balance:</strong> <span class="${account.balance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${account.balance.toFixed(2)}</span>
+        </div>
+    `;
+
+    // Get JV entries for this owner account
+    const jvEntries = jvVouchers.filter(jv =>
+        (jv.debitType === 'owner' && jv.debitAccount === 'owner_' + accountId) ||
+        (jv.creditType === 'owner' && jv.creditAccount === 'owner_' + accountId)
+    ).map(jv => {
+        const isDebit = jv.debitType === 'owner' && jv.debitAccount === 'owner_' + accountId;
+        return {
+            date: jv.date,
+            description: `📝 JV: ${jv.description}`,
+            type: 'jv',
+            amount: isDebit ? jv.debitAmount : jv.creditAmount,
+            isDebit: isDebit,
+            source: 'jv',
+            id: jv.id
+        };
+    });
+
+    const allEntries = [...jvEntries]
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Calculate opening balance by working backward from current balance
+    let openingBalance = account.balance;
+    allEntries.forEach(entry => {
+        if (entry.isDebit) {
+            openingBalance -= entry.amount;
+        } else {
+            openingBalance += entry.amount;
+        }
+    });
+
+    // Render ledger table
+    const tbody = document.getElementById('ownerAccountLedgerBody');
+    tbody.innerHTML = '';
+    let runningBalance = openingBalance;
+
+    // Opening balance row
+    const openingRow = tbody.insertRow();
+    openingRow.innerHTML = `
+        <td colspan="3"><strong>Opening Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
+        <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+    `;
+
+    // Transaction rows
+    allEntries.forEach(entry => {
+        const row = tbody.insertRow();
+
+        if (entry.isDebit) {
+            runningBalance += entry.amount;
+        } else {
+            runningBalance -= entry.amount;
+        }
+
+        const typeLabel = entry.type === 'jv' ? 'JV' : 'TRANSACTION';
+        const typeBg = '#667eea';
+
+        row.innerHTML = `
+            <td>${new Date(entry.date).toLocaleDateString()}</td>
+            <td>${entry.description}</td>
+            <td><span class="badge" style="background: ${typeBg}">${typeLabel}</span></td>
+            <td style="color: #48bb78; font-weight: 600;">${entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td style="color: #f56565; font-weight: 600;">${!entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+        `;
+    });
+
+    // Closing balance row
+    const closingRow = tbody.insertRow();
+    closingRow.innerHTML = `
+        <td colspan="3"><strong>Closing Balance</strong></td>
+        <td>-</td>
+        <td>-</td>
+        <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
+    `;
+
+    window.currentOwnerAccountLedger = { accountId, account, allEntries, openingBalance };
+    openModal('ownerAccountLedgerModal');
+}
+
+function printOwnerAccountLedger() {
+    if (!window.currentOwnerAccountLedger) return;
+    const { account, allEntries, openingBalance } = window.currentOwnerAccountLedger;
+
+    const typeIcon = account.type === 'owner' ? '👔' : '👨‍👩‍👧';
+    const typeText = account.type === 'owner' ? 'Owner Capital' : 'Relative';
+
+    let printContent = `
+        <html>
+        <head>
+            <title>${account.name} - Owner Account Ledger</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { text-align: center; color: #2d3748; }
+                .info { margin: 20px 0; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+                th { background: #667eea; color: white; }
+                .total-row { font-weight: bold; background: #f7fafc; }
+            </style>
+        </head>
+        <body>
+            <h1>${typeIcon} ${account.name} - Owner Account Ledger</h1>
+            <div class="info">
+                <strong>Type:</strong> ${typeText}<br>
+                <strong>Contact:</strong> ${account.contact || 'N/A'}<br>
+                <strong>Current Balance:</strong> Rs. ${account.balance.toFixed(2)}<br>
+                <strong>Statement Date:</strong> ${new Date().toLocaleDateString()}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    let runningBalance = openingBalance;
+    printContent += `<tr class="total-row"><td colspan="3">Opening Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+
+    allEntries.forEach(entry => {
+        if (entry.isDebit) {
+            runningBalance += entry.amount;
+        } else {
+            runningBalance -= entry.amount;
+        }
+        const typeLabel = entry.type === 'jv' ? 'JV' : 'TRANSACTION';
+        printContent += `
+            <tr>
+                <td>${new Date(entry.date).toLocaleDateString()}</td>
+                <td>${entry.description}</td>
+                <td>${typeLabel}</td>
+                <td>${entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>${!entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>Rs. ${runningBalance.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    printContent += `<tr class="total-row"><td colspan="3">Closing Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+    printContent += `</tbody></table></body></html>`;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function downloadOwnerAccountLedgerPDF() {
+    showNotification('💡 Tip: Use Print > Save as PDF option!', 'info');
+    printOwnerAccountLedger();
 }
 
 function openOwnerTransactionModal(accountId) {
@@ -6364,37 +6578,89 @@ function generateAllPartiesReport() {
                         <tr>
                             <th>Vehicle Number</th>
                             <th>Driver</th>
+                            <th>Owner</th>
                             <th>PMG Stock (KL)</th>
                             <th>HSD Stock (KL)</th>
                             <th>Total Stock (KL)</th>
+                            <th>Owner Balance</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
     `;
-    
+
     let totalStock = 0;
+    let totalVehicleBalance = 0;
     vehicles.forEach(vehicle => {
         const vehicleStock = vehicle.stockPMG + vehicle.stockHSD;
         totalStock += vehicleStock;
+        const ownerBalance = vehicle.ownerBalance || 0;
+        totalVehicleBalance += ownerBalance;
         html += `
             <tr>
                 <td><strong>${vehicle.number}</strong></td>
                 <td>${vehicle.driverName}</td>
+                <td>${vehicle.ownerName || '-'}</td>
                 <td><span class="stock-badge stock-pmg">${vehicle.stockPMG.toFixed(2)} KL</span></td>
                 <td><span class="stock-badge stock-hsd">${vehicle.stockHSD.toFixed(2)} KL</span></td>
                 <td style="font-weight: 700;">${vehicleStock.toFixed(2)} KL</td>
+                <td style="font-weight: 700; color: ${ownerBalance >= 0 ? '#48bb78' : '#f56565'};">Rs. ${ownerBalance.toFixed(2)}</td>
                 <td>
                     <span style="background: ${vehicle.status === 'Active' ? '#48bb78' : '#ed8936'}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75em;">${vehicle.status}</span>
                 </td>
             </tr>
         `;
     });
-    
+
     html += `
                         <tr style="background: #f7fafc; font-weight: 700; border-top: 3px solid #805ad5;">
-                            <td colspan="4"><strong>TOTAL STOCK</strong></td>
+                            <td colspan="5"><strong>TOTAL STOCK</strong></td>
                             <td style="color: #805ad5; font-size: 1.2em;">${totalStock.toFixed(2)} KL</td>
+                            <td style="color: ${totalVehicleBalance >= 0 ? '#48bb78' : '#f56565'}; font-size: 1.2em;">Rs. ${totalVehicleBalance.toFixed(2)}</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Owner & Relative Accounts Section -->
+            <h3 style="color: #667eea; margin-top: 30px; margin-bottom: 10px;">👔 Owner & Relative Accounts</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Contact</th>
+                            <th>Balance</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+
+    let totalOwnerBalance = 0;
+    ownerAccounts.forEach(account => {
+        totalOwnerBalance += account.balance;
+        const typeIcon = account.type === 'owner' ? '👔' : '👨‍👩‍👧';
+        const typeText = account.type === 'owner' ? 'Owner Capital' : 'Relative';
+        html += `
+            <tr>
+                <td><strong>${typeIcon} ${account.name}</strong></td>
+                <td><span style="background: ${account.type === 'owner' ? '#667eea' : '#48bb78'}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75em;">${typeText}</span></td>
+                <td>${account.contact || 'N/A'}</td>
+                <td style="font-weight: 700; color: ${account.balance >= 0 ? '#48bb78' : '#f56565'};">Rs. ${account.balance.toFixed(2)}</td>
+                <td>
+                    ${account.balance >= 0 ? '<span style="background: #48bb78; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75em;">POSITIVE</span>' : '<span style="background: #f56565; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75em;">NEGATIVE</span>'}
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                        <tr style="background: #f7fafc; font-weight: 700; border-top: 3px solid #667eea;">
+                            <td colspan="3"><strong>TOTAL OWNER/RELATIVE BALANCE</strong></td>
+                            <td style="color: ${totalOwnerBalance >= 0 ? '#48bb78' : '#f56565'}; font-size: 1.2em;">Rs. ${totalOwnerBalance.toFixed(2)}</td>
                             <td></td>
                         </tr>
                     </tbody>
@@ -6404,7 +6670,7 @@ function generateAllPartiesReport() {
             <!-- Summary -->
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px; margin-top: 30px;">
                 <h3 style="color: white; margin-bottom: 15px; text-align: center;">📊 Financial Summary</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
                     <div style="text-align: center;">
                         <div style="opacity: 0.9; font-size: 0.9em;">Total Receivables</div>
                         <div style="font-size: 1.5em; font-weight: 700; margin-top: 5px;">Rs. ${totalReceivables.toFixed(2)}</div>
@@ -6417,17 +6683,63 @@ function generateAllPartiesReport() {
                         <div style="opacity: 0.9; font-size: 0.9em;">Bank Balance</div>
                         <div style="font-size: 1.5em; font-weight: 700; margin-top: 5px;">Rs. ${totalBankBalance.toFixed(2)}</div>
                     </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
                     <div style="text-align: center;">
-                        <div style="opacity: 0.9; font-size: 0.9em;">Net Position</div>
-                        <div style="font-size: 1.5em; font-weight: 700; margin-top: 5px;">Rs. ${(totalReceivables - totalPayables + totalBankBalance).toFixed(2)}</div>
+                        <div style="opacity: 0.9; font-size: 0.9em;">Vehicle Owner Balance</div>
+                        <div style="font-size: 1.5em; font-weight: 700; margin-top: 5px;">Rs. ${totalVehicleBalance.toFixed(2)}</div>
                     </div>
+                    <div style="text-align: center;">
+                        <div style="opacity: 0.9; font-size: 0.9em;">Owner/Relative Balance</div>
+                        <div style="font-size: 1.5em; font-weight: 700; margin-top: 5px;">Rs. ${totalOwnerBalance.toFixed(2)}</div>
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.2); border-radius: 10px;">
+                        <div style="opacity: 0.9; font-size: 0.9em;">Net Position</div>
+                        <div style="font-size: 1.5em; font-weight: 700; margin-top: 5px;">Rs. ${(totalReceivables - totalPayables + totalBankBalance + totalVehicleBalance + totalOwnerBalance).toFixed(2)}</div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn" style="background: white; color: #667eea; font-weight: 700; padding: 12px 30px;" onclick="printAllPartiesReport()">🖨️ Print / Download PDF</button>
                 </div>
             </div>
         </div>
     `;
-    
+
     document.getElementById('reportOutput').innerHTML = html;
     showNotification('All parties report generated! 📋', 'success');
+}
+
+function printAllPartiesReport() {
+    const reportContent = document.getElementById('reportOutput').innerHTML;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>All Parties Balance Report - Baghoor Oil Traders</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1, h2, h3 { color: #2d3748; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+                th { background: #667eea; color: white; }
+                .stock-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85em; }
+                .stock-pmg { background: #667eea; color: white; }
+                .stock-hsd { background: #f59e0b; color: white; }
+                .card { margin: 20px 0; }
+                .table-container { overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            ${reportContent}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+
+    setTimeout(() => {
+        printWindow.print();
+    }, 500);
 }
 
 function generateProfitLossReport() {
