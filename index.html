@@ -2426,12 +2426,13 @@ async function saveToStorage() {
                     id: 1,
                     customers, suppliers, transactions, payments, expenses,
                     customerTransfers, vehicles, banks, bankTransactions,
-                    rateChangeLogs, ledgerEntries, jvVouchers, systemUsers,
+                    rateChangeLogs, ledgerEntries, jvVouchers, ownerAccounts, systemUsers,
                     last_updated: new Date().toISOString()
                 });
             
             if (!error) {
                 console.log('☁️ Data synced to cloud!');
+                console.log(`📊 Synced: ${customers.length} customers, ${suppliers.length} suppliers, ${vehicles.length} vehicles, ${transactions.length} transactions`);
             } else {
                 console.error('❌ Cloud sync failed:', error);
                 console.error('Error details:', JSON.stringify(error, null, 2));
@@ -8659,7 +8660,12 @@ window.addEventListener('load', async () => {
             
             if (data) {
                 console.log('📥 Cloud data loaded!');
-                
+
+                // Store counts before loading to detect data loss
+                const localVehicleCount = vehicles.length;
+                const localCustomerCount = customers.length;
+                const localSupplierCount = suppliers.length;
+
                 // Update arrays with cloud data
                 if (data.customers) customers = data.customers;
                 if (data.suppliers) suppliers = data.suppliers;
@@ -8675,6 +8681,17 @@ window.addEventListener('load', async () => {
                 if (data.jvVouchers) jvVouchers = data.jvVouchers;
                 if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
                 if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
+
+                // Warn if data counts decreased significantly (potential data loss)
+                if (vehicles.length < localVehicleCount) {
+                    console.warn(`⚠️ Vehicle count decreased from ${localVehicleCount} to ${vehicles.length}!`);
+                }
+                if (customers.length < localCustomerCount) {
+                    console.warn(`⚠️ Customer count decreased from ${localCustomerCount} to ${customers.length}!`);
+                }
+                if (suppliers.length < localSupplierCount) {
+                    console.warn(`⚠️ Supplier count decreased from ${localSupplierCount} to ${suppliers.length}!`);
+                }
                 
                 // CRITICAL: Always ensure default users exist!
                 ensureDefaultUsers();
