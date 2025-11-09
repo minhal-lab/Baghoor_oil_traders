@@ -565,6 +565,10 @@
                     Customers Management
                     <button class="btn btn-primary" onclick="openModal('customerModal')">Add Customer</button>
                 </h2>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <input type="text" id="customerSearchBox" placeholder="🔍 Search customers by name, contact, or CNIC..."
+                           oninput="filterCustomers()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                </div>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -591,6 +595,10 @@
                     Suppliers Management
                     <button class="btn btn-primary" onclick="openModal('supplierModal')">Add Supplier</button>
                 </h2>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <input type="text" id="supplierSearchBox" placeholder="🔍 Search suppliers by name, contact, or CNIC..."
+                           oninput="filterSuppliers()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                </div>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -1227,12 +1235,19 @@
                     <option value="">Select Type</option>
                     <option value="received">Payment Received (from Customer)</option>
                     <option value="paid">Payment Made (to Supplier)</option>
+                    <option value="customer-to-customer">Customer to Customer Transfer</option>
                 </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="paymentPartyGroup">
                 <label id="paymentPartyLabel">Party *</label>
                 <select id="paymentPartyId" required>
                     <option value="">Select Party</option>
+                </select>
+            </div>
+            <div class="form-group" id="paymentToCustomerGroup" style="display: none;">
+                <label>To Customer *</label>
+                <select id="paymentToCustomerId">
+                    <option value="">Select Customer</option>
                 </select>
             </div>
             <div class="form-group">
@@ -2380,8 +2395,8 @@ function saveCustomer(e) {
     
     const existingIndex = customers.findIndex(c => c.id === customer.id);
     if (existingIndex >= 0) {
-        // Editing existing customer - keep current balance
-        customer.balance = customers[existingIndex].balance;
+        // Editing existing customer - use edited balance from form
+        customer.balance = openingBalance;
         customers[existingIndex] = customer;
         showNotification('Customer updated! ✅', 'success');
     } else {
@@ -2427,13 +2442,47 @@ function renderCustomers() {
     tbody.appendChild(fragment);
 }
 
+function filterCustomers() {
+    const searchTerm = document.getElementById('customerSearchBox').value.toLowerCase();
+    const tbody = document.getElementById('customersBody');
+    tbody.innerHTML = '';
+
+    const filteredCustomers = customers.filter(customer => {
+        return customer.name.toLowerCase().includes(searchTerm) ||
+               (customer.contact && customer.contact.toLowerCase().includes(searchTerm)) ||
+               (customer.cnic && customer.cnic.toLowerCase().includes(searchTerm));
+    });
+
+    const fragment = document.createDocumentFragment();
+
+    filteredCustomers.forEach(customer => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${customer.name}</strong></td>
+            <td>${customer.contact || '-'}</td>
+            <td>${customer.cnic || '-'}</td>
+            <td>Rs. ${parseFloat(customer.pmgRate).toFixed(4)}</td>
+            <td>Rs. ${parseFloat(customer.hsdRate).toFixed(4)}</td>
+            <td class="${customer.balance >= 0 ? 'balance-positive' : 'balance-negative'}">Rs. ${customer.balance.toFixed(2)}</td>
+            <td>
+                <button class="btn btn-success btn-sm" onclick="viewCustomerLedger('${customer.id}')">📊 Ledger</button>
+                <button class="btn btn-info btn-sm" onclick='editCustomer(${JSON.stringify(customer).replace(/'/g, "&#39;")})'>Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCustomer('${customer.id}')">Delete</button>
+            </td>
+        `;
+        fragment.appendChild(row);
+    });
+
+    tbody.appendChild(fragment);
+}
+
 function editCustomer(customer) {
     // Set ID first to prevent clearing
     document.getElementById('customerId').value = customer.id;
-    
+
     // Open modal (will detect we're editing and won't clear)
     openModal('customerModal');
-    
+
     // Now fill all fields (they won't be cleared)
     document.getElementById('customerName').value = customer.name;
     document.getElementById('customerContact').value = customer.contact || '';
@@ -2442,13 +2491,13 @@ function editCustomer(customer) {
     document.getElementById('customerHsdRate').value = customer.hsdRate;
     document.getElementById('customerAddress').value = customer.address || '';
     document.getElementById('customerNotes').value = customer.notes || '';
-    
-    // Set balance with proper styling
+
+    // Set balance as EDITABLE
     const balanceField = document.getElementById('customerOpeningBalance');
     balanceField.value = customer.balance.toFixed(2);
-    balanceField.disabled = true;
-    balanceField.style.backgroundColor = '#f7fafc';
-    balanceField.title = 'Current balance (cannot edit - use transactions/payments to change)';
+    balanceField.disabled = false;
+    balanceField.style.backgroundColor = '';
+    balanceField.title = 'Edit opening balance if needed';
 }
 
 function deleteCustomer(id) {
@@ -2486,8 +2535,8 @@ function saveSupplier(e) {
     
     const existingIndex = suppliers.findIndex(s => s.id === supplier.id);
     if (existingIndex >= 0) {
-        // Editing - keep current balance
-        supplier.balance = suppliers[existingIndex].balance;
+        // Editing - use edited balance from form
+        supplier.balance = openingBalance;
         suppliers[existingIndex] = supplier;
         showNotification('Supplier updated! ✅', 'success');
     } else {
@@ -2539,6 +2588,45 @@ function renderSuppliers() {
     tbody.appendChild(fragment);
 }
 
+function filterSuppliers() {
+    const searchTerm = document.getElementById('supplierSearchBox').value.toLowerCase();
+    const tbody = document.getElementById('suppliersBody');
+    tbody.innerHTML = '';
+
+    const filteredSuppliers = suppliers.filter(supplier => {
+        return supplier.name.toLowerCase().includes(searchTerm) ||
+               (supplier.contact && supplier.contact.toLowerCase().includes(searchTerm)) ||
+               (supplier.cnic && supplier.cnic.toLowerCase().includes(searchTerm));
+    });
+
+    const fragment = document.createDocumentFragment();
+
+    filteredSuppliers.forEach(supplier => {
+        const pmgRate = supplier.pmgRateSelf || supplier.pmgRate || 0;
+        const hsdRate = supplier.hsdRateSelf || supplier.hsdRate || 0;
+        const carriageType = supplier.defaultCarriage || 'self';
+        const carriageIcon = carriageType === 'pso' ? '🚛' : '🚗';
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${supplier.name}</strong></td>
+            <td>${supplier.contact || '-'}</td>
+            <td>${supplier.cnic || '-'}</td>
+            <td>Rs. ${parseFloat(pmgRate).toFixed(4)} ${carriageIcon}</td>
+            <td>Rs. ${parseFloat(hsdRate).toFixed(4)} ${carriageIcon}</td>
+            <td class="${supplier.balance >= 0 ? 'balance-positive' : 'balance-negative'}">Rs. ${supplier.balance.toFixed(2)}</td>
+            <td>
+                <button class="btn btn-success btn-sm" onclick="viewSupplierLedger('${supplier.id}')">📊 Ledger</button>
+                <button class="btn btn-info btn-sm" onclick='editSupplier(${JSON.stringify(supplier).replace(/'/g, "&#39;")})'>Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteSupplier('${supplier.id}')">Delete</button>
+            </td>
+        `;
+        fragment.appendChild(row);
+    });
+
+    tbody.appendChild(fragment);
+}
+
 function editSupplier(supplier) {
     // Set ID first to prevent clearing
     document.getElementById('supplierId').value = supplier.id;
@@ -2561,12 +2649,12 @@ function editSupplier(supplier) {
     document.getElementById('supplierAddress').value = supplier.address || '';
     document.getElementById('supplierNotes').value = supplier.notes || '';
     
-    // Set balance with proper styling
+    // Set balance as EDITABLE
     const balanceField = document.getElementById('supplierOpeningBalance');
     balanceField.value = supplier.balance.toFixed(2);
-    balanceField.disabled = true;
-    balanceField.style.backgroundColor = '#f7fafc';
-    balanceField.title = 'Current balance (cannot edit - use transactions/payments to change)';
+    balanceField.disabled = false;
+    balanceField.style.backgroundColor = '';
+    balanceField.title = 'Edit opening balance if needed';
 }
 
 function deleteSupplier(id) {
@@ -3146,20 +3234,39 @@ function calculatePurchaseAmount() {
 function updatePaymentParties() {
     const type = document.getElementById('paymentType').value;
     const partySelect = document.getElementById('paymentPartyId');
+    const toCustomerSelect = document.getElementById('paymentToCustomerId');
     const label = document.getElementById('paymentPartyLabel');
-    
+    const toCustomerGroup = document.getElementById('paymentToCustomerGroup');
+    const partyGroup = document.getElementById('paymentPartyGroup');
+
     partySelect.innerHTML = '<option value="">Select Party</option>';
-    
+    toCustomerSelect.innerHTML = '<option value="">Select Customer</option>';
+
     if (type === 'received') {
         label.textContent = 'Customer *';
+        partyGroup.style.display = 'block';
+        toCustomerGroup.style.display = 'none';
         customers.forEach(c => {
             partySelect.innerHTML += `<option value="${c.id}">${c.name} (Balance: Rs. ${c.balance.toFixed(2)})</option>`;
         });
     } else if (type === 'paid') {
         label.textContent = 'Supplier *';
+        partyGroup.style.display = 'block';
+        toCustomerGroup.style.display = 'none';
         suppliers.forEach(s => {
             partySelect.innerHTML += `<option value="${s.id}">${s.name} (Balance: Rs. ${s.balance.toFixed(2)})</option>`;
         });
+    } else if (type === 'customer-to-customer') {
+        label.textContent = 'From Customer *';
+        partyGroup.style.display = 'block';
+        toCustomerGroup.style.display = 'block';
+        customers.forEach(c => {
+            partySelect.innerHTML += `<option value="${c.id}">${c.name} (Balance: Rs. ${c.balance.toFixed(2)})</option>`;
+            toCustomerSelect.innerHTML += `<option value="${c.id}">${c.name} (Balance: Rs. ${c.balance.toFixed(2)})</option>`;
+        });
+    } else {
+        partyGroup.style.display = 'none';
+        toCustomerGroup.style.display = 'none';
     }
 }
 
@@ -3176,7 +3283,7 @@ function toggleBankField() {
 
 function savePayment(e) {
     e.preventDefault();
-    
+
     const type = document.getElementById('paymentType').value;
     const partyId = document.getElementById('paymentPartyId').value;
     const amount = parseFloat(document.getElementById('paymentAmount').value);
@@ -3184,24 +3291,73 @@ function savePayment(e) {
     const bankId = document.getElementById('paymentBankId').value;
     const date = document.getElementById('paymentDate').value;
     const notes = document.getElementById('paymentNotes').value;
-    
+
     let party, partyName;
-    
+
+    if (type === 'customer-to-customer') {
+        // Handle customer to customer transfer
+        const toCustomerId = document.getElementById('paymentToCustomerId').value;
+        if (!toCustomerId || toCustomerId === partyId) {
+            showNotification('Please select different customers for transfer!', 'error');
+            return;
+        }
+
+        const fromCustomer = customers.find(c => c.id === partyId);
+        const toCustomer = customers.find(c => c.id === toCustomerId);
+
+        if (!fromCustomer || !toCustomer) {
+            showNotification('Customer not found!', 'error');
+            return;
+        }
+
+        // Create customer transfer
+        const transfer = {
+            id: 'ct_' + Date.now(),
+            fromCustomerId: partyId,
+            fromCustomerName: fromCustomer.name,
+            toCustomerId: toCustomerId,
+            toCustomerName: toCustomer.name,
+            amount: amount,
+            date: date,
+            notes: notes,
+            createdBy: currentUser,
+            createdAt: new Date().toISOString()
+        };
+
+        // Update balances
+        fromCustomer.balance -= amount; // Reduces from customer's receivable
+        toCustomer.balance += amount;   // Increases to customer's receivable
+
+        customerTransfers.push(transfer);
+
+        // Ledger entries
+        addLedgerEntry('customer_transfer', `Transfer from ${fromCustomer.name} to ${toCustomer.name}`,
+            `Customer: ${fromCustomer.name}`, amount, `Customer: ${toCustomer.name}`, amount, date);
+
+        saveToStorage();
+        renderCustomers();
+        updateDashboard();
+        closeModal('paymentModal');
+        showNotification(`Transfer of Rs. ${amount.toFixed(2)} from ${fromCustomer.name} to ${toCustomer.name} recorded! 🔄`, 'success');
+        e.target.reset();
+        return;
+    }
+
     if (type === 'received') {
         party = customers.find(c => c.id === partyId);
         partyName = party.name;
         party.balance -= amount;
-        
+
         // Ledger entry
-        addLedgerEntry('payment_received', `Payment from ${partyName}`, 
+        addLedgerEntry('payment_received', `Payment from ${partyName}`,
             bankId ? 'Bank' : 'Cash', amount, `Customer: ${partyName}`, amount, date);
     } else {
         party = suppliers.find(s => s.id === partyId);
         partyName = party.name;
         party.balance -= amount;
-        
+
         // Ledger entry
-        addLedgerEntry('payment_made', `Payment to ${partyName}`, 
+        addLedgerEntry('payment_made', `Payment to ${partyName}`,
             `Supplier: ${partyName}`, amount, bankId ? 'Bank' : 'Cash', amount, date);
     }
     
@@ -4174,17 +4330,17 @@ function viewCustomerLedger(customerId) {
         </div>
     `;
 
-    // Get all transactions for this customer (sales)
+    // Get all transactions for this customer (sales and purchases)
     const custTrans = transactions
-        .filter(t => t.customerId === customerId)
+        .filter(t => t.partyId === customerId || t.customerId === customerId)
         .map(t => ({
             date: t.date,
-            description: `${t.description || 'Sale'} - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
-            type: t.type === 'sale' ? 'sale' : 'jv',
+            description: `${t.description || (t.type === 'sale' ? 'Sale' : 'Transaction')} - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
+            type: t.type === 'sale' ? 'sale' : (t.type === 'purchase' ? 'purchase' : 'jv'),
             amount: Math.abs(t.amount),
             pmgQty: (t.fuelType === 'PMG' || t.fuelType === 'Petrol') ? (t.quantity || 0) : 0,
             hsdQty: (t.fuelType === 'HSD' || t.fuelType === 'Diesel') ? (t.quantity || 0) : 0,
-            isDebit: t.amount < 0, // Negative amount = customer paying (debit/reduces balance)
+            isDebit: (t.type === 'payment' || t.amount < 0), // Payment or negative amount = debit (reduces customer balance)
             source: t.source || 'transaction',
             id: t.id
         }));
@@ -4687,21 +4843,22 @@ function saveVehicle(e) {
         createdAt: existingIndex >= 0 ? vehicles[existingIndex].createdAt : new Date().toISOString()
     };
     
+    const ownerBalance = parseFloat(document.getElementById('vehicleOwnerBalance').value) || 0;
+
     if (existingIndex >= 0) {
-        // Editing - keep stock and owner balance
+        // Editing - keep stock but allow editing owner balance
         vehicle.stockPMG = vehicles[existingIndex].stockPMG;
         vehicle.stockHSD = vehicles[existingIndex].stockHSD;
-        vehicle.ownerBalance = vehicles[existingIndex].ownerBalance || 0;
+        vehicle.ownerBalance = ownerBalance;
         vehicles[existingIndex] = vehicle;
         showNotification('Vehicle updated! ✅', 'success');
     } else {
         // New vehicle - set opening balance and initial stock
-        const openingBalance = parseFloat(document.getElementById('vehicleOwnerBalance').value) || 0;
-        vehicle.ownerBalance = openingBalance;
+        vehicle.ownerBalance = ownerBalance;
         vehicle.stockPMG = 0;
         vehicle.stockHSD = 0;
         vehicles.push(vehicle);
-        showNotification('Vehicle added! ✅' + (openingBalance !== 0 ? ` (Owner balance: Rs. ${openingBalance.toFixed(2)})` : ''), 'success');
+        showNotification('Vehicle added! ✅' + (ownerBalance !== 0 ? ` (Owner balance: Rs. ${ownerBalance.toFixed(2)})` : ''), 'success');
     }
     
     saveToStorage();
@@ -4744,7 +4901,16 @@ function editVehicle(vehicle) {
     document.getElementById('vehicleNumber').value = vehicle.number;
     document.getElementById('vehicleDriver').value = vehicle.driverName;
     document.getElementById('vehicleContact').value = vehicle.contact || '';
+    document.getElementById('vehicleOwnerName').value = vehicle.ownerName || '';
+    document.getElementById('vehicleOwnerContact').value = vehicle.ownerContact || '';
     document.getElementById('vehicleStatus').value = vehicle.status;
+
+    // Set owner balance as EDITABLE
+    const balanceField = document.getElementById('vehicleOwnerBalance');
+    balanceField.value = (vehicle.ownerBalance || 0).toFixed(2);
+    balanceField.disabled = false;
+    balanceField.style.backgroundColor = '';
+
     openModal('vehicleModal');
 }
 
