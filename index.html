@@ -1235,6 +1235,8 @@
                     <option value="">Select Type</option>
                     <option value="received">Payment Received (from Customer)</option>
                     <option value="paid">Payment Made (to Supplier)</option>
+                    <option value="owner-received">Payment Received (from Owner/Relative)</option>
+                    <option value="owner-paid">Payment Made (to Owner/Relative)</option>
                     <option value="customer-to-customer">Customer to Customer Transfer</option>
                 </select>
             </div>
@@ -1899,6 +1901,7 @@
                             <option value="supplier">Supplier</option>
                             <option value="bank">Bank</option>
                             <option value="vehicle">Vehicle Owner</option>
+                            <option value="owner">Owner/Relative Account</option>
                             <option value="expense">Expense</option>
                             <option value="other">Other Account</option>
                         </select>
@@ -1927,6 +1930,7 @@
                             <option value="supplier">Supplier</option>
                             <option value="bank">Bank</option>
                             <option value="vehicle">Vehicle Owner</option>
+                            <option value="owner">Owner/Relative Account</option>
                             <option value="income">Income</option>
                             <option value="other">Other Account</option>
                         </select>
@@ -3344,6 +3348,22 @@ function updatePaymentParties() {
         suppliers.forEach(s => {
             partySelect.innerHTML += `<option value="${s.id}">${s.name} (Balance: Rs. ${s.balance.toFixed(2)})</option>`;
         });
+    } else if (type === 'owner-received') {
+        label.textContent = 'Owner/Relative Account *';
+        partyGroup.style.display = 'block';
+        toCustomerGroup.style.display = 'none';
+        ownerAccounts.forEach(a => {
+            const icon = a.type === 'owner' ? '👔' : '👨‍👩‍👧';
+            partySelect.innerHTML += `<option value="${a.id}">${icon} ${a.name} (Balance: Rs. ${a.balance.toFixed(2)})</option>`;
+        });
+    } else if (type === 'owner-paid') {
+        label.textContent = 'Owner/Relative Account *';
+        partyGroup.style.display = 'block';
+        toCustomerGroup.style.display = 'none';
+        ownerAccounts.forEach(a => {
+            const icon = a.type === 'owner' ? '👔' : '👨‍👩‍👧';
+            partySelect.innerHTML += `<option value="${a.id}">${icon} ${a.name} (Balance: Rs. ${a.balance.toFixed(2)})</option>`;
+        });
     } else if (type === 'customer-to-customer') {
         label.textContent = 'From Customer *';
         partyGroup.style.display = 'block';
@@ -3439,7 +3459,7 @@ function savePayment(e) {
         // Ledger entry
         addLedgerEntry('payment_received', `Payment from ${partyName}`,
             bankId ? 'Bank' : 'Cash', amount, `Customer: ${partyName}`, amount, date);
-    } else {
+    } else if (type === 'paid') {
         party = suppliers.find(s => s.id === partyId);
         partyName = party.name;
         party.balance -= amount;
@@ -3447,6 +3467,24 @@ function savePayment(e) {
         // Ledger entry
         addLedgerEntry('payment_made', `Payment to ${partyName}`,
             `Supplier: ${partyName}`, amount, bankId ? 'Bank' : 'Cash', amount, date);
+    } else if (type === 'owner-received') {
+        party = ownerAccounts.find(a => a.id === partyId);
+        const icon = party.type === 'owner' ? '👔' : '👨‍👩‍👧';
+        partyName = `${icon} ${party.name}`;
+        party.balance -= amount; // Owner balance decreases when they give money to business
+
+        // Ledger entry
+        addLedgerEntry('payment_received', `Payment from ${partyName}`,
+            bankId ? 'Bank' : 'Cash', amount, `Owner: ${party.name}`, amount, date);
+    } else if (type === 'owner-paid') {
+        party = ownerAccounts.find(a => a.id === partyId);
+        const icon = party.type === 'owner' ? '👔' : '👨‍👩‍👧';
+        partyName = `${icon} ${party.name}`;
+        party.balance += amount; // Owner balance increases when business gives them money
+
+        // Ledger entry
+        addLedgerEntry('payment_made', `Payment to ${partyName}`,
+            `Owner: ${party.name}`, amount, bankId ? 'Bank' : 'Cash', amount, date);
     }
     
     const payment = {
@@ -3480,9 +3518,9 @@ function savePayment(e) {
                 id: 'bt_' + Date.now(),
                 bankId: bankId,
                 bankName: bank.name,
-                type: type === 'received' ? 'deposit' : 'withdrawal',
+                type: (type === 'received' || type === 'owner-received') ? 'deposit' : 'withdrawal',
                 amount: amount,
-                description: type === 'received' ? `Payment from ${partyName}` : `Payment to ${partyName}`,
+                description: (type === 'received' || type === 'owner-received') ? `Payment from ${partyName}` : `Payment to ${partyName}`,
                 date: date,
                 balanceAfter: bank.balance,
                 createdBy: currentUser,
@@ -3498,6 +3536,7 @@ function savePayment(e) {
     renderCustomers();
     renderSuppliers();
     renderBanks();
+    renderOwnerAccounts(); // Refresh owner accounts
     closeModal('paymentModal');
     updateDashboard();
     showNotification('Payment recorded! 💰', 'success');
@@ -8131,10 +8170,10 @@ function updateJVDebitAccounts() {
     const type = document.getElementById('jvDebitType').value;
     const accountSelect = document.getElementById('jvDebitAccount');
     const otherInput = document.getElementById('jvDebitOther');
-    
+
     accountSelect.innerHTML = '<option value="">Select Account</option>';
     otherInput.style.display = 'none';
-    
+
     if (type === 'customer') {
         customers.forEach(c => accountSelect.innerHTML += `<option value="customer_${c.id}">${c.name}</option>`);
     } else if (type === 'supplier') {
@@ -8143,6 +8182,11 @@ function updateJVDebitAccounts() {
         banks.forEach(b => accountSelect.innerHTML += `<option value="bank_${b.id}">${b.name}</option>`);
     } else if (type === 'vehicle') {
         vehicles.forEach(v => accountSelect.innerHTML += `<option value="vehicle_${v.id}">${v.number} - ${v.ownerName || 'Owner'}</option>`);
+    } else if (type === 'owner') {
+        ownerAccounts.forEach(a => {
+            const icon = a.type === 'owner' ? '👔' : '👨‍👩‍👧';
+            accountSelect.innerHTML += `<option value="owner_${a.id}">${icon} ${a.name}</option>`;
+        });
     } else if (type === 'other') {
         otherInput.style.display = 'block';
     }
@@ -8152,10 +8196,10 @@ function updateJVCreditAccounts() {
     const type = document.getElementById('jvCreditType').value;
     const accountSelect = document.getElementById('jvCreditAccount');
     const otherInput = document.getElementById('jvCreditOther');
-    
+
     accountSelect.innerHTML = '<option value="">Select Account</option>';
     otherInput.style.display = 'none';
-    
+
     if (type === 'customer') {
         customers.forEach(c => accountSelect.innerHTML += `<option value="customer_${c.id}">${c.name}</option>`);
     } else if (type === 'supplier') {
@@ -8164,6 +8208,11 @@ function updateJVCreditAccounts() {
         banks.forEach(b => accountSelect.innerHTML += `<option value="bank_${b.id}">${b.name}</option>`);
     } else if (type === 'vehicle') {
         vehicles.forEach(v => accountSelect.innerHTML += `<option value="vehicle_${v.id}">${v.number} - ${v.ownerName || 'Owner'}</option>`);
+    } else if (type === 'owner') {
+        ownerAccounts.forEach(a => {
+            const icon = a.type === 'owner' ? '👔' : '👨‍👩‍👧';
+            accountSelect.innerHTML += `<option value="owner_${a.id}">${icon} ${a.name}</option>`;
+        });
     } else if (type === 'other') {
         otherInput.style.display = 'block';
     }
@@ -8225,6 +8274,7 @@ function saveJVVoucher(e) {
     renderCustomers();
     renderSuppliers();
     renderBanks(); // Refresh banks to show new transactions
+    renderOwnerAccounts(); // Refresh owner accounts
     updateDashboard();
     showNotification('JV Voucher saved! ✅', 'success');
     closeModal('jvModal');
@@ -8262,6 +8312,14 @@ function updateAccountFromJV(type, account, amount, side, jvDescription, jvDate)
         if (veh) {
             // Credit increases vehicle owner balance, Debit decreases
             veh.ownerBalance += side === 'credit' ? amount : -amount;
+        }
+    } else if (type === 'owner') {
+        const ownerId = account.replace('owner_', '');
+        const owner = ownerAccounts.find(a => a.id === ownerId);
+        if (owner) {
+            // Debit increases owner balance (capital injection, amount owed to owner)
+            // Credit decreases owner balance (withdrawal, payment from owner)
+            owner.balance += side === 'debit' ? amount : -amount;
         }
     } else if (type === 'expense') {
         // Handle expense accounts if needed
