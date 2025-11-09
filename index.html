@@ -1650,12 +1650,18 @@
                             <th>Date</th>
                             <th>Description</th>
                             <th>Type</th>
+                            <th>PMG (L)</th>
+                            <th>HSD (L)</th>
                             <th>Amount</th>
                             <th>Balance</th>
                         </tr>
                     </thead>
                     <tbody id="vehicleLedgerBody"></tbody>
                 </table>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button class="btn btn-secondary" onclick="printVehicleLedger()">🖨️ Print</button>
+                <button class="btn btn-success" onclick="downloadVehicleLedgerPDF()">📄 Download PDF</button>
             </div>
         </div>
     </div>
@@ -3439,10 +3445,12 @@ function savePayment(e) {
             const bankTransaction = {
                 id: 'bt_' + Date.now(),
                 bankId: bankId,
+                bankName: bank.name,
                 type: type === 'received' ? 'deposit' : 'withdrawal',
                 amount: amount,
                 description: type === 'received' ? `Payment from ${partyName}` : `Payment to ${partyName}`,
                 date: date,
+                balanceAfter: bank.balance,
                 createdBy: currentUser,
                 createdAt: new Date().toISOString()
             };
@@ -4433,12 +4441,12 @@ function viewCustomerLedger(customerId) {
             id: t.id
         }));
 
-    // Get payments by this customer
+    // Get payments by this customer (using both customerId and partyId)
     const custPayments = payments
-        .filter(p => p.customerId === customerId)
+        .filter(p => (p.customerId === customerId || (p.partyId === customerId && p.type === 'received')))
         .map(p => ({
             date: p.date,
-            description: `Payment Received - ${p.paymentMethod}`,
+            description: `Payment Received - ${p.method || p.paymentMethod}`,
             type: 'payment',
             amount: p.amount,
             pmgQty: 0,
@@ -4625,6 +4633,8 @@ function printCustomerLedger() {
                         <th>Date</th>
                         <th>Description</th>
                         <th>Type</th>
+                        <th>PMG (L)</th>
+                        <th>HSD (L)</th>
                         <th>Debit</th>
                         <th>Credit</th>
                         <th>Balance</th>
@@ -4634,7 +4644,10 @@ function printCustomerLedger() {
     `;
 
     let runningBalance = openingBalance;
-    printContent += `<tr class="total-row"><td colspan="3">Opening Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+    let totalPMG = 0;
+    let totalHSD = 0;
+
+    printContent += `<tr class="total-row"><td colspan="5">Opening Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
 
     allEntries.forEach(entry => {
         if (entry.isDebit) {
@@ -4642,12 +4655,16 @@ function printCustomerLedger() {
         } else {
             runningBalance += entry.amount;
         }
-        const typeLabel = entry.type === 'sale' ? 'SALE' : entry.type === 'payment' ? 'PAYMENT' : entry.type === 'transfer' ? 'TRANSFER' : 'JV';
+        totalPMG += entry.pmgQty;
+        totalHSD += entry.hsdQty;
+        const typeLabel = entry.type === 'sale' ? 'SALE' : entry.type === 'payment' ? 'PAYMENT' : entry.type === 'transfer' ? 'TRANSFER' : entry.type === 'expense' ? 'EXPENSE' : 'JV';
         printContent += `
             <tr>
                 <td>${new Date(entry.date).toLocaleDateString()}</td>
                 <td>${entry.description}</td>
                 <td>${typeLabel}</td>
+                <td>${entry.pmgQty > 0 ? entry.pmgQty.toFixed(2) : '-'}</td>
+                <td>${entry.hsdQty > 0 ? entry.hsdQty.toFixed(2) : '-'}</td>
                 <td>${!entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
                 <td>${entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
                 <td>Rs. ${runningBalance.toFixed(2)}</td>
@@ -4655,7 +4672,8 @@ function printCustomerLedger() {
         `;
     });
 
-    printContent += `<tr class="total-row"><td colspan="3">Closing Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+    printContent += `<tr class="total-row"><td colspan="3"><strong>Total Supplied</strong></td><td style="color: #667eea; font-weight: bold;">${totalPMG > 0 ? totalPMG.toFixed(2) + ' L' : '-'}</td><td style="color: #f59e0b; font-weight: bold;">${totalHSD > 0 ? totalHSD.toFixed(2) + ' L' : '-'}</td><td colspan="3">-</td></tr>`;
+    printContent += `<tr class="total-row"><td colspan="5">Closing Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
     printContent += `</tbody></table></body></html>`;
 
     const printWindow = window.open('', '_blank');
@@ -4852,6 +4870,8 @@ function printSupplierLedger() {
                         <th>Date</th>
                         <th>Description</th>
                         <th>Type</th>
+                        <th>PMG (L)</th>
+                        <th>HSD (L)</th>
                         <th>Debit</th>
                         <th>Credit</th>
                         <th>Balance</th>
@@ -4861,28 +4881,36 @@ function printSupplierLedger() {
     `;
 
     let runningBalance = openingBalance;
-    printContent += `<tr class="total-row"><td colspan="3">Opening Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+    let totalPMG = 0;
+    let totalHSD = 0;
+
+    printContent += `<tr class="total-row"><td colspan="5">Opening Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
 
     allEntries.forEach(entry => {
-        if (entry.isCredit) {
+        if (entry.isDebit) {
             runningBalance -= entry.amount;
         } else {
             runningBalance += entry.amount;
         }
+        totalPMG += entry.pmgQty;
+        totalHSD += entry.hsdQty;
         const typeLabel = entry.type === 'purchase' ? 'PURCHASE' : entry.type === 'payment' ? 'PAYMENT' : 'JV';
         printContent += `
             <tr>
                 <td>${new Date(entry.date).toLocaleDateString()}</td>
                 <td>${entry.description}</td>
                 <td>${typeLabel}</td>
-                <td>${!entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
-                <td>${entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>${entry.pmgQty > 0 ? entry.pmgQty.toFixed(2) : '-'}</td>
+                <td>${entry.hsdQty > 0 ? entry.hsdQty.toFixed(2) : '-'}</td>
+                <td>${entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+                <td>${!entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
                 <td>Rs. ${runningBalance.toFixed(2)}</td>
             </tr>
         `;
     });
 
-    printContent += `<tr class="total-row"><td colspan="3">Closing Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+    printContent += `<tr class="total-row"><td colspan="3"><strong>Total Purchased</strong></td><td style="color: #667eea; font-weight: bold;">${totalPMG > 0 ? totalPMG.toFixed(2) + ' L' : '-'}</td><td style="color: #f59e0b; font-weight: bold;">${totalHSD > 0 ? totalHSD.toFixed(2) + ' L' : '-'}</td><td colspan="3">-</td></tr>`;
+    printContent += `<tr class="total-row"><td colspan="5">Closing Balance</td><td>-</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
     printContent += `</tbody></table></body></html>`;
 
     const printWindow = window.open('', '_blank');
@@ -5095,19 +5123,23 @@ function viewVehicleLedger(vehicleId) {
             description: `${t.type === 'sale' ? 'Sale to' : 'Purchase from'} ${t.partyName} - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
             type: t.type,
             amount: Math.abs(t.amount),
+            pmgQty: (t.fuelType === 'PMG' || t.fuelType === 'Petrol') ? (t.quantity || 0) : 0,
+            hsdQty: (t.fuelType === 'HSD' || t.fuelType === 'Diesel') ? (t.quantity || 0) : 0,
             isIncome: t.type === 'sale',
             source: 'transaction',
             id: t.id
         }));
 
-    // Get vehicle expenses
+    // Get vehicle expenses (check both source=vehicle and expenseType=vehicle)
     const vehicleExpenses = expenses
-        .filter(e => e.source === 'vehicle' && e.vehicleId === vehicleId)
+        .filter(e => (e.source === 'vehicle' || e.expenseType === 'vehicle') && e.vehicleId === vehicleId)
         .map(e => ({
             date: e.date,
-            description: `Expense: ${e.category} - ${e.description}`,
+            description: `💸 Expense: ${e.category} - ${e.description}`,
             type: 'expense',
             amount: e.amount,
+            pmgQty: 0,
+            hsdQty: 0,
             isIncome: false,
             source: 'expense',
             id: e.id
@@ -5124,6 +5156,8 @@ function viewVehicleLedger(vehicleId) {
             description: `📝 JV: ${jv.description}`,
             type: 'jv',
             amount: isDebit ? jv.debitAmount : jv.creditAmount,
+            pmgQty: 0,
+            hsdQty: 0,
             isIncome: !isDebit,
             source: 'jv',
             id: jv.id
@@ -5171,10 +5205,18 @@ function viewVehicleLedger(vehicleId) {
     tbody.innerHTML = '';
     let runningBalance = vehicle.ownerBalance || 0;
 
+    // Calculate PMG/HSD totals
+    let totalPMG = 0;
+    let totalHSD = 0;
+    allEntries.forEach(entry => {
+        totalPMG += entry.pmgQty || 0;
+        totalHSD += entry.hsdQty || 0;
+    });
+
     // Opening balance row
     const openingRow = tbody.insertRow();
     openingRow.innerHTML = `
-        <td colspan="3"><strong>Opening Balance</strong></td>
+        <td colspan="5"><strong>Opening Balance</strong></td>
         <td>-</td>
         <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
     `;
@@ -5200,12 +5242,128 @@ function viewVehicleLedger(vehicleId) {
             <td>${new Date(entry.date).toLocaleDateString()}</td>
             <td>${entry.description}</td>
             <td><span class="badge" style="background: ${typeBg}">${typeLabel}</span></td>
+            <td style="color: #667eea; font-weight: 600;">${entry.pmgQty > 0 ? entry.pmgQty.toFixed(2) : '-'}</td>
+            <td style="color: #f59e0b; font-weight: 600;">${entry.hsdQty > 0 ? entry.hsdQty.toFixed(2) : '-'}</td>
             <td style="color: ${entry.isIncome ? '#48bb78' : '#f56565'}; font-weight: 600;">${entry.isIncome ? '+' : '-'} Rs. ${entry.amount.toFixed(2)}</td>
             <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
         `;
     });
 
+    // Add total row for quantities
+    const totalRow = tbody.insertRow();
+    totalRow.style.background = 'var(--bg-secondary)';
+    totalRow.style.fontWeight = 'bold';
+    totalRow.innerHTML = `
+        <td colspan="3"><strong>📊 Total Sold</strong></td>
+        <td style="color: #667eea; font-weight: 700;">${totalPMG > 0 ? totalPMG.toFixed(2) + ' L' : '-'}</td>
+        <td style="color: #f59e0b; font-weight: 700;">${totalHSD > 0 ? totalHSD.toFixed(2) + ' L' : '-'}</td>
+        <td colspan="2">-</td>
+    `;
+
+    window.currentVehicleLedger = { vehicleId, vehicle, allEntries, openingBalance: vehicle.ownerBalance || 0, totalIncome, totalExpenses, netProfit };
     openModal('vehicleLedgerModal');
+}
+
+function printVehicleLedger() {
+    if (!window.currentVehicleLedger) return;
+    const { vehicle, allEntries, openingBalance, totalIncome, totalExpenses, netProfit } = window.currentVehicleLedger;
+
+    let printContent = `
+        <html>
+        <head>
+            <title>${vehicle.number} - Vehicle Ledger</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { text-align: center; color: #2d3748; }
+                .info { margin: 20px 0; }
+                .profit-summary { background: #f7fafc; padding: 15px; margin: 20px 0; border-radius: 8px; }
+                .profit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+                .profit-item { text-align: center; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+                th { background: #667eea; color: white; }
+                .total-row { font-weight: bold; background: #f7fafc; }
+            </style>
+        </head>
+        <body>
+            <h1>${vehicle.number} - Vehicle Ledger</h1>
+            <div class="info">
+                <strong>Driver:</strong> ${vehicle.driverName || 'N/A'}<br>
+                <strong>Owner:</strong> ${vehicle.ownerName || 'N/A'}<br>
+                <strong>Statement Date:</strong> ${new Date().toLocaleDateString()}
+            </div>
+            <div class="profit-summary">
+                <h3>Profit/Loss Summary</h3>
+                <div class="profit-grid">
+                    <div class="profit-item">
+                        <div>Total Income</div>
+                        <div style="color: #48bb78; font-weight: bold; font-size: 1.2em;">Rs. ${totalIncome.toFixed(2)}</div>
+                    </div>
+                    <div class="profit-item">
+                        <div>Total Expenses</div>
+                        <div style="color: #f56565; font-weight: bold; font-size: 1.2em;">Rs. ${totalExpenses.toFixed(2)}</div>
+                    </div>
+                    <div class="profit-item">
+                        <div>Net Profit/Loss</div>
+                        <div style="color: ${netProfit >= 0 ? '#48bb78' : '#f56565'}; font-weight: bold; font-size: 1.2em;">Rs. ${netProfit.toFixed(2)}</div>
+                    </div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>PMG (L)</th>
+                        <th>HSD (L)</th>
+                        <th>Amount</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    let runningBalance = openingBalance;
+    let totalPMG = 0;
+    let totalHSD = 0;
+
+    printContent += `<tr class="total-row"><td colspan="5">Opening Balance</td><td>-</td><td>Rs. ${runningBalance.toFixed(2)}</td></tr>`;
+
+    allEntries.forEach(entry => {
+        if (entry.isIncome) {
+            runningBalance += entry.amount;
+        } else {
+            runningBalance -= entry.amount;
+        }
+        totalPMG += entry.pmgQty || 0;
+        totalHSD += entry.hsdQty || 0;
+        const typeLabel = entry.type === 'sale' ? 'SALE' : entry.type === 'purchase' ? 'PURCHASE' : entry.type === 'expense' ? 'EXPENSE' : 'JV';
+        printContent += `
+            <tr>
+                <td>${new Date(entry.date).toLocaleDateString()}</td>
+                <td>${entry.description}</td>
+                <td>${typeLabel}</td>
+                <td>${entry.pmgQty > 0 ? entry.pmgQty.toFixed(2) : '-'}</td>
+                <td>${entry.hsdQty > 0 ? entry.hsdQty.toFixed(2) : '-'}</td>
+                <td style="color: ${entry.isIncome ? '#48bb78' : '#f56565'};">${entry.isIncome ? '+' : '-'} Rs. ${entry.amount.toFixed(2)}</td>
+                <td>Rs. ${runningBalance.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    printContent += `<tr class="total-row"><td colspan="3"><strong>Total Sold</strong></td><td style="color: #667eea; font-weight: bold;">${totalPMG > 0 ? totalPMG.toFixed(2) + ' L' : '-'}</td><td style="color: #f59e0b; font-weight: bold;">${totalHSD > 0 ? totalHSD.toFixed(2) + ' L' : '-'}</td><td colspan="2">-</td></tr>`;
+    printContent += `</tbody></table></body></html>`;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function downloadVehicleLedgerPDF() {
+    showNotification('💡 Tip: Use Print > Save as PDF option!', 'info');
+    printVehicleLedger();
 }
 
 // LEDGER FUNCTIONS (NEW)
@@ -7773,7 +7931,7 @@ function loadVehicleInvoiceData() {
     const select = document.getElementById('invoiceVehicleId');
     select.innerHTML = '<option value="">Choose Vehicle</option>';
     vehicles.forEach(v => {
-        select.innerHTML += `<option value="${v.id}">${v.number} - ${v.driver}</option>`;
+        select.innerHTML += `<option value="${v.id}">${v.number} - ${v.driverName || v.driver}</option>`;
     });
 }
 
@@ -7808,7 +7966,7 @@ function generateVehicleInvoice() {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
             <div>
                 <p><strong>Vehicle Number:</strong> ${vehicle.number}</p>
-                <p><strong>Driver:</strong> ${vehicle.driver}</p>
+                <p><strong>Driver:</strong> ${vehicle.driverName || vehicle.driver}</p>
                 ${vehicle.ownerName ? `<p><strong>Owner:</strong> ${vehicle.ownerName}</p>` : ''}
             </div>
             <div style="text-align: right;">
