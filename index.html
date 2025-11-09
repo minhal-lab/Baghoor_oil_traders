@@ -4687,30 +4687,30 @@ function viewSupplierLedger(supplierId) {
 
     // Get all transactions for this supplier (purchases)
     const suppTrans = transactions
-        .filter(t => t.supplierId === supplierId)
+        .filter(t => (t.supplierId === supplierId || t.partyId === supplierId) && t.type === 'purchase')
         .map(t => ({
             date: t.date,
-            description: `${t.description || 'Purchase'} - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
-            type: t.type === 'purchase' ? 'purchase' : 'jv',
+            description: `Purchase - ${t.fuelType} (${t.quantity} L @ Rs.${t.rate})`,
+            type: 'purchase',
             amount: Math.abs(t.amount),
             pmgQty: (t.fuelType === 'PMG' || t.fuelType === 'Petrol') ? (t.quantity || 0) : 0,
             hsdQty: (t.fuelType === 'HSD' || t.fuelType === 'Diesel') ? (t.quantity || 0) : 0,
-            isCredit: t.amount < 0, // Negative amount = we are paying supplier (credit/reduces our liability)
+            isDebit: false, // Purchase increases our liability (we owe supplier)
             source: 'transaction',
             id: t.id
         }));
 
     // Get payments to this supplier
     const suppPayments = payments
-        .filter(p => p.supplierId === supplierId)
+        .filter(p => p.partyId === supplierId && p.type === 'paid')
         .map(p => ({
             date: p.date,
-            description: `Payment Made - ${p.paymentMethod}`,
+            description: `Payment Made - ${p.method || p.paymentMethod} ${p.notes ? '(' + p.notes + ')' : ''}`,
             type: 'payment',
             amount: p.amount,
             pmgQty: 0,
             hsdQty: 0,
-            isCredit: true, // Payment reduces supplier balance (we owe less)
+            isDebit: true, // Payment reduces our liability (debit reduces balance)
             source: 'payment',
             id: p.id
         }));
@@ -4720,15 +4720,15 @@ function viewSupplierLedger(supplierId) {
         (jv.debitType === 'supplier' && jv.debitAccount === 'supplier_' + supplierId) ||
         (jv.creditType === 'supplier' && jv.creditAccount === 'supplier_' + supplierId)
     ).map(jv => {
-        const isCredit = jv.creditType === 'supplier' && jv.creditAccount === 'supplier_' + supplierId;
+        const isDebit = jv.debitType === 'supplier' && jv.debitAccount === 'supplier_' + supplierId;
         return {
             date: jv.date,
             description: `📝 JV: ${jv.description}`,
             type: 'jv',
-            amount: isCredit ? jv.creditAmount : jv.debitAmount,
+            amount: isDebit ? jv.debitAmount : jv.creditAmount,
             pmgQty: 0,
             hsdQty: 0,
-            isCredit: isCredit,
+            isDebit: isDebit,
             source: 'jv',
             id: jv.id
         };
@@ -4737,9 +4737,10 @@ function viewSupplierLedger(supplierId) {
     const allEntries = [...suppTrans, ...suppPayments, ...jvEntries]
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // Calculate opening balance by working backward from current balance
     let openingBalance = supplier.balance;
     allEntries.forEach(entry => {
-        if (entry.isCredit) {
+        if (entry.isDebit) {
             openingBalance -= entry.amount;
         } else {
             openingBalance += entry.amount;
@@ -4763,7 +4764,8 @@ function viewSupplierLedger(supplierId) {
     allEntries.forEach(entry => {
         const row = tbody.insertRow();
 
-        if (entry.isCredit) {
+        // Update running balance
+        if (entry.isDebit) {
             runningBalance -= entry.amount;
         } else {
             runningBalance += entry.amount;
@@ -4780,8 +4782,8 @@ function viewSupplierLedger(supplierId) {
             <td><span class="badge" style="background: ${typeBg}">${typeLabel}</span></td>
             <td style="color: #667eea; font-weight: 600;">${entry.pmgQty > 0 ? entry.pmgQty.toFixed(2) : '-'}</td>
             <td style="color: #f59e0b; font-weight: 600;">${entry.hsdQty > 0 ? entry.hsdQty.toFixed(2) : '-'}</td>
-            <td style="color: #f56565; font-weight: 600;">${!entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
-            <td style="color: #48bb78; font-weight: 600;">${entry.isCredit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td style="color: #f56565; font-weight: 600;">${!entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
+            <td style="color: #48bb78; font-weight: 600;">${entry.isDebit ? 'Rs. ' + entry.amount.toFixed(2) : '-'}</td>
             <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
         `;
     });
