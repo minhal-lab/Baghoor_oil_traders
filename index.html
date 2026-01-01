@@ -2093,11 +2093,20 @@ const TABLE_NAME = 'BOTs';
 let supabaseClient = null;
 let USE_SUPABASE = false;
 
-// Initialize Supabase
+// Initialize Supabase with FIXED configuration
 if (typeof window.supabase !== 'undefined') {
     try {
         const { createClient } = window.supabase;
-        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // ✅ FIXED: Configure Supabase to NOT use localStorage
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: false,      // Don't persist auth session
+                autoRefreshToken: false,    // Don't auto-refresh tokens  
+                detectSessionInUrl: false   // Don't detect session from URL
+            }
+        });
+        
         USE_SUPABASE = true;
         console.log('✅ Supabase initialized! Multi-device sync ACTIVE! 🚀');
     } catch (error) {
@@ -2107,7 +2116,6 @@ if (typeof window.supabase !== 'undefined') {
 } else {
     console.log('⚠️ Supabase SDK not loaded. Using localStorage only.');
 }
-
 // ==========================================
 // DATA CLEANUP AND VALIDATION FUNCTION
 // ==========================================
