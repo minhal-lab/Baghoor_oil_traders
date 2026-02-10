@@ -2472,11 +2472,12 @@ function addLedgerEntry(type, description, debitAccount, debitAmount, creditAcco
         createdAt: new Date().toISOString()
     };
     ledgerEntries.push(entry);
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
 }
 
 // CUSTOMER FUNCTIONS
-function saveCustomer(e) {
+async function saveCustomer(e) {
     e.preventDefault();
     
     const openingBalance = parseFloat(document.getElementById('customerOpeningBalance').value) || 0;
@@ -2507,7 +2508,8 @@ function saveCustomer(e) {
         showNotification('Customer added! ✅' + (openingBalance !== 0 ? ` (Opening balance: Rs. ${openingBalance.toFixed(2)})` : ''), 'success');
     }
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderCustomers();
     closeModal('customerModal');
     updateDashboard();
@@ -2601,10 +2603,11 @@ function editCustomer(customer) {
     balanceField.title = 'Edit opening balance if needed';
 }
 
-function deleteCustomer(id) {
+async function deleteCustomer(id) {
     if (confirm('Are you sure?')) {
         customers = customers.filter(c => c.id !== id);
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         renderCustomers();
         updateDashboard();
         populateDropdowns();
@@ -2613,7 +2616,7 @@ function deleteCustomer(id) {
 }
 
 // SUPPLIER FUNCTIONS
-function saveSupplier(e) {
+async function saveSupplier(e) {
     e.preventDefault();
     
     const openingBalance = parseFloat(document.getElementById('supplierOpeningBalance').value) || 0;
@@ -2647,7 +2650,8 @@ function saveSupplier(e) {
         showNotification('Supplier added! ✅' + (openingBalance !== 0 ? ` (Opening balance: Rs. ${openingBalance.toFixed(2)})` : ''), 'success');
     }
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderSuppliers();
     closeModal('supplierModal');
     updateDashboard();
@@ -2758,10 +2762,11 @@ function editSupplier(supplier) {
     balanceField.title = 'Edit opening balance if needed';
 }
 
-function deleteSupplier(id) {
+async function deleteSupplier(id) {
     if (confirm('Are you sure?')) {
         suppliers = suppliers.filter(s => s.id !== id);
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         renderSuppliers();
         updateDashboard();
         populateDropdowns();
@@ -2770,7 +2775,7 @@ function deleteSupplier(id) {
 }
 
 // TRANSACTION FUNCTIONS
-function saveSale(e) {
+async function saveSale(e) {
     e.preventDefault();
     
     const customerId = document.getElementById('saleCustomerId').value;
@@ -2835,8 +2840,11 @@ function saveSale(e) {
     addLedgerEntry('sale', `Sale to ${customer.name} - ${fuelType}`, 
         `Customer: ${customer.name}`, amount, 'Sales Revenue', amount, date);
     
-    // CRITICAL: Force save to localStorage IMMEDIATELY
-    saveToStorage();
+    // Show progress notification
+    showNotification('Saving sale and syncing to cloud...', 'info');
+    
+    // CRITICAL: Wait for cloud sync to complete
+    await saveToStorage();
     
     // CRITICAL: Force complete UI refresh
     renderTransactions();
@@ -2851,14 +2859,14 @@ function saveSale(e) {
     calculateSaleAmount(); // Reset display
     
     // Success message
-    let msg = '✅ Sale recorded successfully!';
+    let msg = '✅ Sale recorded & synced to cloud!';
     if (discountAmount > 0) {
         msg += ` (Discount: Rs. ${discountAmount.toFixed(2)})`;
     }
     showNotification(msg, 'success');
 }
 
-function savePurchase(e) {
+async function savePurchase(e) {
     e.preventDefault();
     
     const supplierId = document.getElementById('purchaseSupplierId').value;
@@ -2909,7 +2917,8 @@ function savePurchase(e) {
     addLedgerEntry('purchase', `Purchase from ${supplier.name} - ${fuelType}`, 
         'Inventory', amount, `Supplier: ${supplier.name}`, amount, date);
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderTransactions();
     renderSuppliers();
     renderVehicles();
@@ -3112,7 +3121,7 @@ function changeTransactionsPage(direction) {
     renderTransactions();
 }
 
-function deleteTransaction(transId, type, partyId, vehicleId, fuelType, quantity, amount) {
+async function deleteTransaction(transId, type, partyId, vehicleId, fuelType, quantity, amount) {
     if (!confirm('Are you sure you want to delete this transaction? This will reverse all changes made by this transaction.')) {
         return;
     }
@@ -3164,8 +3173,11 @@ function deleteTransaction(transId, type, partyId, vehicleId, fuelType, quantity
     // Remove the transaction
     transactions.splice(transIndex, 1);
     
-    // CRITICAL: Force save and complete refresh
-    saveToStorage();
+    // Show progress notification
+    showNotification('Deleting transaction and syncing to cloud...', 'info');
+    
+    // CRITICAL: Wait for cloud sync to complete
+    await saveToStorage();
     renderTransactions();
     renderCustomers();
     renderSuppliers();
@@ -3173,7 +3185,7 @@ function deleteTransaction(transId, type, partyId, vehicleId, fuelType, quantity
     updateDashboard();
     populateDropdowns();
     
-    showNotification('✅ Transaction deleted successfully! All changes reversed.', 'success');
+    showNotification('✅ Transaction deleted & synced to cloud! All changes reversed.', 'success');
 }
 
 function updateSaleRate() {
@@ -3398,7 +3410,7 @@ function toggleBankField() {
     }
 }
 
-function savePayment(e) {
+async function savePayment(e) {
     e.preventDefault();
 
     const type = document.getElementById('paymentType').value;
@@ -3451,7 +3463,8 @@ function savePayment(e) {
         addLedgerEntry('customer_transfer', `Transfer from ${fromCustomer.name} to ${toCustomer.name}`,
             `Customer: ${fromCustomer.name}`, amount, `Customer: ${toCustomer.name}`, amount, date);
 
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         renderCustomers();
         updateDashboard();
         closeModal('paymentModal');
@@ -3539,7 +3552,8 @@ function savePayment(e) {
         }
     }
 
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderPayments();
     renderTransactions(); // Update unified transactions view
     renderCustomers();
@@ -3614,7 +3628,8 @@ function saveCustomerTransfer(e) {
     // NOTE: No ledger entry needed - customer transfers are tracked in customerTransfers array only
     // Removed addLedgerEntry() to prevent duplicate/phantom entries
 
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderCustomers();
     renderTransactions(); // Update unified transactions view
     closeModal('customerTransferModal');
@@ -3650,7 +3665,7 @@ function toggleExpenseSourceField() {
     }
 }
 
-function saveExpense(e) {
+async function saveExpense(e) {
     e.preventDefault();
 
     const expenseType = document.getElementById('expenseType').value;
@@ -3706,7 +3721,8 @@ function saveExpense(e) {
         showNotification('Expense added! 💸', 'success');
     }
 
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderExpenses();
     renderTransactions(); // Update unified transactions view
     renderBanks();
@@ -3747,10 +3763,11 @@ function renderExpenses() {
     });
 }
 
-function deleteExpense(id) {
+async function deleteExpense(id) {
     if (confirm('Are you sure?')) {
         expenses = expenses.filter(e => e.id !== id);
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         renderExpenses();
         renderTransactions(); // Update unified transactions view
         updateDashboard();
@@ -3759,7 +3776,7 @@ function deleteExpense(id) {
 }
 
 // DELETE PAYMENT FUNCTION
-function deletePayment(id) {
+async function deletePayment(id) {
     if (!confirm('Are you sure you want to delete this payment? This will reverse all balance changes.')) {
         return;
     }
@@ -3788,13 +3805,14 @@ function deletePayment(id) {
     // Remove the payment
     payments = payments.filter(p => p.id !== id);
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderPayments();
     renderTransactions(); // Update unified transactions view
     renderCustomers();
     renderSuppliers();
     updateDashboard();
-    showNotification('Payment deleted successfully! ✅', 'success');
+    showNotification('Payment deleted & synced to cloud! ✅', 'success');
 }
 
 // DELETE CUSTOMER TRANSFER FUNCTION
@@ -3839,6 +3857,7 @@ async function deleteCustomerTransfer(id) {
     });
 
     // CRITICAL: Wait for cloud sync to complete before showing success
+    showNotification('Saving and syncing to cloud...', 'info');
     await saveToStorage();
 
     renderCustomerTransfers();
@@ -3860,7 +3879,7 @@ function renderCustomerTransfers() {
 }
 
 // DELETE BANK TRANSACTION FUNCTION
-function deleteBankTransaction(id) {
+async function deleteBankTransaction(id) {
     if (!confirm('Are you sure you want to delete this bank transaction? This will reverse the balance change.')) {
         return;
     }
@@ -3884,7 +3903,8 @@ function deleteBankTransaction(id) {
     // Remove the transaction
     bankTransactions = bankTransactions.filter(t => t.id !== id);
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderBankTransactions();
     renderTransactions(); // Update unified transactions view
     renderBanks();
@@ -3894,7 +3914,7 @@ function deleteBankTransaction(id) {
 
 
 // OWNER ACCOUNTS FUNCTIONS
-function saveOwnerAccount(e) {
+async function saveOwnerAccount(e) {
     e.preventDefault();
     
     const accountId = document.getElementById('ownerAccountId').value || 'owner_' + Date.now();
@@ -3923,7 +3943,8 @@ function saveOwnerAccount(e) {
         showNotification('Owner account added! ✅' + (openingBalance !== 0 ? ` (Balance: Rs. ${openingBalance.toFixed(2)})` : ''), 'success');
     }
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderOwnerAccounts();
     closeModal('ownerAccountModal');
     e.target.reset();
@@ -3980,13 +4001,14 @@ function editOwnerAccount(account) {
     balanceField.title = 'Current balance (use transactions to change)';
 }
 
-function deleteOwnerAccount(id) {
+async function deleteOwnerAccount(id) {
     const account = ownerAccounts.find(a => a.id === id);
     if (!account) return;
 
     if (confirm(`Delete ${account.name}?\n\nThis will remove the account and all its transaction history.`)) {
         ownerAccounts = ownerAccounts.filter(a => a.id !== id);
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         renderOwnerAccounts();
         showNotification('Owner account deleted!', 'success');
     }
@@ -4250,7 +4272,8 @@ function saveOwnerAccountTransaction(e) {
         createdAt: transaction.createdAt
     });
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderOwnerAccounts();
     renderTransactions();
     closeModal('ownerAccountTransModal');
@@ -4335,7 +4358,7 @@ function renderJVVouchers() {
     });
 }
 
-function deleteJVVoucher(id) {
+async function deleteJVVoucher(id) {
     const jv = jvVouchers.find(j => j.id === id);
     if (!jv) {
         showNotification('JV not found!', 'error');
@@ -4392,7 +4415,8 @@ function deleteJVVoucher(id) {
         // Remove the JV from list
         jvVouchers = jvVouchers.filter(j => j.id !== id);
 
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         renderJVVouchers();
         renderTransactions(); // Update unified transactions view
         renderCustomers();
@@ -4404,7 +4428,7 @@ function deleteJVVoucher(id) {
 }
 
 // BANK FUNCTIONS
-function saveBank(e) {
+async function saveBank(e) {
     e.preventDefault();
     
     const bank = {
@@ -4424,7 +4448,8 @@ function saveBank(e) {
         showNotification('Bank added! ✅', 'success');
     }
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderBanks();
     closeModal('bankModal');
     updateDashboard();
@@ -4459,10 +4484,11 @@ function editBank(bank) {
     openModal('bankModal');
 }
 
-function deleteBank(id) {
+async function deleteBank(id) {
     if (confirm('Are you sure?')) {
         banks = banks.filter(b => b.id !== id);
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         renderBanks();
         updateDashboard();
         populateDropdowns();
@@ -5187,7 +5213,7 @@ function downloadSupplierLedgerPDF() {
 }
 
 // BANK TRANSACTION FUNCTIONS
-function saveBankTransaction(e) {
+async function saveBankTransaction(e) {
     e.preventDefault();
     
     const bankId = document.getElementById('bankTransBankId').value;
@@ -5228,7 +5254,8 @@ function saveBankTransaction(e) {
             'Cash/Expense', amount, 'Bank', amount, date);
     }
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderBankTransactions();
     renderTransactions(); // Update unified transactions view
     renderBanks();
@@ -5259,7 +5286,7 @@ function renderBankTransactions() {
 }
 
 // VEHICLE FUNCTIONS
-function saveVehicle(e) {
+async function saveVehicle(e) {
     e.preventDefault();
     
     const vehicleId = document.getElementById('vehicleId').value || 'veh_' + Date.now();
@@ -5295,7 +5322,8 @@ function saveVehicle(e) {
         showNotification('Vehicle added! ✅' + (ownerBalance !== 0 ? ` (Owner balance: Rs. ${ownerBalance.toFixed(2)})` : ''), 'success');
     }
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderVehicles();
     closeModal('vehicleModal');
     updateDashboard();
@@ -5349,10 +5377,11 @@ function editVehicle(vehicle) {
     openModal('vehicleModal');
 }
 
-function deleteVehicle(id) {
+async function deleteVehicle(id) {
     if (confirm('Are you sure?')) {
         vehicles = vehicles.filter(v => v.id !== id);
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         renderVehicles();
         updateDashboard();
         populateDropdowns();
@@ -6057,7 +6086,8 @@ function applyGovRateChange(e) {
     }
     
     rateChangeLogs.push(logEntry);
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     
     showNotification(`🎉 Rate change applied to ${logEntry.changes.length} parties!`, 'success');
     closeModal('govRateModal');
@@ -7676,7 +7706,8 @@ function restoreBackup() {
                 ownerAccounts = backup.data.ownerAccounts || [];
                 systemUsers = backup.data.systemUsers || [];
 
-                saveToStorage();
+                showNotification('Saving and syncing to cloud...', 'info');
+                await saveToStorage();
 
                 // Re-render all UI components
                 renderCustomers();
@@ -7749,7 +7780,8 @@ function restoreCustomers() {
             const backup = JSON.parse(e.target.result);
             if (backup.customers) {
                 customers = backup.customers;
-                saveToStorage();
+                showNotification('Saving and syncing to cloud...', 'info');
+                await saveToStorage();
                 renderCustomers();
                 updateDashboard();
                 showNotification('Customers restored! ✅', 'success');
@@ -7797,7 +7829,8 @@ function restoreSuppliers() {
             const backup = JSON.parse(e.target.result);
             if (backup.suppliers) {
                 suppliers = backup.suppliers;
-                saveToStorage();
+                showNotification('Saving and syncing to cloud...', 'info');
+                await saveToStorage();
                 renderSuppliers();
                 updateDashboard();
                 showNotification('Suppliers restored! ✅', 'success');
@@ -7845,7 +7878,8 @@ function restoreVehicles() {
             const backup = JSON.parse(e.target.result);
             if (backup.vehicles) {
                 vehicles = backup.vehicles;
-                saveToStorage();
+                showNotification('Saving and syncing to cloud...', 'info');
+                await saveToStorage();
                 renderVehicles();
                 updateDashboard();
                 showNotification('Vehicles restored! ✅', 'success');
@@ -7894,7 +7928,8 @@ function restoreBanks() {
             if (backup.banks) {
                 banks = backup.banks;
                 bankTransactions = backup.bankTransactions || [];
-                saveToStorage();
+                showNotification('Saving and syncing to cloud...', 'info');
+                await saveToStorage();
                 renderBanks();
                 renderBankTransactions();
                 updateDashboard();
@@ -8242,7 +8277,7 @@ function validateJVAmounts() {
     }
 }
 
-function saveJVVoucher(e) {
+async function saveJVVoucher(e) {
     e.preventDefault();
     
     const debit = parseFloat(document.getElementById('jvDebitAmount').value);
@@ -8277,7 +8312,8 @@ function saveJVVoucher(e) {
     updateAccountFromJV(jv.debitType, jv.debitAccount, debit, 'debit', jv.description, jv.date);
     updateAccountFromJV(jv.creditType, jv.creditAccount, credit, 'credit', jv.description, jv.date);
     
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     renderJVVouchers();
     renderTransactions(); // Update unified transactions view
     renderCustomers();
@@ -8532,7 +8568,8 @@ function changeUserPassword(userId) {
     const newPassword = prompt(`Enter new password for ${user.username}:`);
     if (newPassword && newPassword.length >= 4) {
         user.password = newPassword;
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         showNotification(`Password changed for ${user.username}! ✅`, 'success');
         renderUserManagement();
     } else if (newPassword !== null) {
@@ -8561,7 +8598,8 @@ function changeUserRole(userId) {
     if (choice && ['1', '2', '3'].includes(choice)) {
         const newRole = roles[parseInt(choice) - 1];
         user.role = newRole;
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         showNotification(`Role changed to ${newRole.toUpperCase()} for ${user.username}! ✅`, 'success');
         renderUserManagement();
     }
@@ -8576,7 +8614,8 @@ function deleteUser(userId) {
     
     if (confirm(`Are you sure you want to delete user "${user.username}"?\n\nThis action cannot be undone!`)) {
         systemUsers = systemUsers.filter(u => u.id !== userId);
-        saveToStorage();
+        showNotification('Saving and syncing to cloud...', 'info');
+        await saveToStorage();
         showNotification(`User ${user.username} deleted! ✅`, 'success');
         renderUserManagement();
     }
@@ -8618,7 +8657,8 @@ function addNewUser() {
     };
     
     systemUsers.push(newUser);
-    saveToStorage();
+    showNotification('Saving and syncing to cloud...', 'info');
+    await saveToStorage();
     showNotification(`User ${username} created successfully! ✅`, 'success');
     renderUserManagement();
 }
@@ -8725,6 +8765,7 @@ window.addEventListener('load', async () => {
             } else if (!error || error.code === 'PGRST116') {
                 console.log('📝 First time! Uploading local data...');
                 ensureDefaultUsers(); // Make sure defaults exist before first upload!
+                showNotification('Saving and syncing to cloud...', 'info');
                 await saveToStorage();
             }
             
