@@ -2180,31 +2180,16 @@ function ensureDefaultUsers() {
     // If no users at all, use defaults
     if (!systemUsers || systemUsers.length === 0) {
         systemUsers = [...DEFAULT_USERS];
-        console.log('No users found, using defaults');
         return;
     }
     
-    // Make sure each default user exists with correct password
+    // Make sure each default user exists
     DEFAULT_USERS.forEach(defaultUser => {
-        const existingUser = systemUsers.find(u => u.username === defaultUser.username);
-        if (!existingUser) {
-            // User doesn't exist, add it
+        const exists = systemUsers.find(u => u.username === defaultUser.username);
+        if (!exists) {
             systemUsers.push({...defaultUser});
-            console.log('Added missing user:', defaultUser.username);
-        } else if (!existingUser.password || existingUser.password === '') {
-            // User exists but has no/empty password, fix it
-            existingUser.password = defaultUser.password;
-            existingUser.role = defaultUser.role;
-            console.log('Fixed password for user:', defaultUser.username);
         }
     });
-    
-    // If no valid users with passwords exist, reset to defaults
-    const validUsers = systemUsers.filter(u => u.username && u.password && u.password.length > 0);
-    if (validUsers.length === 0) {
-        console.warn('No valid users found! Resetting to defaults');
-        systemUsers = [...DEFAULT_USERS];
-    }
 }
 
 let systemUsers = safeLoadData('systemUsers', []);
@@ -2338,48 +2323,6 @@ function handleLogin(e) {
         showNotification('Welcome ' + username + '! 🎉', 'success');
     } else {
         showNotification('Invalid username or password!', 'error');
-    }
-}
-
-
-
-// Emergency function to reset users if login fails
-function emergencyResetUsers() {
-    if (confirm('⚠️ Reset all users to default credentials?
-
-This will:
-• Reset admin/admin123
-• Reset manager/manager123
-• Reset accountant/accountant123
-
-Click OK to proceed.')) {
-        // Clear everything and reset
-        localStorage.clear();
-        systemUsers = [...DEFAULT_USERS];
-        localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
-        
-        // Also sync to cloud if available
-        if (USE_SUPABASE && supabaseClient) {
-            saveToStorage().then(() => {
-                alert('✅ Users reset! Please try logging in again with:
-
-Username: admin
-Password: admin123');
-                location.reload();
-            }).catch(() => {
-                alert('✅ Users reset locally! Please try logging in again with:
-
-Username: admin
-Password: admin123');
-                location.reload();
-            });
-        } else {
-            alert('✅ Users reset! Please try logging in again with:
-
-Username: admin
-Password: admin123');
-            location.reload();
-        }
     }
 }
 
@@ -2827,7 +2770,7 @@ function deleteSupplier(id) {
 }
 
 // TRANSACTION FUNCTIONS
-async function saveSale(e) {
+function saveSale(e) {
     e.preventDefault();
     
     const customerId = document.getElementById('saleCustomerId').value;
@@ -2893,7 +2836,7 @@ async function saveSale(e) {
         `Customer: ${customer.name}`, amount, 'Sales Revenue', amount, date);
     
     // CRITICAL: Force save to localStorage IMMEDIATELY
-    await saveToStorage();
+    saveToStorage();
     
     // CRITICAL: Force complete UI refresh
     renderTransactions();
@@ -2915,7 +2858,7 @@ async function saveSale(e) {
     showNotification(msg, 'success');
 }
 
-async function savePurchase(e) {
+function savePurchase(e) {
     e.preventDefault();
     
     const supplierId = document.getElementById('purchaseSupplierId').value;
@@ -2966,7 +2909,7 @@ async function savePurchase(e) {
     addLedgerEntry('purchase', `Purchase from ${supplier.name} - ${fuelType}`, 
         'Inventory', amount, `Supplier: ${supplier.name}`, amount, date);
     
-    await saveToStorage();
+    saveToStorage();
     renderTransactions();
     renderSuppliers();
     renderVehicles();
@@ -3169,7 +3112,7 @@ function changeTransactionsPage(direction) {
     renderTransactions();
 }
 
-async function deleteTransaction(transId, type, partyId, vehicleId, fuelType, quantity, amount) {
+function deleteTransaction(transId, type, partyId, vehicleId, fuelType, quantity, amount) {
     if (!confirm('Are you sure you want to delete this transaction? This will reverse all changes made by this transaction.')) {
         return;
     }
@@ -3222,7 +3165,7 @@ async function deleteTransaction(transId, type, partyId, vehicleId, fuelType, qu
     transactions.splice(transIndex, 1);
     
     // CRITICAL: Force save and complete refresh
-    await saveToStorage();
+    saveToStorage();
     renderTransactions();
     renderCustomers();
     renderSuppliers();
@@ -3455,7 +3398,7 @@ function toggleBankField() {
     }
 }
 
-async function savePayment(e) {
+function savePayment(e) {
     e.preventDefault();
 
     const type = document.getElementById('paymentType').value;
@@ -3508,7 +3451,7 @@ async function savePayment(e) {
         addLedgerEntry('customer_transfer', `Transfer from ${fromCustomer.name} to ${toCustomer.name}`,
             `Customer: ${fromCustomer.name}`, amount, `Customer: ${toCustomer.name}`, amount, date);
 
-        await saveToStorage();
+        saveToStorage();
         renderCustomers();
         updateDashboard();
         closeModal('paymentModal');
@@ -3596,7 +3539,7 @@ async function savePayment(e) {
         }
     }
 
-    await saveToStorage();
+    saveToStorage();
     renderPayments();
     renderTransactions(); // Update unified transactions view
     renderCustomers();
@@ -3804,10 +3747,10 @@ function renderExpenses() {
     });
 }
 
-async function deleteExpense(id) {
+function deleteExpense(id) {
     if (confirm('Are you sure?')) {
         expenses = expenses.filter(e => e.id !== id);
-        await saveToStorage();
+        saveToStorage();
         renderExpenses();
         renderTransactions(); // Update unified transactions view
         updateDashboard();
