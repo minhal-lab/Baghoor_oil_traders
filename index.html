@@ -2180,16 +2180,31 @@ function ensureDefaultUsers() {
     // If no users at all, use defaults
     if (!systemUsers || systemUsers.length === 0) {
         systemUsers = [...DEFAULT_USERS];
+        console.log('No users found, using defaults');
         return;
     }
     
-    // Make sure each default user exists
+    // Make sure each default user exists with correct password
     DEFAULT_USERS.forEach(defaultUser => {
-        const exists = systemUsers.find(u => u.username === defaultUser.username);
-        if (!exists) {
+        const existingUser = systemUsers.find(u => u.username === defaultUser.username);
+        if (!existingUser) {
+            // User doesn't exist, add it
             systemUsers.push({...defaultUser});
+            console.log('Added missing user:', defaultUser.username);
+        } else if (!existingUser.password || existingUser.password === '') {
+            // User exists but has no/empty password, fix it
+            existingUser.password = defaultUser.password;
+            existingUser.role = defaultUser.role;
+            console.log('Fixed password for user:', defaultUser.username);
         }
     });
+    
+    // If no valid users with passwords exist, reset to defaults
+    const validUsers = systemUsers.filter(u => u.username && u.password && u.password.length > 0);
+    if (validUsers.length === 0) {
+        console.warn('No valid users found! Resetting to defaults');
+        systemUsers = [...DEFAULT_USERS];
+    }
 }
 
 let systemUsers = safeLoadData('systemUsers', []);
@@ -2323,6 +2338,48 @@ function handleLogin(e) {
         showNotification('Welcome ' + username + '! 🎉', 'success');
     } else {
         showNotification('Invalid username or password!', 'error');
+    }
+}
+
+
+
+// Emergency function to reset users if login fails
+function emergencyResetUsers() {
+    if (confirm('⚠️ Reset all users to default credentials?
+
+This will:
+• Reset admin/admin123
+• Reset manager/manager123
+• Reset accountant/accountant123
+
+Click OK to proceed.')) {
+        // Clear everything and reset
+        localStorage.clear();
+        systemUsers = [...DEFAULT_USERS];
+        localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
+        
+        // Also sync to cloud if available
+        if (USE_SUPABASE && supabaseClient) {
+            saveToStorage().then(() => {
+                alert('✅ Users reset! Please try logging in again with:
+
+Username: admin
+Password: admin123');
+                location.reload();
+            }).catch(() => {
+                alert('✅ Users reset locally! Please try logging in again with:
+
+Username: admin
+Password: admin123');
+                location.reload();
+            });
+        } else {
+            alert('✅ Users reset! Please try logging in again with:
+
+Username: admin
+Password: admin123');
+            location.reload();
+        }
     }
 }
 
