@@ -835,6 +835,7 @@
 
         <!-- LEDGER TAB (NEW) -->
         <div id="ledger-tab" class="tab-content">
+            <!-- Daily Ledger Section -->
             <div class="card">
                 <h2>
                     Daily Ledger (Debit/Credit)
@@ -844,6 +845,19 @@
                     </div>
                 </h2>
                 <div id="ledgerOutput"></div>
+            </div>
+
+            <!-- All Ledgers Hub -->
+            <div class="card" style="margin-top: 15px;">
+                <h2>All Ledgers</h2>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+                    <button class="btn btn-info" onclick="switchLedgerCategory('customers')" id="ledgerCatBtn-customers" style="font-weight:700;">Customers</button>
+                    <button class="btn" onclick="switchLedgerCategory('suppliers')" id="ledgerCatBtn-suppliers" style="background:#6c757d;color:#fff;">Suppliers</button>
+                    <button class="btn" onclick="switchLedgerCategory('vehicles')" id="ledgerCatBtn-vehicles" style="background:#6c757d;color:#fff;">Vehicles</button>
+                    <button class="btn" onclick="switchLedgerCategory('banks')" id="ledgerCatBtn-banks" style="background:#6c757d;color:#fff;">Banks</button>
+                    <button class="btn" onclick="switchLedgerCategory('owners')" id="ledgerCatBtn-owners" style="background:#6c757d;color:#fff;">Owner Accounts</button>
+                </div>
+                <div id="ledgerHubContent"></div>
             </div>
         </div>
 
@@ -5394,7 +5408,7 @@ function viewVehicleLedger(vehicleId) {
 
     // Get vehicle expenses (check both source=vehicle and expenseType=vehicle)
     const vehicleExpenses = expenses
-        .filter(e => (e.source === 'vehicle' || e.expenseType === 'vehicle') && e.vehicleId === vehicleId)
+        .filter(e => e.vehicleId === vehicleId)
         .map(e => ({
             date: e.date,
             description: `💸 Expense: ${e.category} - ${e.description}`,
@@ -7941,11 +7955,127 @@ function switchTab(tabName) {
     
     if (tabName === 'ledger') {
         generateLedger();
+        renderLedgerHub();
     } else if (tabName === 'jvouchers') {
         renderJVVouchers();
     } else if (tabName === 'owneraccounts') {
         renderOwnerAccounts();
     }
+}
+
+// ==========================================
+// LEDGER HUB - All Ledgers in one place
+// ==========================================
+let currentLedgerCategory = 'customers';
+
+function switchLedgerCategory(category) {
+    currentLedgerCategory = category;
+    const categories = ['customers', 'suppliers', 'vehicles', 'banks', 'owners'];
+    categories.forEach(cat => {
+        const btn = document.getElementById('ledgerCatBtn-' + cat);
+        if (btn) {
+            if (cat === category) {
+                btn.style.background = '#3182ce';
+                btn.style.color = '#fff';
+                btn.style.fontWeight = '700';
+                btn.className = 'btn btn-info';
+            } else {
+                btn.style.background = '#6c757d';
+                btn.style.color = '#fff';
+                btn.style.fontWeight = 'normal';
+                btn.className = 'btn';
+            }
+        }
+    });
+    renderLedgerHub();
+}
+
+function renderLedgerHub() {
+    const container = document.getElementById('ledgerHubContent');
+    if (!container) return;
+
+    let html = '';
+    const cardStyle = 'display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;background:#f8fafc;';
+    const nameStyle = 'font-weight:600;font-size:1em;';
+    const balStyle = 'font-size:0.9em;margin-top:2px;';
+
+    if (currentLedgerCategory === 'customers') {
+        if (customers.length === 0) {
+            html = '<p style="color:#888;text-align:center;">No customers found</p>';
+        } else {
+            customers.forEach(c => {
+                const balClass = c.balance >= 0 ? 'color:#38a169' : 'color:#e53e3e';
+                html += `<div style="${cardStyle}">
+                    <div>
+                        <div style="${nameStyle}">${c.name}</div>
+                        <div style="${balStyle}">Balance: <span style="${balClass};font-weight:700;">Rs. ${(c.balance || 0).toFixed(2)}</span></div>
+                    </div>
+                    <button class="btn btn-info" onclick="viewCustomerLedger('${c.id}')" style="white-space:nowrap;">View Ledger</button>
+                </div>`;
+            });
+        }
+    } else if (currentLedgerCategory === 'suppliers') {
+        if (suppliers.length === 0) {
+            html = '<p style="color:#888;text-align:center;">No suppliers found</p>';
+        } else {
+            suppliers.forEach(s => {
+                const balClass = s.balance >= 0 ? 'color:#38a169' : 'color:#e53e3e';
+                html += `<div style="${cardStyle}">
+                    <div>
+                        <div style="${nameStyle}">${s.name}</div>
+                        <div style="${balStyle}">Balance: <span style="${balClass};font-weight:700;">Rs. ${(s.balance || 0).toFixed(2)}</span></div>
+                    </div>
+                    <button class="btn btn-info" onclick="viewSupplierLedger('${s.id}')" style="white-space:nowrap;">View Ledger</button>
+                </div>`;
+            });
+        }
+    } else if (currentLedgerCategory === 'vehicles') {
+        if (vehicles.length === 0) {
+            html = '<p style="color:#888;text-align:center;">No vehicles found</p>';
+        } else {
+            vehicles.forEach(v => {
+                const balClass = (v.ownerBalance || 0) >= 0 ? 'color:#38a169' : 'color:#e53e3e';
+                html += `<div style="${cardStyle}">
+                    <div>
+                        <div style="${nameStyle}">${v.number}</div>
+                        <div style="${balStyle}">Driver: ${v.driverName || 'N/A'} | Owner Balance: <span style="${balClass};font-weight:700;">Rs. ${(v.ownerBalance || 0).toFixed(2)}</span></div>
+                    </div>
+                    <button class="btn btn-info" onclick="viewVehicleLedger('${v.id}')" style="white-space:nowrap;">View Ledger</button>
+                </div>`;
+            });
+        }
+    } else if (currentLedgerCategory === 'banks') {
+        if (banks.length === 0) {
+            html = '<p style="color:#888;text-align:center;">No banks found</p>';
+        } else {
+            banks.forEach(b => {
+                html += `<div style="${cardStyle}">
+                    <div>
+                        <div style="${nameStyle}">${b.name}</div>
+                        <div style="${balStyle}">Account: ${b.accountNumber || 'N/A'} | Balance: <span style="color:#38a169;font-weight:700;">Rs. ${(b.balance || 0).toFixed(2)}</span></div>
+                    </div>
+                    <button class="btn btn-info" onclick="viewBankLedger('${b.id}')" style="white-space:nowrap;">View Ledger</button>
+                </div>`;
+            });
+        }
+    } else if (currentLedgerCategory === 'owners') {
+        if (ownerAccounts.length === 0) {
+            html = '<p style="color:#888;text-align:center;">No owner accounts found</p>';
+        } else {
+            ownerAccounts.forEach(a => {
+                const balClass = (a.balance || 0) >= 0 ? 'color:#38a169' : 'color:#e53e3e';
+                html += `<div style="${cardStyle}">
+                    <div>
+                        <div style="${nameStyle}">${a.name}</div>
+                        <div style="${balStyle}">Type: ${a.type === 'owner' ? 'Owner Capital' : 'Relative'} | Balance: <span style="${balClass};font-weight:700;">Rs. ${(a.balance || 0).toFixed(2)}</span></div>
+                    </div>
+                    <button class="btn btn-info" onclick="viewOwnerAccountLedger('${a.id}')" style="white-space:nowrap;">View Ledger</button>
+                </div>`;
+            });
+        }
+    }
+
+    container.innerHTML = html;
 }
 
 function openModal(modalId) {
