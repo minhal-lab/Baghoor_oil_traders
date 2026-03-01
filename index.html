@@ -856,6 +856,7 @@
                     <button class="btn" onclick="switchLedgerCategory('vehicles')" id="ledgerCatBtn-vehicles" style="background:#6c757d;color:#fff;">Vehicles</button>
                     <button class="btn" onclick="switchLedgerCategory('banks')" id="ledgerCatBtn-banks" style="background:#6c757d;color:#fff;">Banks</button>
                     <button class="btn" onclick="switchLedgerCategory('owners')" id="ledgerCatBtn-owners" style="background:#6c757d;color:#fff;">Owner Accounts</button>
+                    <button class="btn" onclick="switchLedgerCategory('expenses')" id="ledgerCatBtn-expenses" style="background:#6c757d;color:#fff;">💸 Expenses</button>
                 </div>
                 <div id="ledgerHubContent"></div>
             </div>
@@ -1969,6 +1970,34 @@
             
             <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 20px;">Save Journal Voucher</button>
         </form>
+    </div>
+</div>
+
+<!-- EXPENSE LEDGER MODAL -->
+<div id="expenseLedgerModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h2 id="expenseLedgerTitle">💸 Expense Ledger</h2>
+            <button class="close-btn" onclick="closeModal('expenseLedgerModal')">&times;</button>
+        </div>
+        <div id="expenseLedgerContent" style="padding: 20px;">
+            <div id="expenseLedgerInfo" style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;"></div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Paid From</th>
+                            <th>Source</th>
+                            <th>Amount (Rs)</th>
+                            <th>Running Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expenseLedgerBody"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -4303,11 +4332,11 @@ function renderJVVouchers() {
             const bank = banks.find(b => b.id === bankId);
             debitAccountName = bank ? `🏦 ${bank.name}` : 'Bank';
         } else if (jv.debitType === 'expense') {
-            debitAccountName = `💸 ${jv.debitAccount}`;
+            debitAccountName = `💸 ${(jv.debitAccount || '').replace('expense_', '')}`;
         } else {
             debitAccountName = jv.debitAccount;
         }
-        
+
         if (jv.creditType === 'customer') {
             const custId = jv.creditAccount.replace('customer_', '');
             const cust = customers.find(c => c.id === custId);
@@ -4321,7 +4350,7 @@ function renderJVVouchers() {
             const bank = banks.find(b => b.id === bankId);
             creditAccountName = bank ? `🏦 ${bank.name}` : 'Bank';
         } else if (jv.creditType === 'expense') {
-            creditAccountName = `💸 ${jv.creditAccount}`;
+            creditAccountName = `💸 ${(jv.creditAccount || '').replace('expense_', '')}`;
         } else {
             creditAccountName = jv.creditAccount;
         }
@@ -7970,7 +7999,7 @@ let currentLedgerCategory = 'customers';
 
 function switchLedgerCategory(category) {
     currentLedgerCategory = category;
-    const categories = ['customers', 'suppliers', 'vehicles', 'banks', 'owners'];
+    const categories = ['customers', 'suppliers', 'vehicles', 'banks', 'owners', 'expenses'];
     categories.forEach(cat => {
         const btn = document.getElementById('ledgerCatBtn-' + cat);
         if (btn) {
@@ -8073,9 +8102,110 @@ function renderLedgerHub() {
                 </div>`;
             });
         }
+    } else if (currentLedgerCategory === 'expenses') {
+        // Collect all expense categories from both regular expenses and JV expense entries
+        const allExpenseCats = new Set();
+        expenses.forEach(e => { if (e.category) allExpenseCats.add(e.category); });
+        jvVouchers.filter(jv => jv.debitType === 'expense').forEach(jv => {
+            const cat = (jv.debitAccount || '').replace('expense_', '');
+            if (cat) allExpenseCats.add(cat);
+        });
+
+        if (allExpenseCats.size === 0) {
+            html = '<p style="color:#888;text-align:center;">No expenses recorded yet</p>';
+        } else {
+            // Sort categories alphabetically
+            [...allExpenseCats].sort().forEach(cat => {
+                const catExpenses = expenses.filter(e => e.category === cat);
+                const jvCatExpenses = jvVouchers.filter(jv =>
+                    jv.debitType === 'expense' &&
+                    (jv.debitAccount === 'expense_' + cat || jv.debitAccount === cat)
+                );
+                const total = catExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)
+                            + jvCatExpenses.reduce((sum, jv) => sum + (jv.debitAmount || 0), 0);
+                const count = catExpenses.length + jvCatExpenses.length;
+
+                html += `<div style="${cardStyle}">
+                    <div>
+                        <div style="${nameStyle}">💸 ${cat}</div>
+                        <div style="${balStyle}">Entries: ${count} | Total Spent: <span style="color:#e53e3e;font-weight:700;">Rs. ${total.toFixed(2)}</span></div>
+                    </div>
+                    <button class="btn btn-info" onclick="viewExpenseHeadLedger('${cat}')" style="white-space:nowrap;">View Ledger</button>
+                </div>`;
+            });
+        }
     }
 
     container.innerHTML = html;
+}
+
+function viewExpenseHeadLedger(category) {
+    // Gather all expense entries for this category (regular + JV)
+    const catExpenses = expenses
+        .filter(e => e.category === category)
+        .map(e => ({
+            date: e.date,
+            description: e.description,
+            paidFrom: e.source === 'bank' ? 'Bank' : e.source === 'customer' ? 'Customer' : 'Cash',
+            source: e.expenseType === 'vehicle' ? '🚗 Vehicle' : e.expenseType === 'owner' ? '👤 Owner' : '📋 General',
+            amount: e.amount || 0
+        }));
+
+    const jvCatExpenses = jvVouchers
+        .filter(jv =>
+            jv.debitType === 'expense' &&
+            (jv.debitAccount === 'expense_' + category || jv.debitAccount === category)
+        )
+        .map(jv => ({
+            date: jv.date,
+            description: `📝 JV: ${jv.description}`,
+            paidFrom: jv.creditType === 'bank' ? 'Bank' : jv.creditType === 'cash' ? 'Cash' : jv.creditType || 'Other',
+            source: 'Journal Voucher',
+            amount: jv.debitAmount || 0
+        }));
+
+    const allEntries = [...catExpenses, ...jvCatExpenses]
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const total = allEntries.reduce((sum, e) => sum + e.amount, 0);
+
+    document.getElementById('expenseLedgerTitle').textContent = `💸 ${category} - Expense Ledger`;
+    document.getElementById('expenseLedgerInfo').innerHTML = `
+        <strong>Expense Head:</strong> ${category} &nbsp;|&nbsp;
+        <strong>Total Entries:</strong> ${allEntries.length} &nbsp;|&nbsp;
+        <strong>Total Amount:</strong> <span style="color:#e53e3e;font-weight:700;">Rs. ${total.toFixed(2)}</span>
+    `;
+
+    const tbody = document.getElementById('expenseLedgerBody');
+    tbody.innerHTML = '';
+
+    if (allEntries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a0aec0;padding:20px;">No entries for this expense head</td></tr>';
+    } else {
+        let runningTotal = 0;
+        allEntries.forEach(entry => {
+            runningTotal += entry.amount;
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${new Date(entry.date).toLocaleDateString()}</td>
+                <td>${entry.description}</td>
+                <td>${entry.paidFrom}</td>
+                <td><span style="background:#e9ecef;padding:2px 8px;border-radius:4px;font-size:0.8em;">${entry.source}</span></td>
+                <td style="color:#e53e3e;font-weight:700;">Rs. ${entry.amount.toFixed(2)}</td>
+                <td style="color:#e53e3e;font-weight:700;">Rs. ${runningTotal.toFixed(2)}</td>
+            `;
+        });
+        // Totals row
+        const totalRow = tbody.insertRow();
+        totalRow.style.background = 'var(--bg-secondary)';
+        totalRow.innerHTML = `
+            <td colspan="4"><strong>Total</strong></td>
+            <td style="color:#e53e3e;font-weight:700;">Rs. ${total.toFixed(2)}</td>
+            <td style="color:#e53e3e;font-weight:700;">Rs. ${total.toFixed(2)}</td>
+        `;
+    }
+
+    openModal('expenseLedgerModal');
 }
 
 function openModal(modalId) {
@@ -8326,6 +8456,19 @@ function updateJVDebitAccounts() {
             const icon = a.type === 'owner' ? '👔' : '👨‍👩‍👧';
             accountSelect.innerHTML += `<option value="owner_${a.id}">${icon} ${a.name}</option>`;
         });
+    } else if (type === 'expense') {
+        const expCats = ['Fuel', 'Salaries', 'Rent', 'Utilities', 'Vehicle Maintenance',
+                         'Office Supplies', 'Transport', 'Marketing', 'Insurance', 'Taxes',
+                         'Miscellaneous', 'Other'];
+        // Add predefined categories
+        expCats.forEach(cat => {
+            accountSelect.innerHTML += `<option value="expense_${cat}">${cat}</option>`;
+        });
+        // Also add any custom categories already in expense data
+        const existingCats = [...new Set(expenses.map(e => e.category))].filter(c => !expCats.includes(c));
+        existingCats.forEach(cat => {
+            accountSelect.innerHTML += `<option value="expense_${cat}">${cat}</option>`;
+        });
     } else if (type === 'other') {
         otherInput.style.display = 'block';
     }
@@ -8461,8 +8604,13 @@ function updateAccountFromJV(type, account, amount, side, jvDescription, jvDate)
             owner.balance += side === 'debit' ? amount : -amount;
         }
     } else if (type === 'expense') {
-        // Handle expense accounts if needed
-        // Expenses typically increase with debit
+        // Record expense ledger entry when JV debits an expense head
+        if (side === 'debit') {
+            const category = account.replace('expense_', '');
+            addLedgerEntry('expense',
+                `JV Expense: ${category} - ${jvDescription}`,
+                category, amount, 'Cash/Bank', amount, jvDate);
+        }
     }
 }
 
