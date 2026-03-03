@@ -493,7 +493,7 @@
                 <button class="quick-btn" onclick="openModal('saleModal')">💰 Record Sale</button>
                 <button class="quick-btn" onclick="openModal('purchaseModal')">🛒 Record Purchase</button>
                 <button class="quick-btn" onclick="openModal('paymentModal')">💳 Record Payment</button>
-                <button class="quick-btn" onclick="openModal('jvModal')">📝 JV Voucher</button>
+                <button class="quick-btn" onclick="openJVModal()">📝 JV Voucher</button>
                 <button class="quick-btn" onclick="openModal('customerTransferModal')">🔄 Customer Transfer</button>
                 <button class="quick-btn" onclick="openModal('expenseModal')">💸 Add Expense</button>
                 <button class="quick-btn" onclick="openModal('bankTransModal')">🏦 Bank Transaction</button>
@@ -555,6 +555,7 @@
             <button class="tab" onclick="switchTab('banks')">🏦 Banks</button>
             <button class="tab" onclick="switchTab('vehicles')">🚛 Vehicles</button>
             <button class="tab" onclick="switchTab('ledger')">📒 Ledger</button>
+            <button class="tab" onclick="switchTab('dailyentries')">📅 Daily Entries</button>
             <button class="tab" onclick="switchTab('reports')">📊 Reports</button>
         </div>
 
@@ -678,7 +679,7 @@
             <div class="card">
                 <h2>
                     Journal Vouchers (JV) - All Entries
-                    <button class="btn btn-primary" onclick="openModal('jvModal')">Add JV Voucher</button>
+                    <button class="btn btn-primary" onclick="openJVModal()">Add JV Voucher</button>
                 </h2>
                 <div class="table-container">
                     <table>
@@ -859,6 +860,21 @@
                     <button class="btn" onclick="switchLedgerCategory('expenses')" id="ledgerCatBtn-expenses" style="background:#6c757d;color:#fff;">💸 Expenses</button>
                 </div>
                 <div id="ledgerHubContent"></div>
+            </div>
+        </div>
+
+        <!-- DAILY ENTRIES TAB -->
+        <div id="dailyentries-tab" class="tab-content">
+            <div class="card">
+                <h2>📅 Daily Entries - All Transactions by Date</h2>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                    <label style="font-weight:600;">Date:</label>
+                    <input type="date" id="dailyEntriesDate" onchange="renderDailyEntries()" style="padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:1em;">
+                    <button class="btn btn-sm" onclick="changeDailyDate(-1)" style="background:#6c757d;color:#fff;">◀ Previous Day</button>
+                    <button class="btn btn-primary btn-sm" onclick="setDailyDateToday()">Today</button>
+                    <button class="btn btn-sm" onclick="changeDailyDate(1)" style="background:#6c757d;color:#fff;">Next Day ▶</button>
+                </div>
+                <div id="dailyEntriesContent"></div>
             </div>
         </div>
 
@@ -1554,6 +1570,14 @@
                     <button class="btn btn-success" onclick="downloadBankLedgerPDF()">📄 Download PDF</button>
                 </div>
             </div>
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <label style="font-weight:600;">📅 Filter:</label>
+                <input type="date" id="bankLedgerFromDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <span>to</span>
+                <input type="date" id="bankLedgerToDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <button class="btn btn-primary btn-sm" onclick="applyLedgerDateFilter('bank')">Apply</button>
+                <button class="btn btn-sm" onclick="clearLedgerDateFilter('bank')" style="background:#6c757d;color:#fff;">Clear</button>
+            </div>
             <div class="table-container">
                 <table id="bankLedgerTable">
                     <thead>
@@ -1587,6 +1611,14 @@
                     <button class="btn btn-primary" onclick="printCustomerLedger()">🖨️ Print</button>
                     <button class="btn btn-success" onclick="downloadCustomerLedgerPDF()">📄 PDF</button>
                 </div>
+            </div>
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <label style="font-weight:600;">📅 Filter:</label>
+                <input type="date" id="customerLedgerFromDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <span>to</span>
+                <input type="date" id="customerLedgerToDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <button class="btn btn-primary btn-sm" onclick="applyLedgerDateFilter('customer')">Apply</button>
+                <button class="btn btn-sm" onclick="clearLedgerDateFilter('customer')" style="background:#6c757d;color:#fff;">Clear</button>
             </div>
             <div class="table-container">
                 <table id="customerLedgerTable">
@@ -1624,6 +1656,14 @@
                     <button class="btn btn-success" onclick="downloadSupplierLedgerPDF()">📄 PDF</button>
                 </div>
             </div>
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <label style="font-weight:600;">📅 Filter:</label>
+                <input type="date" id="supplierLedgerFromDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <span>to</span>
+                <input type="date" id="supplierLedgerToDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <button class="btn btn-primary btn-sm" onclick="applyLedgerDateFilter('supplier')">Apply</button>
+                <button class="btn btn-sm" onclick="clearLedgerDateFilter('supplier')" style="background:#6c757d;color:#fff;">Clear</button>
+            </div>
             <div class="table-container">
                 <table id="supplierLedgerTable">
                     <thead>
@@ -1660,6 +1700,14 @@
                     <div id="vehicleProfitDetails"></div>
                 </div>
             </div>
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <label style="font-weight:600;">📅 Filter:</label>
+                <input type="date" id="vehicleLedgerFromDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <span>to</span>
+                <input type="date" id="vehicleLedgerToDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <button class="btn btn-primary btn-sm" onclick="applyLedgerDateFilter('vehicle')">Apply</button>
+                <button class="btn btn-sm" onclick="clearLedgerDateFilter('vehicle')" style="background:#6c757d;color:#fff;">Clear</button>
+            </div>
             <div class="table-container">
                 <table id="vehicleLedgerTable">
                     <thead>
@@ -1694,6 +1742,14 @@
         <div id="ownerAccountLedgerContent" style="padding: 20px;">
             <div style="margin-bottom: 20px;">
                 <div id="ownerAccountLedgerInfo"></div>
+            </div>
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <label style="font-weight:600;">📅 Filter:</label>
+                <input type="date" id="ownerLedgerFromDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <span>to</span>
+                <input type="date" id="ownerLedgerToDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <button class="btn btn-primary btn-sm" onclick="applyLedgerDateFilter('owner')">Apply</button>
+                <button class="btn btn-sm" onclick="clearLedgerDateFilter('owner')" style="background:#6c757d;color:#fff;">Clear</button>
             </div>
             <div class="table-container">
                 <table id="ownerAccountLedgerTable">
@@ -1889,10 +1945,11 @@
 <div id="jvModal" class="modal">
     <div class="modal-content" style="max-width: 900px;">
         <div class="modal-header">
-            <h2>📝 Journal Voucher (JV Entry)</h2>
+            <h2 id="jvModalTitle">📝 Journal Voucher (JV Entry)</h2>
             <button class="close-btn" onclick="closeModal('jvModal')">&times;</button>
         </div>
         <form onsubmit="saveJVVoucher(event)">
+            <input type="hidden" id="jvEditId" value="">
             <div class="form-group">
                 <label>Date *</label>
                 <input type="date" id="jvDate" required>
@@ -1933,7 +1990,12 @@
                         <input type="number" step="0.01" id="jvDebitAmount" oninput="validateJVAmounts()" required>
                     </div>
                 </div>
-                
+
+                <!-- SWAP BUTTON -->
+                <div style="grid-column: 1 / -1; text-align: center; margin: -5px 0;">
+                    <button type="button" class="btn" onclick="swapJVDebitCredit()" style="background: #805ad5; color: white; font-size: 0.9em; padding: 6px 16px;">🔄 Swap Debit / Credit</button>
+                </div>
+
                 <!-- CREDIT SIDE -->
                 <div style="background: #d4edda; padding: 15px; border-radius: 10px; border: 2px solid #28a745;">
                     <h3 style="color: #155724; margin-bottom: 15px;">📥 CREDIT (Cr.)</h3>
@@ -1982,6 +2044,14 @@
         </div>
         <div id="expenseLedgerContent" style="padding: 20px;">
             <div id="expenseLedgerInfo" style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;"></div>
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <label style="font-weight:600;">📅 Filter:</label>
+                <input type="date" id="expenseLedgerFromDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <span>to</span>
+                <input type="date" id="expenseLedgerToDate" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px;">
+                <button class="btn btn-primary btn-sm" onclick="applyLedgerDateFilter('expense')">Apply</button>
+                <button class="btn btn-sm" onclick="clearLedgerDateFilter('expense')" style="background:#6c757d;color:#fff;">Clear</button>
+            </div>
             <div class="table-container">
                 <table>
                     <thead>
@@ -4085,10 +4155,22 @@ function viewOwnerAccountLedger(accountId) {
         }
     });
 
+    // Apply date filter
+    const dateFilter = getLedgerDateFilter('owner');
+    const displayEntries = filterEntriesByDate(allEntries, dateFilter);
+    let filteredOpening = openingBalance;
+    if (dateFilter.from) {
+        allEntries.forEach(entry => {
+            if ((entry.date || '').substring(0, 10) < dateFilter.from) {
+                filteredOpening += entry.isDebit ? -entry.amount : entry.amount;
+            }
+        });
+    }
+
     // Render ledger table
     const tbody = document.getElementById('ownerAccountLedgerBody');
     tbody.innerHTML = '';
-    let runningBalance = openingBalance;
+    let runningBalance = filteredOpening;
 
     // Opening balance row
     const openingRow = tbody.insertRow();
@@ -4100,7 +4182,7 @@ function viewOwnerAccountLedger(accountId) {
     `;
 
     // Transaction rows
-    allEntries.forEach(entry => {
+    displayEntries.forEach(entry => {
         const row = tbody.insertRow();
 
         if (entry.isDebit) {
@@ -4372,6 +4454,8 @@ function renderJVVouchers() {
             <td style="font-weight: 700; color: #667eea;">Rs. ${jv.debitAmount.toFixed(2)}</td>
             <td><span style="background: #e2e8f0; padding: 3px 8px; border-radius: 4px; font-size: 0.75em;">${jv.createdBy || 'System'}</span></td>
             <td>
+                <button class="btn btn-info btn-sm" onclick="editJVVoucher('${jv.id}')" title="Edit this JV entry">Edit</button>
+                <button class="btn btn-warning btn-sm" onclick="swapJVVoucherDrCr('${jv.id}')" title="Swap Debit/Credit" style="background:#805ad5;color:#fff;border:none;">🔄 Swap</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteJVVoucher('${jv.id}')" title="Delete this JV entry">Delete</button>
             </td>
         `;
@@ -4564,11 +4648,25 @@ function viewBankLedger(bankId) {
         }
     });
 
+    // Apply date filter
+    const dateFilter = getLedgerDateFilter('bank');
+    const displayEntries = filterEntriesByDate(allEntries, dateFilter);
+
+    // Adjust opening balance for filtered view (add entries before filter start)
+    let filteredOpening = openingBalance;
+    if (dateFilter.from) {
+        allEntries.forEach(entry => {
+            if ((entry.date || '').substring(0, 10) < dateFilter.from) {
+                filteredOpening += entry.type === 'deposit' ? entry.amount : -entry.amount;
+            }
+        });
+    }
+
     // Render ledger table
     const tbody = document.getElementById('bankLedgerBody');
     tbody.innerHTML = '';
 
-    let runningBalance = openingBalance;
+    let runningBalance = filteredOpening;
 
     // Opening balance row
     const openingRow = tbody.insertRow();
@@ -4580,7 +4678,7 @@ function viewBankLedger(bankId) {
     `;
 
     // Transaction rows
-    allEntries.forEach(entry => {
+    displayEntries.forEach(entry => {
         const row = tbody.insertRow();
         const isDebit = entry.type === 'deposit';
 
@@ -4826,10 +4924,22 @@ function viewCustomerLedger(customerId) {
         }
     });
 
+    // Apply date filter
+    const dateFilter = getLedgerDateFilter('customer');
+    const displayEntries = filterEntriesByDate(allEntries, dateFilter);
+    let filteredOpening = openingBalance;
+    if (dateFilter.from) {
+        allEntries.forEach(entry => {
+            if ((entry.date || '').substring(0, 10) < dateFilter.from) {
+                filteredOpening += entry.isDebit ? -entry.amount : entry.amount;
+            }
+        });
+    }
+
     // Render ledger table
     const tbody = document.getElementById('customerLedgerBody');
     tbody.innerHTML = '';
-    let runningBalance = openingBalance;
+    let runningBalance = filteredOpening;
 
     // Opening balance row
     const openingRow = tbody.insertRow();
@@ -4843,7 +4953,7 @@ function viewCustomerLedger(customerId) {
     `;
 
     // Transaction rows
-    allEntries.forEach(entry => {
+    displayEntries.forEach(entry => {
         const row = tbody.insertRow();
 
         if (entry.isDebit) {
@@ -5070,9 +5180,21 @@ function viewSupplierLedger(supplierId) {
         }
     });
 
+    // Apply date filter
+    const dateFilter = getLedgerDateFilter('supplier');
+    const displayEntries = filterEntriesByDate(allEntries, dateFilter);
+    let filteredOpening = openingBalance;
+    if (dateFilter.from) {
+        allEntries.forEach(entry => {
+            if ((entry.date || '').substring(0, 10) < dateFilter.from) {
+                filteredOpening += entry.isDebit ? -entry.amount : entry.amount;
+            }
+        });
+    }
+
     const tbody = document.getElementById('supplierLedgerBody');
     tbody.innerHTML = '';
-    let runningBalance = openingBalance;
+    let runningBalance = filteredOpening;
 
     const openingRow = tbody.insertRow();
     openingRow.innerHTML = `
@@ -5084,7 +5206,7 @@ function viewSupplierLedger(supplierId) {
         <td class="${runningBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${runningBalance.toFixed(2)}</td>
     `;
 
-    allEntries.forEach(entry => {
+    displayEntries.forEach(entry => {
         const row = tbody.insertRow();
 
         // Update running balance
@@ -5505,6 +5627,10 @@ function viewVehicleLedger(vehicleId) {
         </div>
     `;
 
+    // Apply date filter
+    const dateFilter = getLedgerDateFilter('vehicle');
+    const displayEntries = filterEntriesByDate(allEntries, dateFilter);
+
     // Render ledger table
     const tbody = document.getElementById('vehicleLedgerBody');
     tbody.innerHTML = '';
@@ -5513,7 +5639,7 @@ function viewVehicleLedger(vehicleId) {
     // Calculate PMG/HSD totals
     let totalPMG = 0;
     let totalHSD = 0;
-    allEntries.forEach(entry => {
+    displayEntries.forEach(entry => {
         totalPMG += entry.pmgQty || 0;
         totalHSD += entry.hsdQty || 0;
     });
@@ -5527,7 +5653,7 @@ function viewVehicleLedger(vehicleId) {
     `;
 
     // Transaction rows
-    allEntries.forEach(entry => {
+    displayEntries.forEach(entry => {
         const row = tbody.insertRow();
 
         if (entry.isIncome) {
@@ -7989,7 +8115,209 @@ function switchTab(tabName) {
         renderJVVouchers();
     } else if (tabName === 'owneraccounts') {
         renderOwnerAccounts();
+    } else if (tabName === 'dailyentries') {
+        if (!document.getElementById('dailyEntriesDate').value) {
+            setDailyDateToday();
+        } else {
+            renderDailyEntries();
+        }
     }
+}
+
+// ==========================================
+// DAILY ENTRIES VIEW
+// ==========================================
+function setDailyDateToday() {
+    document.getElementById('dailyEntriesDate').value = new Date().toISOString().substring(0, 10);
+    renderDailyEntries();
+}
+
+function changeDailyDate(offset) {
+    const dateInput = document.getElementById('dailyEntriesDate');
+    const current = dateInput.value ? new Date(dateInput.value) : new Date();
+    current.setDate(current.getDate() + offset);
+    dateInput.value = current.toISOString().substring(0, 10);
+    renderDailyEntries();
+}
+
+function renderDailyEntries() {
+    const selectedDate = document.getElementById('dailyEntriesDate').value;
+    if (!selectedDate) return;
+
+    const container = document.getElementById('dailyEntriesContent');
+    const allDayEntries = [];
+
+    // 1. Sales/Purchases (transactions)
+    transactions.filter(t => (t.date || '').substring(0, 10) === selectedDate).forEach(t => {
+        allDayEntries.push({
+            time: t.date,
+            type: t.type === 'sale' ? 'SALE' : 'PURCHASE',
+            typeBg: t.type === 'sale' ? '#805ad5' : '#ed8936',
+            description: t.description || `${t.type === 'sale' ? 'Sale' : 'Purchase'} - ${t.fuelType} (${t.quantity} L)`,
+            amount: Math.abs(t.amount),
+            debit: t.type === 'sale' ? `Customer: ${t.partyName || t.customerName || ''}` : 'Inventory',
+            credit: t.type === 'sale' ? 'Sales Revenue' : `Supplier: ${t.partyName || t.supplierName || ''}`,
+            entryType: 'transaction',
+            id: t.id,
+            editable: false
+        });
+    });
+
+    // 2. Payments
+    payments.filter(p => (p.date || '').substring(0, 10) === selectedDate).forEach(p => {
+        const isReceived = p.type === 'received' || p.type === 'owner-received';
+        allDayEntries.push({
+            time: p.date,
+            type: isReceived ? 'PAYMENT RECEIVED' : 'PAYMENT MADE',
+            typeBg: '#48bb78',
+            description: `${isReceived ? 'Payment from' : 'Payment to'} ${p.partyName || ''} - ${p.method || p.paymentMethod || ''}`,
+            amount: p.amount,
+            debit: isReceived ? (p.bankId ? 'Bank' : 'Cash') : `${p.partyName || ''}`,
+            credit: isReceived ? `${p.partyName || ''}` : (p.bankId ? 'Bank' : 'Cash'),
+            entryType: 'payment',
+            id: p.id,
+            editable: false
+        });
+    });
+
+    // 3. Expenses
+    expenses.filter(e => (e.date || '').substring(0, 10) === selectedDate).forEach(e => {
+        const sourceLabel = e.source === 'bank' ? 'Bank' : e.source === 'customer' ? 'Customer' : 'Cash';
+        allDayEntries.push({
+            time: e.date,
+            type: 'EXPENSE',
+            typeBg: '#f56565',
+            description: `${e.category}: ${e.description}`,
+            amount: e.amount,
+            debit: `Expense: ${e.category}`,
+            credit: sourceLabel,
+            entryType: 'expense',
+            id: e.id,
+            editable: false
+        });
+    });
+
+    // 4. JV Vouchers
+    jvVouchers.filter(jv => (jv.date || '').substring(0, 10) === selectedDate).forEach(jv => {
+        let drName = jv.debitAccount;
+        let crName = jv.creditAccount;
+        if (jv.debitType === 'customer') {
+            const c = customers.find(c => c.id === jv.debitAccount.replace('customer_', ''));
+            drName = c ? c.name : jv.debitAccount;
+        } else if (jv.debitType === 'supplier') {
+            const s = suppliers.find(s => s.id === jv.debitAccount.replace('supplier_', ''));
+            drName = s ? s.name : jv.debitAccount;
+        } else if (jv.debitType === 'bank') {
+            const b = banks.find(b => b.id === jv.debitAccount.replace('bank_', ''));
+            drName = b ? b.name : jv.debitAccount;
+        } else if (jv.debitType === 'expense') {
+            drName = jv.debitAccount.replace('expense_', '');
+        }
+        if (jv.creditType === 'customer') {
+            const c = customers.find(c => c.id === jv.creditAccount.replace('customer_', ''));
+            crName = c ? c.name : jv.creditAccount;
+        } else if (jv.creditType === 'supplier') {
+            const s = suppliers.find(s => s.id === jv.creditAccount.replace('supplier_', ''));
+            crName = s ? s.name : jv.creditAccount;
+        } else if (jv.creditType === 'bank') {
+            const b = banks.find(b => b.id === jv.creditAccount.replace('bank_', ''));
+            crName = b ? b.name : jv.creditAccount;
+        } else if (jv.creditType === 'expense') {
+            crName = jv.creditAccount.replace('expense_', '');
+        }
+
+        allDayEntries.push({
+            time: jv.date || jv.createdAt,
+            type: 'JV VOUCHER',
+            typeBg: '#805ad5',
+            description: jv.description,
+            amount: jv.debitAmount,
+            debit: `${jv.debitType}: ${drName}`,
+            credit: `${jv.creditType}: ${crName}`,
+            entryType: 'jv',
+            id: jv.id,
+            editable: true
+        });
+    });
+
+    // 5. Bank transactions
+    bankTransactions.filter(bt => (bt.date || '').substring(0, 10) === selectedDate).forEach(bt => {
+        allDayEntries.push({
+            time: bt.date,
+            type: bt.type === 'deposit' ? 'BANK DEPOSIT' : 'BANK WITHDRAWAL',
+            typeBg: bt.type === 'deposit' ? '#38a169' : '#e53e3e',
+            description: bt.description || bt.type,
+            amount: bt.amount,
+            debit: bt.type === 'deposit' ? 'Bank' : 'Cash/Expense',
+            credit: bt.type === 'deposit' ? 'Cash/Revenue' : 'Bank',
+            entryType: 'bank',
+            id: bt.id,
+            editable: false
+        });
+    });
+
+    // 6. Customer transfers
+    (customerTransfers || []).filter(ct => (ct.date || '').substring(0, 10) === selectedDate).forEach(ct => {
+        allDayEntries.push({
+            time: ct.date,
+            type: 'CUSTOMER TRANSFER',
+            typeBg: '#ed8936',
+            description: `Transfer: ${ct.fromCustomerName} → ${ct.toCustomerName}`,
+            amount: ct.amount,
+            debit: `Customer: ${ct.fromCustomerName}`,
+            credit: `Customer: ${ct.toCustomerName}`,
+            entryType: 'transfer',
+            id: ct.id,
+            editable: false
+        });
+    });
+
+    // Sort by time
+    allDayEntries.sort((a, b) => new Date(a.time) - new Date(b.time));
+
+    // Render
+    const dateObj = new Date(selectedDate + 'T00:00:00');
+    const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    if (allDayEntries.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-secondary);">
+            <h3>📅 ${dateLabel}</h3>
+            <p style="margin-top:10px;">No entries found for this date.</p>
+        </div>`;
+        return;
+    }
+
+    let totalDebitAmt = 0;
+    let totalCreditAmt = 0;
+    allDayEntries.forEach(e => { totalDebitAmt += e.amount; totalCreditAmt += e.amount; });
+
+    let html = `<h3 style="margin-bottom:15px;">📅 ${dateLabel} — ${allDayEntries.length} entries</h3>`;
+    html += '<div class="table-container"><table><thead><tr>';
+    html += '<th>Type</th><th>Description</th><th>Debit Account</th><th>Credit Account</th><th>Amount</th><th>Actions</th>';
+    html += '</tr></thead><tbody>';
+
+    allDayEntries.forEach(entry => {
+        const editBtns = entry.editable ? `
+            <button class="btn btn-info btn-sm" onclick="editJVVoucher('${entry.id}')" title="Edit">Edit</button>
+            <button class="btn btn-sm" onclick="swapJVVoucherDrCr('${entry.id}')" title="Swap Dr/Cr" style="background:#805ad5;color:#fff;border:none;">🔄</button>
+        ` : '<span style="color:#a0aec0;font-size:0.8em;">-</span>';
+
+        html += `<tr>
+            <td><span class="badge" style="background:${entry.typeBg};font-size:0.75em;">${entry.type}</span></td>
+            <td>${entry.description}</td>
+            <td style="font-size:0.9em;"><div style="padding:3px 6px;background:#fed7d7;color:#c53030;border-radius:4px;display:inline-block;">DR: ${entry.debit}</div></td>
+            <td style="font-size:0.9em;"><div style="padding:3px 6px;background:#c6f6d5;color:#22543d;border-radius:4px;display:inline-block;">CR: ${entry.credit}</div></td>
+            <td style="font-weight:700;color:#667eea;">Rs. ${entry.amount.toFixed(2)}</td>
+            <td>${editBtns}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    html += `<div style="margin-top:15px;padding:12px;background:var(--bg-secondary);border-radius:8px;text-align:center;font-weight:600;">
+        📊 Day Total: ${allDayEntries.length} entries | Total Amount: Rs. ${totalDebitAmt.toFixed(2)}
+    </div>`;
+
+    container.innerHTML = html;
 }
 
 // ==========================================
@@ -8167,23 +8495,30 @@ function viewExpenseHeadLedger(category) {
     const allEntries = [...catExpenses, ...jvCatExpenses]
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    const total = allEntries.reduce((sum, e) => sum + e.amount, 0);
+    // Apply date filter
+    const dateFilter = getLedgerDateFilter('expense');
+    const displayEntries = filterEntriesByDate(allEntries, dateFilter);
+
+    const total = displayEntries.reduce((sum, e) => sum + e.amount, 0);
 
     document.getElementById('expenseLedgerTitle').textContent = `💸 ${category} - Expense Ledger`;
     document.getElementById('expenseLedgerInfo').innerHTML = `
         <strong>Expense Head:</strong> ${category} &nbsp;|&nbsp;
-        <strong>Total Entries:</strong> ${allEntries.length} &nbsp;|&nbsp;
+        <strong>Total Entries:</strong> ${displayEntries.length} &nbsp;|&nbsp;
         <strong>Total Amount:</strong> <span style="color:#e53e3e;font-weight:700;">Rs. ${total.toFixed(2)}</span>
     `;
+
+    // Store for filter re-apply
+    window.currentExpenseLedger = { category };
 
     const tbody = document.getElementById('expenseLedgerBody');
     tbody.innerHTML = '';
 
-    if (allEntries.length === 0) {
+    if (displayEntries.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a0aec0;padding:20px;">No entries for this expense head</td></tr>';
     } else {
         let runningTotal = 0;
-        allEntries.forEach(entry => {
+        displayEntries.forEach(entry => {
             runningTotal += entry.amount;
             const row = tbody.insertRow();
             row.innerHTML = `
@@ -8206,6 +8541,75 @@ function viewExpenseHeadLedger(category) {
     }
 
     openModal('expenseLedgerModal');
+}
+
+// ==========================================
+// LEDGER DATE FILTER FUNCTIONS
+// ==========================================
+function applyLedgerDateFilter(type) {
+    if (type === 'bank' && window.currentBankLedger) {
+        viewBankLedger(window.currentBankLedger.bankId);
+    } else if (type === 'customer' && window.currentCustomerLedger) {
+        viewCustomerLedger(window.currentCustomerLedger.customerId);
+    } else if (type === 'supplier' && window.currentSupplierLedger) {
+        viewSupplierLedger(window.currentSupplierLedger.supplierId);
+    } else if (type === 'vehicle' && window.currentVehicleLedger) {
+        viewVehicleLedger(window.currentVehicleLedger.vehicleId);
+    } else if (type === 'owner' && window.currentOwnerAccountLedger) {
+        viewOwnerAccountLedger(window.currentOwnerAccountLedger.accountId);
+    } else if (type === 'expense' && window.currentExpenseLedger) {
+        viewExpenseHeadLedger(window.currentExpenseLedger.category);
+    }
+}
+
+function clearLedgerDateFilter(type) {
+    const fromEl = document.getElementById(type + 'LedgerFromDate');
+    const toEl = document.getElementById(type + 'LedgerToDate');
+    if (fromEl) fromEl.value = '';
+    if (toEl) toEl.value = '';
+    applyLedgerDateFilter(type);
+}
+
+function getLedgerDateFilter(type) {
+    const fromEl = document.getElementById(type + 'LedgerFromDate');
+    const toEl = document.getElementById(type + 'LedgerToDate');
+    return {
+        from: fromEl ? fromEl.value : '',
+        to: toEl ? toEl.value : ''
+    };
+}
+
+function filterEntriesByDate(entries, dateFilter) {
+    let filtered = entries;
+    if (dateFilter.from) {
+        filtered = filtered.filter(e => {
+            const d = (e.date || '').substring(0, 10);
+            return d >= dateFilter.from;
+        });
+    }
+    if (dateFilter.to) {
+        filtered = filtered.filter(e => {
+            const d = (e.date || '').substring(0, 10);
+            return d <= dateFilter.to;
+        });
+    }
+    return filtered;
+}
+
+function calcFilteredOpeningBalance(allEntries, filteredEntries, baseOpeningBalance, getEffect) {
+    // Add effect of entries before the filtered set to get the opening balance at filter start
+    let opening = baseOpeningBalance;
+    const firstFilteredDate = filteredEntries.length > 0 ? filteredEntries[0].date : null;
+    if (firstFilteredDate) {
+        allEntries.forEach(entry => {
+            if (entry.date < firstFilteredDate || !filteredEntries.includes(entry)) {
+                if (!filteredEntries.includes(entry) && entry.date <= firstFilteredDate) {
+                    opening += getEffect(entry);
+                }
+            }
+        });
+    }
+    return opening;
 }
 
 function openModal(modalId) {
@@ -8515,51 +8919,199 @@ function validateJVAmounts() {
     }
 }
 
+function openJVModal() {
+    // Reset form for new entry
+    document.getElementById('jvEditId').value = '';
+    document.getElementById('jvDate').value = '';
+    document.getElementById('jvDescription').value = '';
+    document.getElementById('jvDebitType').value = '';
+    document.getElementById('jvDebitAccount').innerHTML = '<option value="">Select Account</option>';
+    document.getElementById('jvDebitOther').value = '';
+    document.getElementById('jvDebitOther').style.display = 'none';
+    document.getElementById('jvDebitAmount').value = '';
+    document.getElementById('jvCreditType').value = '';
+    document.getElementById('jvCreditAccount').innerHTML = '<option value="">Select Account</option>';
+    document.getElementById('jvCreditOther').value = '';
+    document.getElementById('jvCreditOther').style.display = 'none';
+    document.getElementById('jvCreditAmount').value = '';
+    document.getElementById('jvModalTitle').textContent = '📝 Journal Voucher (JV Entry)';
+    openModal('jvModal');
+}
+
+function editJVVoucher(id) {
+    const jv = jvVouchers.find(j => j.id === id);
+    if (!jv) { showNotification('JV not found!', 'error'); return; }
+
+    document.getElementById('jvEditId').value = jv.id;
+    document.getElementById('jvDate').value = jv.date;
+    document.getElementById('jvDescription').value = jv.description;
+    document.getElementById('jvDebitType').value = jv.debitType;
+    updateJVDebitAccounts();
+    setTimeout(() => { document.getElementById('jvDebitAccount').value = jv.debitAccount; }, 50);
+    if (jv.debitType === 'other') {
+        document.getElementById('jvDebitOther').value = jv.debitAccount;
+        document.getElementById('jvDebitOther').style.display = 'block';
+    }
+    document.getElementById('jvDebitAmount').value = jv.debitAmount;
+    document.getElementById('jvCreditType').value = jv.creditType;
+    updateJVCreditAccounts();
+    setTimeout(() => { document.getElementById('jvCreditAccount').value = jv.creditAccount; }, 50);
+    if (jv.creditType === 'other') {
+        document.getElementById('jvCreditOther').value = jv.creditAccount;
+        document.getElementById('jvCreditOther').style.display = 'block';
+    }
+    document.getElementById('jvCreditAmount').value = jv.creditAmount;
+    document.getElementById('jvModalTitle').textContent = '✏️ Edit Journal Voucher';
+    openModal('jvModal');
+}
+
+function swapJVDebitCredit() {
+    // Swap the debit and credit sides in the JV form
+    const dType = document.getElementById('jvDebitType').value;
+    const dAccount = document.getElementById('jvDebitAccount').value;
+    const dOther = document.getElementById('jvDebitOther').value;
+    const dAmount = document.getElementById('jvDebitAmount').value;
+    const cType = document.getElementById('jvCreditType').value;
+    const cAccount = document.getElementById('jvCreditAccount').value;
+    const cOther = document.getElementById('jvCreditOther').value;
+
+    // Set credit -> debit
+    document.getElementById('jvDebitType').value = cType;
+    updateJVDebitAccounts();
+    setTimeout(() => { document.getElementById('jvDebitAccount').value = cAccount; }, 50);
+    if (cType === 'other') {
+        document.getElementById('jvDebitOther').value = cOther;
+        document.getElementById('jvDebitOther').style.display = 'block';
+    }
+
+    // Set debit -> credit
+    document.getElementById('jvCreditType').value = dType;
+    updateJVCreditAccounts();
+    setTimeout(() => { document.getElementById('jvCreditAccount').value = dAccount; }, 50);
+    if (dType === 'other') {
+        document.getElementById('jvCreditOther').value = dOther;
+        document.getElementById('jvCreditOther').style.display = 'block';
+    }
+
+    showNotification('Debit and Credit swapped! 🔄', 'info');
+}
+
+function swapJVVoucherDrCr(id) {
+    const jv = jvVouchers.find(j => j.id === id);
+    if (!jv) { showNotification('JV not found!', 'error'); return; }
+
+    if (!confirm(`🔄 Swap Debit/Credit for this JV?\n\nCurrently:\n  DR: ${jv.debitType} → CR: ${jv.creditType}\n\nWill become:\n  DR: ${jv.creditType} → CR: ${jv.debitType}\n\nAmount: Rs. ${jv.debitAmount.toFixed(2)}`)) return;
+
+    // Reverse old effects
+    reverseJVAccountEffect(jv.debitType, jv.debitAccount, jv.debitAmount, 'debit');
+    reverseJVAccountEffect(jv.creditType, jv.creditAccount, jv.creditAmount, 'credit');
+
+    // Swap debit and credit
+    const tmpType = jv.debitType;
+    const tmpAccount = jv.debitAccount;
+    jv.debitType = jv.creditType;
+    jv.debitAccount = jv.creditAccount;
+    jv.creditType = tmpType;
+    jv.creditAccount = tmpAccount;
+
+    // Apply new effects
+    updateAccountFromJV(jv.debitType, jv.debitAccount, jv.debitAmount, 'debit', jv.description, jv.date);
+    updateAccountFromJV(jv.creditType, jv.creditAccount, jv.creditAmount, 'credit', jv.description, jv.date);
+
+    saveToStorage();
+    renderJVVouchers();
+    renderTransactions();
+    renderCustomers();
+    renderSuppliers();
+    renderBanks();
+    renderOwnerAccounts();
+    updateDashboard();
+    showNotification('JV Debit/Credit swapped successfully! ✅', 'success');
+}
+
+function reverseJVAccountEffect(type, account, amount, side) {
+    if (type === 'customer') {
+        const custId = account.replace('customer_', '');
+        const cust = customers.find(c => c.id === custId);
+        if (cust) cust.balance += side === 'debit' ? -amount : amount;
+    } else if (type === 'supplier') {
+        const suppId = account.replace('supplier_', '');
+        const supp = suppliers.find(s => s.id === suppId);
+        if (supp) supp.balance += side === 'debit' ? amount : -amount;
+    } else if (type === 'bank') {
+        const bankId = account.replace('bank_', '');
+        const bank = banks.find(b => b.id === bankId);
+        if (bank) bank.balance += side === 'debit' ? -amount : amount;
+    } else if (type === 'vehicle') {
+        const vehId = account.replace('vehicle_', '');
+        const veh = vehicles.find(v => v.id === vehId);
+        if (veh) veh.ownerBalance += side === 'debit' ? amount : -amount;
+    } else if (type === 'owner') {
+        const ownId = account.replace('owner_', '');
+        const own = ownerAccounts.find(a => a.id === ownId);
+        if (own) own.balance += side === 'debit' ? amount : -amount;
+    }
+}
+
 function saveJVVoucher(e) {
     e.preventDefault();
-    
+
     const debit = parseFloat(document.getElementById('jvDebitAmount').value);
     const credit = parseFloat(document.getElementById('jvCreditAmount').value);
-    
+
     if (debit !== credit) {
         showNotification('Debit and Credit must be equal!', 'error');
         return;
     }
-    
+
+    const editId = document.getElementById('jvEditId').value;
+
+    // If editing, reverse old JV effects first
+    if (editId) {
+        const oldJV = jvVouchers.find(j => j.id === editId);
+        if (oldJV) {
+            reverseJVAccountEffect(oldJV.debitType, oldJV.debitAccount, oldJV.debitAmount, 'debit');
+            reverseJVAccountEffect(oldJV.creditType, oldJV.creditAccount, oldJV.creditAmount, 'credit');
+            jvVouchers = jvVouchers.filter(j => j.id !== editId);
+        }
+    }
+
     const jv = {
-        id: 'jv_' + Date.now(),
+        id: editId || 'jv_' + Date.now(),
         date: document.getElementById('jvDate').value,
         description: document.getElementById('jvDescription').value,
         debitType: document.getElementById('jvDebitType').value,
-        debitAccount: document.getElementById('jvDebitType').value === 'other' ? 
-            document.getElementById('jvDebitOther').value : 
+        debitAccount: document.getElementById('jvDebitType').value === 'other' ?
+            document.getElementById('jvDebitOther').value :
             document.getElementById('jvDebitAccount').value,
         debitAmount: debit,
         creditType: document.getElementById('jvCreditType').value,
-        creditAccount: document.getElementById('jvCreditType').value === 'other' ? 
-            document.getElementById('jvCreditOther').value : 
+        creditAccount: document.getElementById('jvCreditType').value === 'other' ?
+            document.getElementById('jvCreditOther').value :
             document.getElementById('jvCreditAccount').value,
         creditAmount: credit,
         createdBy: currentUser,
         createdAt: new Date().toISOString()
     };
-    
+
     jvVouchers.push(jv);
-    
+
     // Update accounts and create visible transactions
     updateAccountFromJV(jv.debitType, jv.debitAccount, debit, 'debit', jv.description, jv.date);
     updateAccountFromJV(jv.creditType, jv.creditAccount, credit, 'credit', jv.description, jv.date);
-    
+
     saveToStorage();
     renderJVVouchers();
-    renderTransactions(); // Update unified transactions view
+    renderTransactions();
     renderCustomers();
     renderSuppliers();
-    renderBanks(); // Refresh banks to show new transactions
-    renderOwnerAccounts(); // Refresh owner accounts
+    renderBanks();
+    renderOwnerAccounts();
     updateDashboard();
-    showNotification('JV Voucher saved! ✅', 'success');
+    showNotification(editId ? 'JV Voucher updated! ✅' : 'JV Voucher saved! ✅', 'success');
     closeModal('jvModal');
+    document.getElementById('jvEditId').value = '';
+    document.getElementById('jvModalTitle').textContent = '📝 Journal Voucher (JV Entry)';
     e.target.reset();
 }
 
