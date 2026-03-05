@@ -4890,7 +4890,7 @@ function viewCustomerLedger(customerId) {
             amount: isDebit ? jv.debitAmount : jv.creditAmount,
             pmgQty: 0,
             hsdQty: 0,
-            isDebit: isDebit,
+            isDebit: !isDebit,
             source: 'jv',
             id: jv.id
         };
@@ -4914,13 +4914,13 @@ function viewCustomerLedger(customerId) {
     const allEntries = [...custTrans, ...custPayments, ...custTransfers, ...jvEntries, ...custExpenses]
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Calculate opening balance
+    // Calculate opening balance (reverse all entry effects from current balance)
     let openingBalance = customer.balance;
     allEntries.forEach(entry => {
         if (entry.isDebit) {
-            openingBalance -= entry.amount;
-        } else {
             openingBalance += entry.amount;
+        } else {
+            openingBalance -= entry.amount;
         }
     });
 
@@ -5174,9 +5174,9 @@ function viewSupplierLedger(supplierId) {
     let openingBalance = supplier.balance;
     allEntries.forEach(entry => {
         if (entry.isDebit) {
-            openingBalance -= entry.amount;
-        } else {
             openingBalance += entry.amount;
+        } else {
+            openingBalance -= entry.amount;
         }
     });
 
