@@ -9552,6 +9552,23 @@ window.addEventListener('load', async () => {
                 
                 console.log(`✅ Synced: ${customers.length} customers, ${transactions.length} transactions`);
                 console.log(`👥 Users available: ${systemUsers.length} (including defaults)`);
+
+                // Re-render all displays with fresh cloud data
+                try {
+                    renderCustomers();
+                    renderSuppliers();
+                    renderTransactions();
+                    renderPayments();
+                    renderExpenses();
+                    renderVehicles();
+                    renderBanks();
+                    renderBankTransactions();
+                    updateDashboard();
+                    populateDropdowns();
+                    console.log('✅ Display refreshed with cloud data!');
+                } catch (e) {
+                    console.error('Display refresh error:', e);
+                }
             } else if (!error || error.code === 'PGRST116') {
                 console.log('📝 First time! Uploading local data...');
                 ensureDefaultUsers(); // Make sure defaults exist before first upload!
@@ -9592,7 +9609,12 @@ window.addEventListener('load', async () => {
                                 if (typeof renderCustomers === 'function') renderCustomers();
                                 if (typeof renderSuppliers === 'function') renderSuppliers();
                                 if (typeof renderVehicles === 'function') renderVehicles();
+                                if (typeof renderBanks === 'function') renderBanks();
+                                if (typeof renderBankTransactions === 'function') renderBankTransactions();
+                                if (typeof renderPayments === 'function') renderPayments();
+                                if (typeof renderExpenses === 'function') renderExpenses();
                                 if (typeof updateDashboard === 'function') updateDashboard();
+                                if (typeof populateDropdowns === 'function') populateDropdowns();
                                 console.log('✅ Display updated!');
                             } catch (e) {}
                         }
