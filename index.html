@@ -4555,25 +4555,28 @@ function saveBank(e) {
 
     const existingIndex = banks.findIndex(b => b.id === bankId);
     if (existingIndex >= 0) {
-        // Editing: update name/account, recalculate openingBalance if user changed balance field
+        // Editing existing bank
         const existing = banks[existingIndex];
         existing.name = document.getElementById('bankName').value;
         existing.accountNumber = document.getElementById('bankAccount').value;
-        // If user changed the balance field, treat it as a new opening balance adjustment
+        // If user changed the balance field, adjust the saved opening balance
         const currentComputed = computeBankBalance(existing.id);
         if (Math.abs(formBalance - currentComputed) > 0.01) {
-            existing.openingBalance = (existing.openingBalance || 0) + (formBalance - currentComputed);
+            const openings = _getBankOpenings();
+            const currentOpening = openings[existing.id] || 0;
+            _saveBankOpening(existing.id, currentOpening + (formBalance - currentComputed));
         }
         existing.balance = formBalance;
         showNotification('Bank updated! ✅', 'success');
     } else {
-        // New bank: openingBalance = the initial balance entered
+        // New bank: save opening balance separately
+        const newId = 'bank_' + Date.now();
+        _saveBankOpening(newId, formBalance);
         const bank = {
-            id: 'bank_' + Date.now(),
+            id: newId,
             name: document.getElementById('bankName').value,
             accountNumber: document.getElementById('bankAccount').value,
             balance: formBalance,
-            openingBalance: formBalance,
             createdAt: new Date().toISOString()
         };
         banks.push(bank);
@@ -4588,55 +4591,79 @@ function saveBank(e) {
     e.target.reset();
 }
 
-// Compute actual bank balance from openingBalance + all transaction/JV effects
-function computeBankBalance(bankId) {
-    const bank = banks.find(b => b.id === bankId);
-    if (!bank) return 0;
+// ==========================================
+// BANK BALANCE SYSTEM
+// Opening balances are stored in a SEPARATE localStorage key
+// that cloud sync can NEVER overwrite. This ensures correct
+// balance computation even when cloud data is stale.
+// ==========================================
 
-    let balance = bank.openingBalance !== undefined ? bank.openingBalance : (bank.balance || 0);
-
-    // Add all bank transaction effects
-    bankTransactions.filter(t => t.bankId === bankId).forEach(t => {
-        const amt = parseFloat(t.amount) || 0;
-        if (t.type === 'deposit') {
-            balance += amt;
-        } else {
-            balance -= amt;
-        }
-    });
-
-    // Add all JV effects on this bank
-    jvVouchers.forEach(jv => {
-        if (jv.debitType === 'bank' && jv.debitAccount === 'bank_' + bankId) {
-            balance += parseFloat(jv.debitAmount) || 0; // bank debit = deposit
-        } else if (jv.creditType === 'bank' && jv.creditAccount === 'bank_' + bankId) {
-            balance -= parseFloat(jv.creditAmount) || 0; // bank credit = withdrawal
-        }
-    });
-
-    return balance;
+// Get the separately-stored opening balances map
+function _getBankOpenings() {
+    try {
+        return JSON.parse(localStorage.getItem('_bankOpeningBalances') || '{}');
+    } catch (e) { return {}; }
 }
 
-// Ensure all banks have openingBalance field, and recalculate balances
-function recalculateBankBalances() {
-    banks.forEach(bank => {
-        if (bank.openingBalance === undefined || bank.openingBalance === null) {
-            // Back-calculate openingBalance from current stored balance
-            let effectsSum = 0;
-            bankTransactions.filter(t => t.bankId === bank.id).forEach(t => {
-                const amt = parseFloat(t.amount) || 0;
-                effectsSum += t.type === 'deposit' ? amt : -amt;
-            });
-            jvVouchers.forEach(jv => {
-                if (jv.debitType === 'bank' && jv.debitAccount === 'bank_' + bank.id) {
-                    effectsSum += parseFloat(jv.debitAmount) || 0;
-                } else if (jv.creditType === 'bank' && jv.creditAccount === 'bank_' + bank.id) {
-                    effectsSum -= parseFloat(jv.creditAmount) || 0;
-                }
-            });
-            bank.openingBalance = (bank.balance || 0) - effectsSum;
+// Save opening balance for a bank (separate from cloud-synced data)
+function _saveBankOpening(bankId, amount) {
+    const openings = _getBankOpenings();
+    openings[bankId] = amount;
+    localStorage.setItem('_bankOpeningBalances', JSON.stringify(openings));
+}
+
+// Sum all transaction + JV effects for a bank
+function _bankEffectsSum(bankId) {
+    let sum = 0;
+    bankTransactions.filter(t => t.bankId === bankId).forEach(t => {
+        const amt = parseFloat(t.amount) || 0;
+        sum += t.type === 'deposit' ? amt : -amt;
+    });
+    jvVouchers.forEach(jv => {
+        if (jv.debitType === 'bank' && jv.debitAccount === 'bank_' + bankId) {
+            sum += parseFloat(jv.debitAmount) || 0;
+        } else if (jv.creditType === 'bank' && jv.creditAccount === 'bank_' + bankId) {
+            sum -= parseFloat(jv.creditAmount) || 0;
         }
-        // Always recompute actual balance from openingBalance + effects
+    });
+    return sum;
+}
+
+// Compute actual bank balance = savedOpeningBalance + all effects
+function computeBankBalance(bankId) {
+    const openings = _getBankOpenings();
+    if (openings[bankId] !== undefined) {
+        return openings[bankId] + _bankEffectsSum(bankId);
+    }
+    // Fallback: no saved opening, use bank.balance as-is
+    const bank = banks.find(b => b.id === bankId);
+    return bank ? (parseFloat(bank.balance) || 0) : 0;
+}
+
+// ONE-TIME migration: compute and store opening balances from current LOCAL data
+// This runs ONCE on first deployment, before cloud sync can overwrite anything.
+// After this, opening balances are safe in a separate localStorage key forever.
+function initBankOpeningBalances() {
+    const openings = _getBankOpenings();
+    let changed = false;
+
+    banks.forEach(bank => {
+        if (openings[bank.id] === undefined) {
+            // First time seeing this bank — compute its opening balance
+            // from the CURRENT CORRECT local data: opening = balance - effects
+            const effects = _bankEffectsSum(bank.id);
+            openings[bank.id] = (parseFloat(bank.balance) || 0) - effects;
+            changed = true;
+        }
+    });
+
+    if (changed) {
+        localStorage.setItem('_bankOpeningBalances', JSON.stringify(openings));
+        console.log('✅ Bank opening balances computed and saved:', openings);
+    }
+
+    // Now recompute actual balances
+    banks.forEach(bank => {
         bank.balance = computeBankBalance(bank.id);
     });
 }
@@ -4675,6 +4702,10 @@ function editBank(bank) {
 function deleteBank(id) {
     if (confirm('Are you sure?')) {
         banks = banks.filter(b => b.id !== id);
+        // Remove saved opening balance
+        const openings = _getBankOpenings();
+        delete openings[id];
+        localStorage.setItem('_bankOpeningBalances', JSON.stringify(openings));
         saveToStorage();
         renderBanks();
         updateDashboard();
@@ -9574,8 +9605,16 @@ window.addEventListener('load', async () => {
             if (!v.ownerBalance) v.ownerBalance = 0;
         });
         
-        // Recalculate bank balances from entries on every startup
-        recalculateBankBalances();
+        // CRITICAL: Compute and store bank opening balances from LOCAL data
+        // BEFORE cloud sync can overwrite anything. This only runs once per bank.
+        // Opening balances are stored in a SEPARATE localStorage key that
+        // cloud sync never touches, so they're always correct.
+        initBankOpeningBalances();
+
+        // Set lastLocalSave so cloud sync won't overwrite newer local data
+        if (!localStorage.getItem('lastLocalSave')) {
+            localStorage.setItem('lastLocalSave', new Date().toISOString());
+        }
 
         console.log('✅ Data validation complete');
         console.log(`📊 Local: ${customers.length} customers, ${transactions.length} transactions`);
@@ -9603,10 +9642,9 @@ window.addEventListener('load', async () => {
                 const cloudLastUpdate = data.last_updated;
 
                 if (localLastSave && cloudLastUpdate && new Date(localLastSave) > new Date(cloudLastUpdate)) {
-                    console.log('⚠️ Local data is NEWER than cloud. Pushing local data to cloud instead of overwriting.');
-                    // Recalculate bank balances with local data
-                    recalculateBankBalances();
-                    // Push local data to cloud
+                    console.log('⚠️ Local data is NEWER than cloud. Pushing local data to cloud.');
+                    // Recompute bank balances from saved openings + local entries
+                    banks.forEach(bank => { bank.balance = computeBankBalance(bank.id); });
                     _syncToCloud();
                 } else {
                     // Cloud is newer or same — use cloud data
@@ -9627,8 +9665,9 @@ window.addEventListener('load', async () => {
 
                     ensureDefaultUsers();
 
-                    // Recalculate bank balances from entries (fixes stale balance values)
-                    recalculateBankBalances();
+                    // Recompute bank balances using SAVED opening balances + cloud entries
+                    // initBankOpeningBalances also handles any new banks from cloud
+                    initBankOpeningBalances();
 
                     // Save corrected data to localStorage
                     saveToStorage();
@@ -9656,7 +9695,7 @@ window.addEventListener('load', async () => {
             } else if (!error || error.code === 'PGRST116') {
                 console.log('📝 First time! Uploading local data...');
                 ensureDefaultUsers();
-                recalculateBankBalances();
+                initBankOpeningBalances();
                 saveToStorage();
                 _syncToCloud();
             }
@@ -9695,7 +9734,8 @@ window.addEventListener('load', async () => {
                             if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
 
                             ensureDefaultUsers();
-                            recalculateBankBalances();
+                            // Recompute bank balances from saved opening balances
+                            initBankOpeningBalances();
 
                             // Refresh displays if logged in
                             try {
