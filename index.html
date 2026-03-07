@@ -9648,19 +9648,21 @@ window.addEventListener('load', async () => {
                     _syncToCloud();
                 } else {
                     // Cloud is newer or same — use cloud data
-                    if (data.customers) customers = data.customers;
-                    if (data.suppliers) suppliers = data.suppliers;
-                    if (data.transactions) transactions = data.transactions;
-                    if (data.payments) payments = data.payments;
-                    if (data.expenses) expenses = data.expenses;
-                    if (data.customerTransfers) customerTransfers = data.customerTransfers;
-                    if (data.vehicles) vehicles = data.vehicles;
-                    if (data.banks) banks = data.banks;
-                    if (data.bankTransactions) bankTransactions = data.bankTransactions;
+                    // SAFETY: never overwrite local arrays with SMALLER cloud arrays
+                    // (cloud may have old data from before items were added)
+                    if (data.customers && data.customers.length >= customers.length) customers = data.customers;
+                    if (data.suppliers && data.suppliers.length >= suppliers.length) suppliers = data.suppliers;
+                    if (data.transactions && data.transactions.length >= transactions.length) transactions = data.transactions;
+                    if (data.payments && data.payments.length >= payments.length) payments = data.payments;
+                    if (data.expenses && data.expenses.length >= expenses.length) expenses = data.expenses;
+                    if (data.customerTransfers && data.customerTransfers.length >= customerTransfers.length) customerTransfers = data.customerTransfers;
+                    if (data.vehicles && data.vehicles.length >= vehicles.length) vehicles = data.vehicles;
+                    if (data.banks && data.banks.length >= banks.length) banks = data.banks;
+                    if (data.bankTransactions && data.bankTransactions.length >= bankTransactions.length) bankTransactions = data.bankTransactions;
                     if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
-                    if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
-                    if (data.jvVouchers) jvVouchers = data.jvVouchers;
-                    if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
+                    if (data.ledgerEntries && data.ledgerEntries.length >= ledgerEntries.length) ledgerEntries = data.ledgerEntries;
+                    if (data.jvVouchers && data.jvVouchers.length >= jvVouchers.length) jvVouchers = data.jvVouchers;
+                    if (data.ownerAccounts && data.ownerAccounts.length >= ownerAccounts.length) ownerAccounts = data.ownerAccounts;
                     if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
 
                     ensureDefaultUsers();
@@ -9675,23 +9677,20 @@ window.addEventListener('load', async () => {
                     console.log(`✅ Synced: ${customers.length} customers, ${transactions.length} transactions`);
                 }
 
-                // Re-render all displays
-                try {
-                    renderCustomers();
-                    renderSuppliers();
-                    renderTransactions();
-                    renderPayments();
-                    renderExpenses();
-                    renderVehicles();
-                    renderBanks();
-                    renderBankTransactions();
-                    renderOwnerAccounts();
-                    updateDashboard();
-                    populateDropdowns();
-                    console.log('✅ Display refreshed with cloud data!');
-                } catch (e) {
-                    console.error('Display refresh error:', e);
-                }
+                // Re-render all displays (each in its own try/catch so one
+                // failure never prevents the others from rendering)
+                try { renderCustomers(); } catch(e) { console.error('renderCustomers error:', e); }
+                try { renderSuppliers(); } catch(e) { console.error('renderSuppliers error:', e); }
+                try { renderTransactions(); } catch(e) { console.error('renderTransactions error:', e); }
+                try { renderPayments(); } catch(e) { console.error('renderPayments error:', e); }
+                try { renderExpenses(); } catch(e) { console.error('renderExpenses error:', e); }
+                try { renderVehicles(); } catch(e) { console.error('renderVehicles error:', e); }
+                try { renderBanks(); } catch(e) { console.error('renderBanks error:', e); }
+                try { renderBankTransactions(); } catch(e) { console.error('renderBankTransactions error:', e); }
+                try { renderOwnerAccounts(); } catch(e) { console.error('renderOwnerAccounts error:', e); }
+                try { updateDashboard(); } catch(e) { console.error('updateDashboard error:', e); }
+                try { populateDropdowns(); } catch(e) { console.error('populateDropdowns error:', e); }
+                console.log('✅ Display refreshed!');
             } else if (!error || error.code === 'PGRST116') {
                 console.log('📝 First time! Uploading local data...');
                 ensureDefaultUsers();
@@ -9718,42 +9717,38 @@ window.addEventListener('load', async () => {
                                 return;
                             }
 
-                            if (data.customers) customers = data.customers;
-                            if (data.suppliers) suppliers = data.suppliers;
-                            if (data.transactions) transactions = data.transactions;
-                            if (data.payments) payments = data.payments;
-                            if (data.expenses) expenses = data.expenses;
-                            if (data.customerTransfers) customerTransfers = data.customerTransfers;
-                            if (data.vehicles) vehicles = data.vehicles;
-                            if (data.banks) banks = data.banks;
-                            if (data.bankTransactions) bankTransactions = data.bankTransactions;
+                            // SAFETY: never overwrite local arrays with smaller cloud arrays
+                            if (data.customers && data.customers.length >= customers.length) customers = data.customers;
+                            if (data.suppliers && data.suppliers.length >= suppliers.length) suppliers = data.suppliers;
+                            if (data.transactions && data.transactions.length >= transactions.length) transactions = data.transactions;
+                            if (data.payments && data.payments.length >= payments.length) payments = data.payments;
+                            if (data.expenses && data.expenses.length >= expenses.length) expenses = data.expenses;
+                            if (data.customerTransfers && data.customerTransfers.length >= customerTransfers.length) customerTransfers = data.customerTransfers;
+                            if (data.vehicles && data.vehicles.length >= vehicles.length) vehicles = data.vehicles;
+                            if (data.banks && data.banks.length >= banks.length) banks = data.banks;
+                            if (data.bankTransactions && data.bankTransactions.length >= bankTransactions.length) bankTransactions = data.bankTransactions;
                             if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
-                            if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
-                            if (data.jvVouchers) jvVouchers = data.jvVouchers;
-                            if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
+                            if (data.ledgerEntries && data.ledgerEntries.length >= ledgerEntries.length) ledgerEntries = data.ledgerEntries;
+                            if (data.jvVouchers && data.jvVouchers.length >= jvVouchers.length) jvVouchers = data.jvVouchers;
+                            if (data.ownerAccounts && data.ownerAccounts.length >= ownerAccounts.length) ownerAccounts = data.ownerAccounts;
                             if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
 
                             ensureDefaultUsers();
-                            // Recompute bank balances from saved opening balances
                             initBankOpeningBalances();
 
-                            // Refresh displays if logged in
-                            try {
-                                if (typeof renderTransactions === 'function') renderTransactions();
-                                if (typeof renderCustomers === 'function') renderCustomers();
-                                if (typeof renderSuppliers === 'function') renderSuppliers();
-                                if (typeof renderVehicles === 'function') renderVehicles();
-                                if (typeof renderBanks === 'function') renderBanks();
-                                if (typeof renderBankTransactions === 'function') renderBankTransactions();
-                                if (typeof renderPayments === 'function') renderPayments();
-                                if (typeof renderExpenses === 'function') renderExpenses();
-                                if (typeof renderOwnerAccounts === 'function') renderOwnerAccounts();
-                                if (typeof updateDashboard === 'function') updateDashboard();
-                                if (typeof populateDropdowns === 'function') populateDropdowns();
-                                console.log('✅ Display updated!');
-                            } catch (e) {
-                                console.error('Display refresh error:', e);
-                            }
+                            // Refresh displays (each independent so one crash doesn't kill others)
+                            try { renderCustomers(); } catch(e) { console.error(e); }
+                            try { renderSuppliers(); } catch(e) { console.error(e); }
+                            try { renderTransactions(); } catch(e) { console.error(e); }
+                            try { renderPayments(); } catch(e) { console.error(e); }
+                            try { renderExpenses(); } catch(e) { console.error(e); }
+                            try { renderVehicles(); } catch(e) { console.error(e); }
+                            try { renderBanks(); } catch(e) { console.error(e); }
+                            try { renderBankTransactions(); } catch(e) { console.error(e); }
+                            try { renderOwnerAccounts(); } catch(e) { console.error(e); }
+                            try { updateDashboard(); } catch(e) { console.error(e); }
+                            try { populateDropdowns(); } catch(e) { console.error(e); }
+                            console.log('✅ Display updated!');
                         }
                     }
                 )
