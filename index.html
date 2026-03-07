@@ -2205,6 +2205,8 @@ const TABLE_NAME = 'BOTs';
 
 let supabaseClient = null;
 let USE_SUPABASE = false;
+let _cloudSyncTimer = null;
+let _cloudSyncInProgress = false;
 
 // Initialize Supabase with FIXED configuration
 if (typeof window.supabase !== 'undefined') {
@@ -2333,7 +2335,7 @@ async function forceCloudSync() {
                 id: 1,
                 customers, suppliers, transactions, payments, expenses,
                 customerTransfers, vehicles, banks, bankTransactions,
-                rateChangeLogs, ledgerEntries, jvVouchers, systemUsers,
+                rateChangeLogs, ledgerEntries, jvVouchers, ownerAccounts, systemUsers,
                 last_updated: new Date().toISOString()
             });
 
@@ -2521,8 +2523,8 @@ function initApp() {
     }
 }
 
-async function saveToStorage() {
-    // Save to localStorage (local backup)
+function saveToStorage() {
+    // Save to localStorage IMMEDIATELY (always works, never fails)
     localStorage.setItem('customers', JSON.stringify(customers));
     localStorage.setItem('suppliers', JSON.stringify(suppliers));
     localStorage.setItem('transactions', JSON.stringify(transactions));
@@ -2537,37 +2539,51 @@ async function saveToStorage() {
     localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
     localStorage.setItem('ownerAccounts', JSON.stringify(ownerAccounts));
     localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
-    
-    // Also save to Supabase cloud (for multi-device sync)
+    localStorage.setItem('lastLocalSave', new Date().toISOString());
+
+    // Debounce cloud sync - wait 1.5s of inactivity before syncing
     if (USE_SUPABASE && supabaseClient) {
+        if (_cloudSyncTimer) clearTimeout(_cloudSyncTimer);
+        _cloudSyncTimer = setTimeout(() => { _syncToCloud(); }, 1500);
+    }
+}
+
+async function _syncToCloud(retries = 3) {
+    if (_cloudSyncInProgress) return;
+    _cloudSyncInProgress = true;
+
+    const payload = {
+        id: 1,
+        customers, suppliers, transactions, payments, expenses,
+        customerTransfers, vehicles, banks, bankTransactions,
+        rateChangeLogs, ledgerEntries, jvVouchers, ownerAccounts, systemUsers,
+        last_updated: new Date().toISOString()
+    };
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
         try {
             const { error } = await supabaseClient
                 .from(TABLE_NAME)
-                .upsert({
-                    id: 1,
-                    customers, suppliers, transactions, payments, expenses,
-                    customerTransfers, vehicles, banks, bankTransactions,
-                    rateChangeLogs, ledgerEntries, jvVouchers, ownerAccounts, systemUsers,
-                    last_updated: new Date().toISOString()
-                });
-            
+                .upsert(payload);
+
             if (!error) {
                 console.log('☁️ Data synced to cloud!');
-                console.log(`📊 Synced: ${customers.length} customers, ${suppliers.length} suppliers, ${vehicles.length} vehicles, ${transactions.length} transactions`);
-            } else {
-                console.error('❌ Cloud sync failed:', error);
-                console.error('Error details:', JSON.stringify(error, null, 2));
-                console.error('Error message:', error.message);
-                console.error('Error hint:', error.hint);
-                console.error('Error code:', error.code);
-                showNotification('⚠️ Cloud sync failed: ' + (error.message || 'Unknown error'), 'warning');
+                _cloudSyncInProgress = false;
+                return;
             }
+            console.error(`❌ Cloud sync attempt ${attempt}/${retries} failed:`, error.message);
         } catch (error) {
-            console.error('❌ Cloud sync error:', error);
-            console.error('Error details:', error.message);
-            showNotification('⚠️ Cloud sync error: ' + (error.message || 'Unknown error'), 'warning');
+            console.error(`❌ Cloud sync attempt ${attempt}/${retries} error:`, error.message);
+        }
+
+        if (attempt < retries) {
+            await new Promise(r => setTimeout(r, attempt * 2000));
         }
     }
+
+    _cloudSyncInProgress = false;
+    console.error('❌ Cloud sync failed after all retries. Data is safe in localStorage.');
+    showNotification('⚠️ Cloud sync temporarily unavailable. Data saved locally.', 'warning');
 }
 
 // Add ledger entry function
@@ -4533,24 +4549,37 @@ function deleteJVVoucher(id) {
 // BANK FUNCTIONS
 function saveBank(e) {
     e.preventDefault();
-    
-    const bank = {
-        id: document.getElementById('bankId').value || 'bank_' + Date.now(),
-        name: document.getElementById('bankName').value,
-        accountNumber: document.getElementById('bankAccount').value,
-        balance: parseFloat(document.getElementById('bankBalance').value),
-        createdAt: new Date().toISOString()
-    };
-    
-    const existingIndex = banks.findIndex(b => b.id === bank.id);
+
+    const bankId = document.getElementById('bankId').value;
+    const formBalance = parseFloat(document.getElementById('bankBalance').value) || 0;
+
+    const existingIndex = banks.findIndex(b => b.id === bankId);
     if (existingIndex >= 0) {
-        banks[existingIndex] = bank;
+        // Editing: update name/account, recalculate openingBalance if user changed balance field
+        const existing = banks[existingIndex];
+        existing.name = document.getElementById('bankName').value;
+        existing.accountNumber = document.getElementById('bankAccount').value;
+        // If user changed the balance field, treat it as a new opening balance adjustment
+        const currentComputed = computeBankBalance(existing.id);
+        if (Math.abs(formBalance - currentComputed) > 0.01) {
+            existing.openingBalance = (existing.openingBalance || 0) + (formBalance - currentComputed);
+        }
+        existing.balance = formBalance;
         showNotification('Bank updated! ✅', 'success');
     } else {
+        // New bank: openingBalance = the initial balance entered
+        const bank = {
+            id: 'bank_' + Date.now(),
+            name: document.getElementById('bankName').value,
+            accountNumber: document.getElementById('bankAccount').value,
+            balance: formBalance,
+            openingBalance: formBalance,
+            createdAt: new Date().toISOString()
+        };
         banks.push(bank);
         showNotification('Bank added! ✅', 'success');
     }
-    
+
     saveToStorage();
     renderBanks();
     closeModal('bankModal');
@@ -4559,16 +4588,73 @@ function saveBank(e) {
     e.target.reset();
 }
 
+// Compute actual bank balance from openingBalance + all transaction/JV effects
+function computeBankBalance(bankId) {
+    const bank = banks.find(b => b.id === bankId);
+    if (!bank) return 0;
+
+    let balance = bank.openingBalance !== undefined ? bank.openingBalance : (bank.balance || 0);
+
+    // Add all bank transaction effects
+    bankTransactions.filter(t => t.bankId === bankId).forEach(t => {
+        const amt = parseFloat(t.amount) || 0;
+        if (t.type === 'deposit') {
+            balance += amt;
+        } else {
+            balance -= amt;
+        }
+    });
+
+    // Add all JV effects on this bank
+    jvVouchers.forEach(jv => {
+        if (jv.debitType === 'bank' && jv.debitAccount === 'bank_' + bankId) {
+            balance += parseFloat(jv.debitAmount) || 0; // bank debit = deposit
+        } else if (jv.creditType === 'bank' && jv.creditAccount === 'bank_' + bankId) {
+            balance -= parseFloat(jv.creditAmount) || 0; // bank credit = withdrawal
+        }
+    });
+
+    return balance;
+}
+
+// Ensure all banks have openingBalance field, and recalculate balances
+function recalculateBankBalances() {
+    banks.forEach(bank => {
+        if (bank.openingBalance === undefined || bank.openingBalance === null) {
+            // Back-calculate openingBalance from current stored balance
+            let effectsSum = 0;
+            bankTransactions.filter(t => t.bankId === bank.id).forEach(t => {
+                const amt = parseFloat(t.amount) || 0;
+                effectsSum += t.type === 'deposit' ? amt : -amt;
+            });
+            jvVouchers.forEach(jv => {
+                if (jv.debitType === 'bank' && jv.debitAccount === 'bank_' + bank.id) {
+                    effectsSum += parseFloat(jv.debitAmount) || 0;
+                } else if (jv.creditType === 'bank' && jv.creditAccount === 'bank_' + bank.id) {
+                    effectsSum -= parseFloat(jv.creditAmount) || 0;
+                }
+            });
+            bank.openingBalance = (bank.balance || 0) - effectsSum;
+        }
+        // Always recompute actual balance from openingBalance + effects
+        bank.balance = computeBankBalance(bank.id);
+    });
+}
+
 function renderBanks() {
     const tbody = document.getElementById('banksBody');
     tbody.innerHTML = '';
 
     banks.forEach(bank => {
+        // Always compute actual balance from entries (never trust stored bank.balance alone)
+        const actualBalance = computeBankBalance(bank.id);
+        bank.balance = actualBalance; // Keep in sync
+
         const row = tbody.insertRow();
         row.innerHTML = `
             <td><strong>${bank.name}</strong></td>
-            <td>${bank.accountNumber}</td>
-            <td class="${bank.balance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${bank.balance.toFixed(2)}</td>
+            <td>${bank.accountNumber || '-'}</td>
+            <td class="${actualBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${actualBalance.toFixed(2)}</td>
             <td>
                 <button class="btn btn-success btn-sm" onclick="viewBankLedger('${bank.id}')">📊 View Ledger</button>
                 <button class="btn btn-info btn-sm" onclick='editBank(${JSON.stringify(bank).replace(/'/g, "&#39;")})'>Edit</button>
@@ -9101,18 +9187,28 @@ function saveJVVoucher(e) {
     updateAccountFromJV(jv.creditType, jv.creditAccount, credit, 'credit', jv.description, jv.date);
 
     saveToStorage();
-    renderJVVouchers();
-    renderTransactions();
-    renderCustomers();
-    renderSuppliers();
-    renderBanks();
-    renderOwnerAccounts();
-    updateDashboard();
-    showNotification(editId ? 'JV Voucher updated! ✅' : 'JV Voucher saved! ✅', 'success');
+
+    // CRITICAL: Close modal and reset form FIRST, before any render calls.
+    // If a render function throws, the modal must already be closed to prevent
+    // the user from pressing Save again (which creates duplicate entries).
     closeModal('jvModal');
+    showNotification(editId ? 'JV Voucher updated! ✅' : 'JV Voucher saved! ✅', 'success');
     document.getElementById('jvEditId').value = '';
     document.getElementById('jvModalTitle').textContent = '📝 Journal Voucher (JV Entry)';
     e.target.reset();
+
+    // Refresh displays (wrapped in try/catch so errors don't affect the save)
+    try {
+        renderJVVouchers();
+        renderTransactions();
+        renderCustomers();
+        renderSuppliers();
+        renderBanks();
+        renderOwnerAccounts();
+        updateDashboard();
+    } catch (renderErr) {
+        console.error('Display refresh error after JV save:', renderErr);
+    }
 }
 
 function updateAccountFromJV(type, account, amount, side, jvDescription, jvDate) {
@@ -9478,6 +9574,9 @@ window.addEventListener('load', async () => {
             if (!v.ownerBalance) v.ownerBalance = 0;
         });
         
+        // Recalculate bank balances from entries on every startup
+        recalculateBankBalances();
+
         console.log('✅ Data validation complete');
         console.log(`📊 Local: ${customers.length} customers, ${transactions.length} transactions`);
     } catch (error) {
@@ -9499,61 +9598,45 @@ window.addEventListener('load', async () => {
             if (data) {
                 console.log('📥 Cloud data loaded!');
 
-                // Store counts before loading to detect data loss
-                const localVehicleCount = vehicles.length;
-                const localCustomerCount = customers.length;
-                const localSupplierCount = suppliers.length;
+                // Check if local data is NEWER than cloud data (cloud sync had failed before)
+                const localLastSave = localStorage.getItem('lastLocalSave');
+                const cloudLastUpdate = data.last_updated;
 
-                // Update arrays with cloud data
-                if (data.customers) customers = data.customers;
-                if (data.suppliers) suppliers = data.suppliers;
-                if (data.transactions) transactions = data.transactions;
-                if (data.payments) payments = data.payments;
-                if (data.expenses) expenses = data.expenses;
-                if (data.customerTransfers) customerTransfers = data.customerTransfers;
-                if (data.vehicles) vehicles = data.vehicles;
-                if (data.banks) banks = data.banks;
-                if (data.bankTransactions) bankTransactions = data.bankTransactions;
-                if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
-                if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
-                if (data.jvVouchers) jvVouchers = data.jvVouchers;
-                if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
-                if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
+                if (localLastSave && cloudLastUpdate && new Date(localLastSave) > new Date(cloudLastUpdate)) {
+                    console.log('⚠️ Local data is NEWER than cloud. Pushing local data to cloud instead of overwriting.');
+                    // Recalculate bank balances with local data
+                    recalculateBankBalances();
+                    // Push local data to cloud
+                    _syncToCloud();
+                } else {
+                    // Cloud is newer or same — use cloud data
+                    if (data.customers) customers = data.customers;
+                    if (data.suppliers) suppliers = data.suppliers;
+                    if (data.transactions) transactions = data.transactions;
+                    if (data.payments) payments = data.payments;
+                    if (data.expenses) expenses = data.expenses;
+                    if (data.customerTransfers) customerTransfers = data.customerTransfers;
+                    if (data.vehicles) vehicles = data.vehicles;
+                    if (data.banks) banks = data.banks;
+                    if (data.bankTransactions) bankTransactions = data.bankTransactions;
+                    if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
+                    if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
+                    if (data.jvVouchers) jvVouchers = data.jvVouchers;
+                    if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
+                    if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
 
-                // Warn if data counts decreased significantly (potential data loss)
-                if (vehicles.length < localVehicleCount) {
-                    console.warn(`⚠️ Vehicle count decreased from ${localVehicleCount} to ${vehicles.length}!`);
-                }
-                if (customers.length < localCustomerCount) {
-                    console.warn(`⚠️ Customer count decreased from ${localCustomerCount} to ${customers.length}!`);
-                }
-                if (suppliers.length < localSupplierCount) {
-                    console.warn(`⚠️ Supplier count decreased from ${localSupplierCount} to ${suppliers.length}!`);
-                }
-                
-                // CRITICAL: Always ensure default users exist!
-                ensureDefaultUsers();
-                
-                // Save to localStorage as backup
-                localStorage.setItem('customers', JSON.stringify(customers));
-                localStorage.setItem('suppliers', JSON.stringify(suppliers));
-                localStorage.setItem('transactions', JSON.stringify(transactions));
-                localStorage.setItem('payments', JSON.stringify(payments));
-                localStorage.setItem('expenses', JSON.stringify(expenses));
-                localStorage.setItem('customerTransfers', JSON.stringify(customerTransfers));
-                localStorage.setItem('vehicles', JSON.stringify(vehicles));
-                localStorage.setItem('banks', JSON.stringify(banks));
-                localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
-                localStorage.setItem('rateChangeLogs', JSON.stringify(rateChangeLogs));
-                localStorage.setItem('ledgerEntries', JSON.stringify(ledgerEntries));
-                localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
-                localStorage.setItem('ownerAccounts', JSON.stringify(ownerAccounts));
-                localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
-                
-                console.log(`✅ Synced: ${customers.length} customers, ${transactions.length} transactions`);
-                console.log(`👥 Users available: ${systemUsers.length} (including defaults)`);
+                    ensureDefaultUsers();
 
-                // Re-render all displays with fresh cloud data
+                    // Recalculate bank balances from entries (fixes stale balance values)
+                    recalculateBankBalances();
+
+                    // Save corrected data to localStorage
+                    saveToStorage();
+
+                    console.log(`✅ Synced: ${customers.length} customers, ${transactions.length} transactions`);
+                }
+
+                // Re-render all displays
                 try {
                     renderCustomers();
                     renderSuppliers();
@@ -9563,6 +9646,7 @@ window.addEventListener('load', async () => {
                     renderVehicles();
                     renderBanks();
                     renderBankTransactions();
+                    renderOwnerAccounts();
                     updateDashboard();
                     populateDropdowns();
                     console.log('✅ Display refreshed with cloud data!');
@@ -9571,8 +9655,10 @@ window.addEventListener('load', async () => {
                 }
             } else if (!error || error.code === 'PGRST116') {
                 console.log('📝 First time! Uploading local data...');
-                ensureDefaultUsers(); // Make sure defaults exist before first upload!
-                await saveToStorage();
+                ensureDefaultUsers();
+                recalculateBankBalances();
+                saveToStorage();
+                _syncToCloud();
             }
             
             // Set up real-time sync
@@ -9585,6 +9671,14 @@ window.addEventListener('load', async () => {
                         console.log('📡 Update received!');
                         if (payload.new) {
                             const data = payload.new;
+
+                            // Skip stale real-time updates if local data is newer
+                            const localLastSave = localStorage.getItem('lastLocalSave');
+                            if (localLastSave && data.last_updated && new Date(localLastSave) > new Date(data.last_updated)) {
+                                console.log('⚠️ Ignoring stale real-time update (local is newer)');
+                                return;
+                            }
+
                             if (data.customers) customers = data.customers;
                             if (data.suppliers) suppliers = data.suppliers;
                             if (data.transactions) transactions = data.transactions;
@@ -9599,10 +9693,10 @@ window.addEventListener('load', async () => {
                             if (data.jvVouchers) jvVouchers = data.jvVouchers;
                             if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
                             if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
-                            
-                            // CRITICAL: Always ensure default users exist!
+
                             ensureDefaultUsers();
-                            
+                            recalculateBankBalances();
+
                             // Refresh displays if logged in
                             try {
                                 if (typeof renderTransactions === 'function') renderTransactions();
@@ -9613,10 +9707,13 @@ window.addEventListener('load', async () => {
                                 if (typeof renderBankTransactions === 'function') renderBankTransactions();
                                 if (typeof renderPayments === 'function') renderPayments();
                                 if (typeof renderExpenses === 'function') renderExpenses();
+                                if (typeof renderOwnerAccounts === 'function') renderOwnerAccounts();
                                 if (typeof updateDashboard === 'function') updateDashboard();
                                 if (typeof populateDropdowns === 'function') populateDropdowns();
                                 console.log('✅ Display updated!');
-                            } catch (e) {}
+                            } catch (e) {
+                                console.error('Display refresh error:', e);
+                            }
                         }
                     }
                 )
