@@ -5519,21 +5519,26 @@ function saveBankTransaction(e) {
 
 function renderBankTransactions() {
     const tbody = document.getElementById('bankTransactionsBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
-    
+
     bankTransactions.slice().reverse().slice(0, 20).forEach(trans => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${new Date(trans.date).toLocaleDateString()}</td>
-            <td>${trans.bankName}</td>
-            <td><span style="background: ${trans.type === 'deposit' ? '#48bb78' : '#f56565'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${trans.type.toUpperCase()}</span></td>
-            <td style="font-weight: 700;">Rs. ${trans.amount.toFixed(2)}</td>
-            <td>${trans.description || '-'}</td>
-            <td style="font-weight: 600;">Rs. ${trans.balanceAfter.toFixed(2)}</td>
-            <td>
-                <button class="btn btn-danger btn-sm" onclick="deleteBankTransaction('${trans.id}')">Delete</button>
-            </td>
-        `;
+        try {
+            const amt = parseFloat(trans.amount) || 0;
+            const balAfter = parseFloat(trans.balanceAfter) || 0;
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${new Date(trans.date).toLocaleDateString()}</td>
+                <td>${trans.bankName || '-'}</td>
+                <td><span style="background: ${trans.type === 'deposit' ? '#48bb78' : '#f56565'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${(trans.type || '').toUpperCase()}</span></td>
+                <td style="font-weight: 700;">Rs. ${amt.toFixed(2)}</td>
+                <td>${trans.description || '-'}</td>
+                <td style="font-weight: 600;">Rs. ${balAfter.toFixed(2)}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deleteBankTransaction('${trans.id}')">Delete</button>
+                </td>
+            `;
+        } catch(e) { console.error('Bank transaction render error:', e); }
     });
 }
 
@@ -8229,6 +8234,9 @@ function switchTab(tabName) {
         renderJVVouchers();
     } else if (tabName === 'owneraccounts') {
         renderOwnerAccounts();
+    } else if (tabName === 'banks') {
+        renderBanks();
+        renderBankTransactions();
     } else if (tabName === 'dailyentries') {
         if (!document.getElementById('dailyEntriesDate').value) {
             setDailyDateToday();
