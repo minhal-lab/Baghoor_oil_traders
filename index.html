@@ -2496,16 +2496,16 @@ function initApp() {
         document.getElementById('adminSettingsBtn').style.display = 'none';
     }
     
-    updateDashboard();
-    renderCustomers();
-    renderSuppliers();
-    renderTransactions();
-    renderPayments();
-    renderExpenses();
-    renderVehicles();
-    renderBanks();
-    renderBankTransactions();
-    populateDropdowns();
+    try { updateDashboard(); } catch(e) { console.error('updateDashboard:', e); }
+    try { renderCustomers(); } catch(e) { console.error('renderCustomers:', e); }
+    try { renderSuppliers(); } catch(e) { console.error('renderSuppliers:', e); }
+    try { renderTransactions(); } catch(e) { console.error('renderTransactions:', e); }
+    try { renderPayments(); } catch(e) { console.error('renderPayments:', e); }
+    try { renderExpenses(); } catch(e) { console.error('renderExpenses:', e); }
+    try { renderVehicles(); } catch(e) { console.error('renderVehicles:', e); }
+    try { renderBanks(); } catch(e) { console.error('renderBanks:', e); }
+    try { renderBankTransactions(); } catch(e) { console.error('renderBankTransactions:', e); }
+    try { populateDropdowns(); } catch(e) { console.error('populateDropdowns:', e); }
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('saleDate').value = today;
     document.getElementById('purchaseDate').value = today;
@@ -2965,25 +2965,20 @@ function saveSale(e) {
     
     // CRITICAL: Force save to localStorage IMMEDIATELY
     saveToStorage();
-    
-    // CRITICAL: Force complete UI refresh
-    renderTransactions();
-    renderCustomers();
-    renderVehicles();
-    updateDashboard();
-    populateDropdowns();
-    
-    // Close modal and reset form
+
+    // Close modal and notify FIRST (before renders, so user sees feedback immediately)
     closeModal('saleModal');
-    e.target.reset();
-    calculateSaleAmount(); // Reset display
-    
-    // Success message
     let msg = '✅ Sale recorded successfully!';
     if (discountAmount > 0) {
         msg += ` (Discount: Rs. ${discountAmount.toFixed(2)})`;
     }
     showNotification(msg, 'success');
+    e.target.reset();
+    calculateSaleAmount();
+
+    // Refresh displays (wrapped so a crash never blocks the above)
+    try { renderTransactions(); renderCustomers(); renderVehicles(); updateDashboard(); populateDropdowns(); }
+    catch(err) { console.error('Display refresh error:', err); }
 }
 
 function savePurchase(e) {
@@ -3038,19 +3033,19 @@ function savePurchase(e) {
         'Inventory', amount, `Supplier: ${supplier.name}`, amount, date);
     
     saveToStorage();
-    renderTransactions();
-    renderSuppliers();
-    renderVehicles();
+
+    // Close modal and notify FIRST
     closeModal('purchaseModal');
-    updateDashboard();
-    
     let msg = 'Purchase recorded! Stock updated! ✅';
     if (discountAmount > 0) {
         msg += ` (Discount: Rs. ${discountAmount.toFixed(2)})`;
     }
     showNotification(msg, 'success');
     e.target.reset();
-    calculatePurchaseAmount(); // Reset display
+    calculatePurchaseAmount();
+
+    try { renderTransactions(); renderSuppliers(); renderVehicles(); updateDashboard(); }
+    catch(err) { console.error('Display refresh error:', err); }
 }
 
 // Pagination variables
@@ -3059,8 +3054,9 @@ const transactionsPerPage = 50; // Show 50 at a time
 
 function renderTransactions() {
     const tbody = document.getElementById('transactionsBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
-    
+
     // COMBINE ALL ENTRY TYPES INTO ONE ARRAY!
     let allEntries = [];
     
@@ -3180,26 +3176,30 @@ function renderTransactions() {
     
     // Use setTimeout to prevent UI blocking for large datasets
     setTimeout(() => {
+      try {
         const fragment = document.createDocumentFragment();
-        
+
         // Get paginated entries
         const startIndex = (transactionsPage - 1) * transactionsPerPage;
         const endIndex = startIndex + transactionsPerPage;
         const paginatedEntries = allEntries.slice(startIndex, endIndex);
-        
+
         paginatedEntries.forEach(entry => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${new Date(entry.date).toLocaleDateString()}</td>
-                <td><span style="background: ${entry.typeColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600;">${entry.type}</span></td>
-                <td>${entry.description}</td>
-                <td style="font-weight: 700;">Rs. ${entry.amount.toFixed(2)}</td>
-                <td>${entry.reference}</td>
-                <td>
-                    <button class="btn btn-danger btn-sm" onclick="${entry.deleteFunction}">🗑️ Delete</button>
-                </td>
-            `;
-            fragment.appendChild(row);
+            try {
+                const amt = parseFloat(entry.amount) || 0;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(entry.date).toLocaleDateString()}</td>
+                    <td><span style="background: ${entry.typeColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600;">${entry.type}</span></td>
+                    <td>${entry.description}</td>
+                    <td style="font-weight: 700;">Rs. ${amt.toFixed(2)}</td>
+                    <td>${entry.reference}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="${entry.deleteFunction}">🗑️ Delete</button>
+                    </td>
+                `;
+                fragment.appendChild(row);
+            } catch(rowErr) { console.error('Transaction row render error:', rowErr); }
         });
         
         tbody.innerHTML = '';
@@ -3229,6 +3229,7 @@ function renderTransactions() {
             `;
             tbody.appendChild(summaryRow);
         }
+      } catch(renderErr) { console.error('renderTransactions error:', renderErr); }
     }, 10); // Small delay to prevent UI blocking
 }
 
@@ -3580,11 +3581,10 @@ function savePayment(e) {
             `Customer: ${fromCustomer.name}`, amount, `Customer: ${toCustomer.name}`, amount, date);
 
         saveToStorage();
-        renderCustomers();
-        updateDashboard();
         closeModal('paymentModal');
         showNotification(`Transfer of Rs. ${amount.toFixed(2)} from ${fromCustomer.name} to ${toCustomer.name} recorded! 🔄`, 'success');
         e.target.reset();
+        try { renderCustomers(); updateDashboard(); } catch(err) { console.error(err); }
         return;
     }
 
@@ -3668,37 +3668,39 @@ function savePayment(e) {
     }
 
     saveToStorage();
-    renderPayments();
-    renderTransactions(); // Update unified transactions view
-    renderCustomers();
-    renderSuppliers();
-    renderBanks();
-    renderOwnerAccounts(); // Refresh owner accounts
+
+    // Close modal and notify FIRST
     closeModal('paymentModal');
-    updateDashboard();
     showNotification('Payment recorded! 💰', 'success');
     e.target.reset();
+
+    try { renderPayments(); renderTransactions(); renderCustomers(); renderSuppliers(); renderBanks(); renderOwnerAccounts(); updateDashboard(); }
+    catch(err) { console.error('Display refresh error:', err); }
 }
 
 function renderPayments() {
     const tbody = document.getElementById('paymentsBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
-    
+
     payments.slice().reverse().forEach(payment => {
-        const bank = banks.find(b => b.id === payment.bankId);
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${new Date(payment.date).toLocaleDateString()}</td>
-            <td>${payment.partyName}</td>
-            <td><span style="background: ${payment.type === 'received' ? '#48bb78' : '#ed8936'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${payment.type === 'received' ? 'RECEIVED' : 'PAID'}</span></td>
-            <td style="font-weight: 700;">Rs. ${payment.amount.toFixed(2)}</td>
-            <td>${payment.method.toUpperCase()}</td>
-            <td>${bank ? bank.name : '-'}</td>
-            <td>${payment.notes || '-'}</td>
-            <td>
-                <button class="btn btn-danger btn-sm" onclick="deletePayment('${payment.id}')">Delete</button>
-            </td>
-        `;
+        try {
+            const bank = banks.find(b => b.id === payment.bankId);
+            const amt = parseFloat(payment.amount) || 0;
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${new Date(payment.date).toLocaleDateString()}</td>
+                <td>${payment.partyName || '-'}</td>
+                <td><span style="background: ${payment.type === 'received' ? '#48bb78' : '#ed8936'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${payment.type === 'received' ? 'RECEIVED' : 'PAID'}</span></td>
+                <td style="font-weight: 700;">Rs. ${amt.toFixed(2)}</td>
+                <td>${(payment.method || '').toUpperCase()}</td>
+                <td>${bank ? bank.name : '-'}</td>
+                <td>${payment.notes || '-'}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deletePayment('${payment.id}')">Delete</button>
+                </td>
+            `;
+        } catch(e) { console.error('Payment row render error:', e); }
     });
 }
 
@@ -3743,12 +3745,14 @@ function saveCustomerTransfer(e) {
     // Removed addLedgerEntry() to prevent duplicate/phantom entries
 
     saveToStorage();
-    renderCustomers();
-    renderTransactions(); // Update unified transactions view
+
+    // Close modal and notify FIRST
     closeModal('customerTransferModal');
-    updateDashboard();
     showNotification('Customer transfer recorded! 🔄', 'success');
     e.target.reset();
+
+    try { renderCustomers(); renderTransactions(); updateDashboard(); }
+    catch(err) { console.error('Display refresh error:', err); }
 }
 
 // EXPENSE FUNCTIONS (UPDATED)
@@ -3835,43 +3839,46 @@ function saveExpense(e) {
     }
 
     saveToStorage();
-    renderExpenses();
-    renderTransactions(); // Update unified transactions view
-    renderBanks();
-    renderCustomers();
+
+    // Close modal and notify FIRST
     closeModal('expenseModal');
-    updateDashboard();
     e.target.reset();
+
+    try { renderExpenses(); renderTransactions(); renderBanks(); renderCustomers(); updateDashboard(); }
+    catch(err) { console.error('Display refresh error:', err); }
 }
 
 function renderExpenses() {
     const tbody = document.getElementById('expensesBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
-    
+
     expenses.slice().reverse().forEach(expense => {
-        let paidFrom = '';
-        if (expense.source === 'bank' && expense.bankId) {
-            const bank = banks.find(b => b.id === expense.bankId);
-            paidFrom = bank ? bank.name : 'Bank';
-        } else if (expense.source === 'customer' && expense.customerId) {
-            const customer = customers.find(c => c.id === expense.customerId);
-            paidFrom = customer ? customer.name : 'Customer';
-        } else {
-            paidFrom = 'Cash';
-        }
-        
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${new Date(expense.date).toLocaleDateString()}</td>
-            <td><span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${expense.category}</span></td>
-            <td>${expense.description}</td>
-            <td style="color: #f56565; font-weight: 700;">Rs. ${expense.amount.toFixed(2)}</td>
-            <td>${paidFrom}</td>
-            <td>${expense.method.toUpperCase()}</td>
-            <td>
-                <button class="btn btn-danger btn-sm" onclick="deleteExpense('${expense.id}')">Delete</button>
-            </td>
-        `;
+        try {
+            let paidFrom = '';
+            if (expense.source === 'bank' && expense.bankId) {
+                const bank = banks.find(b => b.id === expense.bankId);
+                paidFrom = bank ? bank.name : 'Bank';
+            } else if (expense.source === 'customer' && expense.customerId) {
+                const customer = customers.find(c => c.id === expense.customerId);
+                paidFrom = customer ? customer.name : 'Customer';
+            } else {
+                paidFrom = 'Cash';
+            }
+            const amt = parseFloat(expense.amount) || 0;
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${new Date(expense.date).toLocaleDateString()}</td>
+                <td><span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${expense.category || '-'}</span></td>
+                <td>${expense.description || '-'}</td>
+                <td style="color: #f56565; font-weight: 700;">Rs. ${amt.toFixed(2)}</td>
+                <td>${paidFrom}</td>
+                <td>${(expense.method || '').toUpperCase()}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deleteExpense('${expense.id}')">Delete</button>
+                </td>
+            `;
+        } catch(e) { console.error('Expense row render error:', e); }
     });
 }
 
@@ -5589,29 +5596,33 @@ function saveVehicle(e) {
 
 function renderVehicles() {
     const tbody = document.getElementById('vehiclesBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
-    
-    // Use DocumentFragment for better performance
+
     const fragment = document.createDocumentFragment();
-    
+
     vehicles.forEach(vehicle => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><strong>${vehicle.number}</strong></td>
-            <td>${vehicle.driverName}</td>
-            <td>${vehicle.contact || '-'}</td>
-            <td><span class="stock-badge stock-pmg">${vehicle.stockPMG.toFixed(2)} KL</span></td>
-            <td><span class="stock-badge stock-hsd">${vehicle.stockHSD.toFixed(2)} KL</span></td>
-            <td><span style="background: ${vehicle.status === 'Active' ? '#48bb78' : '#ed8936'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${vehicle.status}</span></td>
-            <td>
-                <button class="btn btn-success btn-sm" onclick="viewVehicleLedger('${vehicle.id}')">📊 Ledger</button>
-                <button class="btn btn-info btn-sm" onclick='editVehicle(${JSON.stringify(vehicle).replace(/'/g, "&#39;")})'>Edit</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${vehicle.id}')">Delete</button>
-            </td>
-        `;
-        fragment.appendChild(row);
+        try {
+            const pmg = parseFloat(vehicle.stockPMG) || 0;
+            const hsd = parseFloat(vehicle.stockHSD) || 0;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${vehicle.number || '-'}</strong></td>
+                <td>${vehicle.driverName || '-'}</td>
+                <td>${vehicle.contact || '-'}</td>
+                <td><span class="stock-badge stock-pmg">${pmg.toFixed(2)} KL</span></td>
+                <td><span class="stock-badge stock-hsd">${hsd.toFixed(2)} KL</span></td>
+                <td><span style="background: ${vehicle.status === 'Active' ? '#48bb78' : '#ed8936'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${vehicle.status || 'Active'}</span></td>
+                <td>
+                    <button class="btn btn-success btn-sm" onclick="viewVehicleLedger('${vehicle.id}')">📊 Ledger</button>
+                    <button class="btn btn-info btn-sm" onclick='editVehicle(${JSON.stringify(vehicle).replace(/'/g, "&#39;")})'>Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${vehicle.id}')">Delete</button>
+                </td>
+            `;
+            fragment.appendChild(row);
+        } catch(e) { console.error('Vehicle row render error:', e); }
     });
-    
+
     tbody.appendChild(fragment);
 }
 
@@ -8234,6 +8245,12 @@ function switchTab(tabName) {
         renderJVVouchers();
     } else if (tabName === 'owneraccounts') {
         renderOwnerAccounts();
+    } else if (tabName === 'transactions') {
+        renderTransactions();
+    } else if (tabName === 'expenses') {
+        renderExpenses();
+    } else if (tabName === 'vehicles') {
+        renderVehicles();
     } else if (tabName === 'banks') {
         renderBanks();
         renderBankTransactions();
@@ -8281,7 +8298,8 @@ function renderDailyEntries() {
             credit: t.type === 'sale' ? 'Sales Revenue' : `Supplier: ${t.partyName || t.supplierName || ''}`,
             entryType: 'transaction',
             id: t.id,
-            editable: false
+            editable: false,
+            deleteFunction: `deleteTransaction('${t.id}', '${t.type}', '${t.partyId}', '${t.vehicleId}', '${t.fuelType}', ${t.quantity}, ${t.amount})`
         });
     });
 
@@ -8298,7 +8316,8 @@ function renderDailyEntries() {
             credit: isReceived ? `${p.partyName || ''}` : (p.bankId ? 'Bank' : 'Cash'),
             entryType: 'payment',
             id: p.id,
-            editable: false
+            editable: false,
+            deleteFunction: `deletePayment('${p.id}')`
         });
     });
 
@@ -8315,7 +8334,8 @@ function renderDailyEntries() {
             credit: sourceLabel,
             entryType: 'expense',
             id: e.id,
-            editable: false
+            editable: false,
+            deleteFunction: `deleteExpense('${e.id}')`
         });
     });
 
@@ -8358,7 +8378,8 @@ function renderDailyEntries() {
             credit: `${jv.creditType}: ${crName}`,
             entryType: 'jv',
             id: jv.id,
-            editable: true
+            editable: true,
+            deleteFunction: `deleteJVVoucher('${jv.id}')`
         });
     });
 
@@ -8374,7 +8395,8 @@ function renderDailyEntries() {
             credit: bt.type === 'deposit' ? 'Cash/Revenue' : 'Bank',
             entryType: 'bank',
             id: bt.id,
-            editable: false
+            editable: false,
+            deleteFunction: `deleteBankTransaction('${bt.id}')`
         });
     });
 
@@ -8390,7 +8412,8 @@ function renderDailyEntries() {
             credit: `Customer: ${ct.toCustomerName}`,
             entryType: 'transfer',
             id: ct.id,
-            editable: false
+            editable: false,
+            deleteFunction: `deleteCustomerTransfer('${ct.id}')`
         });
     });
 
@@ -8419,18 +8442,29 @@ function renderDailyEntries() {
     html += '</tr></thead><tbody>';
 
     allDayEntries.forEach(entry => {
-        const editBtns = entry.editable ? `
-            <button class="btn btn-info btn-sm" onclick="editJVVoucher('${entry.id}')" title="Edit">Edit</button>
-            <button class="btn btn-sm" onclick="swapJVVoucherDrCr('${entry.id}')" title="Swap Dr/Cr" style="background:#805ad5;color:#fff;border:none;">🔄</button>
-        ` : '<span style="color:#a0aec0;font-size:0.8em;">-</span>';
+        const amt = parseFloat(entry.amount) || 0;
+        let actionBtns = '';
+        // JV vouchers get edit + swap + delete
+        if (entry.entryType === 'jv') {
+            actionBtns = `
+                <button class="btn btn-info btn-sm" onclick="editJVVoucher('${entry.id}')" title="Edit">Edit</button>
+                <button class="btn btn-sm" onclick="swapJVVoucherDrCr('${entry.id}')" title="Swap Dr/Cr" style="background:#805ad5;color:#fff;border:none;">🔄</button>
+                <button class="btn btn-danger btn-sm" onclick="${entry.deleteFunction}" title="Delete">🗑️</button>
+            `;
+        } else if (entry.deleteFunction) {
+            // All other entries get a delete button
+            actionBtns = `<button class="btn btn-danger btn-sm" onclick="${entry.deleteFunction}" title="Delete">🗑️</button>`;
+        } else {
+            actionBtns = '<span style="color:#a0aec0;font-size:0.8em;">-</span>';
+        }
 
         html += `<tr>
             <td><span class="badge" style="background:${entry.typeBg};font-size:0.75em;">${entry.type}</span></td>
             <td>${entry.description}</td>
             <td style="font-size:0.9em;"><div style="padding:3px 6px;background:#fed7d7;color:#c53030;border-radius:4px;display:inline-block;">DR: ${entry.debit}</div></td>
             <td style="font-size:0.9em;"><div style="padding:3px 6px;background:#c6f6d5;color:#22543d;border-radius:4px;display:inline-block;">CR: ${entry.credit}</div></td>
-            <td style="font-weight:700;color:#667eea;">Rs. ${entry.amount.toFixed(2)}</td>
-            <td>${editBtns}</td>
+            <td style="font-weight:700;color:#667eea;">Rs. ${amt.toFixed(2)}</td>
+            <td>${actionBtns}</td>
         </tr>`;
     });
 
