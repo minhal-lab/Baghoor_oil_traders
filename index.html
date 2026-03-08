@@ -2539,7 +2539,6 @@ function saveToStorage() {
     localStorage.setItem('jvVouchers', JSON.stringify(jvVouchers));
     localStorage.setItem('ownerAccounts', JSON.stringify(ownerAccounts));
     localStorage.setItem('systemUsers', JSON.stringify(systemUsers));
-    localStorage.setItem('lastLocalSave', new Date().toISOString());
 
     // Debounce cloud sync - wait 1.5s of inactivity before syncing
     if (USE_SUPABASE && supabaseClient) {
@@ -4670,18 +4669,16 @@ function initBankOpeningBalances() {
 
 function renderBanks() {
     const tbody = document.getElementById('banksBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     banks.forEach(bank => {
-        // Always compute actual balance from entries (never trust stored bank.balance alone)
-        const actualBalance = computeBankBalance(bank.id);
-        bank.balance = actualBalance; // Keep in sync
-
+        const bal = parseFloat(bank.balance) || 0;
         const row = tbody.insertRow();
         row.innerHTML = `
             <td><strong>${bank.name}</strong></td>
             <td>${bank.accountNumber || '-'}</td>
-            <td class="${actualBalance >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${actualBalance.toFixed(2)}</td>
+            <td class="${bal >= 0 ? 'balance-positive' : 'balance-negative'}" style="font-weight: 700;">Rs. ${bal.toFixed(2)}</td>
             <td>
                 <button class="btn btn-success btn-sm" onclick="viewBankLedger('${bank.id}')">📊 View Ledger</button>
                 <button class="btn btn-info btn-sm" onclick='editBank(${JSON.stringify(bank).replace(/'/g, "&#39;")})'>Edit</button>
@@ -9605,17 +9602,6 @@ window.addEventListener('load', async () => {
             if (!v.ownerBalance) v.ownerBalance = 0;
         });
         
-        // CRITICAL: Compute and store bank opening balances from LOCAL data
-        // BEFORE cloud sync can overwrite anything. This only runs once per bank.
-        // Opening balances are stored in a SEPARATE localStorage key that
-        // cloud sync never touches, so they're always correct.
-        initBankOpeningBalances();
-
-        // Set lastLocalSave so cloud sync won't overwrite newer local data
-        if (!localStorage.getItem('lastLocalSave')) {
-            localStorage.setItem('lastLocalSave', new Date().toISOString());
-        }
-
         console.log('✅ Data validation complete');
         console.log(`📊 Local: ${customers.length} customers, ${transactions.length} transactions`);
     } catch (error) {
@@ -9637,45 +9623,28 @@ window.addEventListener('load', async () => {
             if (data) {
                 console.log('📥 Cloud data loaded!');
 
-                // Check if local data is NEWER than cloud data (cloud sync had failed before)
-                const localLastSave = localStorage.getItem('lastLocalSave');
-                const cloudLastUpdate = data.last_updated;
+                // Update local data with cloud data
+                if (data.customers) customers = data.customers;
+                if (data.suppliers) suppliers = data.suppliers;
+                if (data.transactions) transactions = data.transactions;
+                if (data.payments) payments = data.payments;
+                if (data.expenses) expenses = data.expenses;
+                if (data.customerTransfers) customerTransfers = data.customerTransfers;
+                if (data.vehicles) vehicles = data.vehicles;
+                if (data.banks) banks = data.banks;
+                if (data.bankTransactions) bankTransactions = data.bankTransactions;
+                if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
+                if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
+                if (data.jvVouchers) jvVouchers = data.jvVouchers;
+                if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
+                if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
 
-                if (localLastSave && cloudLastUpdate && new Date(localLastSave) > new Date(cloudLastUpdate)) {
-                    console.log('⚠️ Local data is NEWER than cloud. Pushing local data to cloud.');
-                    // Recompute bank balances from saved openings + local entries
-                    banks.forEach(bank => { bank.balance = computeBankBalance(bank.id); });
-                    _syncToCloud();
-                } else {
-                    // Cloud is newer or same — use cloud data
-                    // SAFETY: never overwrite local arrays with SMALLER cloud arrays
-                    // (cloud may have old data from before items were added)
-                    if (data.customers && data.customers.length >= customers.length) customers = data.customers;
-                    if (data.suppliers && data.suppliers.length >= suppliers.length) suppliers = data.suppliers;
-                    if (data.transactions && data.transactions.length >= transactions.length) transactions = data.transactions;
-                    if (data.payments && data.payments.length >= payments.length) payments = data.payments;
-                    if (data.expenses && data.expenses.length >= expenses.length) expenses = data.expenses;
-                    if (data.customerTransfers && data.customerTransfers.length >= customerTransfers.length) customerTransfers = data.customerTransfers;
-                    if (data.vehicles && data.vehicles.length >= vehicles.length) vehicles = data.vehicles;
-                    if (data.banks && data.banks.length >= banks.length) banks = data.banks;
-                    if (data.bankTransactions && data.bankTransactions.length >= bankTransactions.length) bankTransactions = data.bankTransactions;
-                    if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
-                    if (data.ledgerEntries && data.ledgerEntries.length >= ledgerEntries.length) ledgerEntries = data.ledgerEntries;
-                    if (data.jvVouchers && data.jvVouchers.length >= jvVouchers.length) jvVouchers = data.jvVouchers;
-                    if (data.ownerAccounts && data.ownerAccounts.length >= ownerAccounts.length) ownerAccounts = data.ownerAccounts;
-                    if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
+                ensureDefaultUsers();
 
-                    ensureDefaultUsers();
+                // Save cloud data to localStorage as backup
+                saveToStorage();
 
-                    // Recompute bank balances using SAVED opening balances + cloud entries
-                    // initBankOpeningBalances also handles any new banks from cloud
-                    initBankOpeningBalances();
-
-                    // Save corrected data to localStorage
-                    saveToStorage();
-
-                    console.log(`✅ Synced: ${customers.length} customers, ${transactions.length} transactions`);
-                }
+                console.log(`✅ Synced: ${customers.length} customers, ${transactions.length} transactions`);
 
                 // Re-render all displays (each in its own try/catch so one
                 // failure never prevents the others from rendering)
@@ -9694,7 +9663,6 @@ window.addEventListener('load', async () => {
             } else if (!error || error.code === 'PGRST116') {
                 console.log('📝 First time! Uploading local data...');
                 ensureDefaultUsers();
-                initBankOpeningBalances();
                 saveToStorage();
                 _syncToCloud();
             }
@@ -9709,32 +9677,22 @@ window.addEventListener('load', async () => {
                         console.log('📡 Update received!');
                         if (payload.new) {
                             const data = payload.new;
-
-                            // Skip stale real-time updates if local data is newer
-                            const localLastSave = localStorage.getItem('lastLocalSave');
-                            if (localLastSave && data.last_updated && new Date(localLastSave) > new Date(data.last_updated)) {
-                                console.log('⚠️ Ignoring stale real-time update (local is newer)');
-                                return;
-                            }
-
-                            // SAFETY: never overwrite local arrays with smaller cloud arrays
-                            if (data.customers && data.customers.length >= customers.length) customers = data.customers;
-                            if (data.suppliers && data.suppliers.length >= suppliers.length) suppliers = data.suppliers;
-                            if (data.transactions && data.transactions.length >= transactions.length) transactions = data.transactions;
-                            if (data.payments && data.payments.length >= payments.length) payments = data.payments;
-                            if (data.expenses && data.expenses.length >= expenses.length) expenses = data.expenses;
-                            if (data.customerTransfers && data.customerTransfers.length >= customerTransfers.length) customerTransfers = data.customerTransfers;
-                            if (data.vehicles && data.vehicles.length >= vehicles.length) vehicles = data.vehicles;
-                            if (data.banks && data.banks.length >= banks.length) banks = data.banks;
-                            if (data.bankTransactions && data.bankTransactions.length >= bankTransactions.length) bankTransactions = data.bankTransactions;
+                            if (data.customers) customers = data.customers;
+                            if (data.suppliers) suppliers = data.suppliers;
+                            if (data.transactions) transactions = data.transactions;
+                            if (data.payments) payments = data.payments;
+                            if (data.expenses) expenses = data.expenses;
+                            if (data.customerTransfers) customerTransfers = data.customerTransfers;
+                            if (data.vehicles) vehicles = data.vehicles;
+                            if (data.banks) banks = data.banks;
+                            if (data.bankTransactions) bankTransactions = data.bankTransactions;
                             if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
-                            if (data.ledgerEntries && data.ledgerEntries.length >= ledgerEntries.length) ledgerEntries = data.ledgerEntries;
-                            if (data.jvVouchers && data.jvVouchers.length >= jvVouchers.length) jvVouchers = data.jvVouchers;
-                            if (data.ownerAccounts && data.ownerAccounts.length >= ownerAccounts.length) ownerAccounts = data.ownerAccounts;
+                            if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
+                            if (data.jvVouchers) jvVouchers = data.jvVouchers;
+                            if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
                             if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
 
                             ensureDefaultUsers();
-                            initBankOpeningBalances();
 
                             // Refresh displays (each independent so one crash doesn't kill others)
                             try { renderCustomers(); } catch(e) { console.error(e); }
