@@ -9764,6 +9764,78 @@ window.addEventListener('load', async () => {
     } else {
         console.log('💾 Local mode only');
     }
+
+    // ── CROSS-DEVICE SYNC HELPERS ──
+
+    // 1. Force sync to cloud BEFORE the user closes / navigates away
+    //    so data entered on this device is never lost.
+    window.addEventListener('beforeunload', () => {
+        if (USE_SUPABASE && supabaseClient) {
+            // Cancel the debounce timer and push immediately (sync, best-effort)
+            if (_cloudSyncTimer) { clearTimeout(_cloudSyncTimer); _cloudSyncTimer = null; }
+            const payload = {
+                id: 1,
+                customers, suppliers, transactions, payments, expenses,
+                customerTransfers, vehicles, banks, bankTransactions,
+                rateChangeLogs, ledgerEntries, jvVouchers, ownerAccounts, systemUsers,
+                last_updated: new Date().toISOString()
+            };
+            // Use fetch with keepalive so the request survives page unload
+            try {
+                const url = SUPABASE_URL + '/rest/v1/' + TABLE_NAME;
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                        'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify(payload),
+                    keepalive: true
+                });
+            } catch(e) { /* best effort */ }
+        }
+    });
+
+    // 2. When user comes back to this tab, pull fresh data from cloud
+    //    so changes made on other devices appear instantly.
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState !== 'visible') return;
+        if (!USE_SUPABASE || !supabaseClient) return;
+        try {
+            const { data } = await supabaseClient
+                .from(TABLE_NAME).select('*').eq('id', 1).maybeSingle();
+            if (!data) return;
+            if (data.customers) customers = data.customers;
+            if (data.suppliers) suppliers = data.suppliers;
+            if (data.transactions) transactions = data.transactions;
+            if (data.payments) payments = data.payments;
+            if (data.expenses) expenses = data.expenses;
+            if (data.customerTransfers) customerTransfers = data.customerTransfers;
+            if (data.vehicles) vehicles = data.vehicles;
+            if (data.banks) banks = data.banks;
+            if (data.bankTransactions) bankTransactions = data.bankTransactions;
+            if (data.rateChangeLogs) rateChangeLogs = data.rateChangeLogs;
+            if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
+            if (data.jvVouchers) jvVouchers = data.jvVouchers;
+            if (data.ownerAccounts) ownerAccounts = data.ownerAccounts;
+            if (data.systemUsers && data.systemUsers.length > 0) systemUsers = data.systemUsers;
+            // Re-render
+            try { renderCustomers(); } catch(e) {}
+            try { renderSuppliers(); } catch(e) {}
+            try { renderTransactions(); } catch(e) {}
+            try { renderPayments(); } catch(e) {}
+            try { renderExpenses(); } catch(e) {}
+            try { renderVehicles(); } catch(e) {}
+            try { renderBanks(); } catch(e) {}
+            try { renderBankTransactions(); } catch(e) {}
+            try { renderOwnerAccounts(); } catch(e) {}
+            try { updateDashboard(); } catch(e) {}
+            try { populateDropdowns(); } catch(e) {}
+            console.log('🔄 Refreshed data from cloud (tab re-focused)');
+        } catch(e) { console.error('Visibility refresh error:', e); }
+    });
 });
 </script>
 
