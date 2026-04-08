@@ -9662,7 +9662,11 @@ window.addEventListener('load', async () => {
                 .eq('id', 1)
                 .maybeSingle();
             
-            if (data) {
+            if (error) {
+                // Cloud unreachable (project may be paused on free tier)
+                console.error('⚠️ Cloud load failed:', error.message);
+                showNotification('⚠️ Cloud server unreachable — using local data. Your data is safe, please refresh in a few minutes.', 'warning');
+            } else if (data) {
                 console.log('📥 Cloud data loaded!');
 
                 // Update local data with cloud data
@@ -9702,11 +9706,19 @@ window.addEventListener('load', async () => {
                 try { updateDashboard(); } catch(e) { console.error('updateDashboard error:', e); }
                 try { populateDropdowns(); } catch(e) { console.error('populateDropdowns error:', e); }
                 console.log('✅ Display refreshed!');
-            } else if (!error || error.code === 'PGRST116') {
-                console.log('📝 First time! Uploading local data...');
-                ensureDefaultUsers();
-                saveToStorage();
-                _syncToCloud();
+            } else {
+                // No data row exists yet — only upload if local actually has data
+                // (prevents an empty new-device from wiping the cloud)
+                const localHasData = customers.length > 0 || transactions.length > 0 ||
+                    suppliers.length > 0 || banks.length > 0 || expenses.length > 0;
+                if (localHasData) {
+                    console.log('📝 First time! Uploading local data...');
+                    ensureDefaultUsers();
+                    saveToStorage();
+                    _syncToCloud();
+                } else {
+                    console.log('ℹ️ No cloud data and no local data — waiting for first entry.');
+                }
             }
             
             // Set up real-time sync
